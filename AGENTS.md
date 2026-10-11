@@ -5,7 +5,7 @@ reasoning and history live in `docs/` and in git (the old plan files were folded
 
 ## What this repository is
 A guided, reversible ThrottleStop tuning for a Lenovo Legion 83DE (i9-14900HX, RTX 4090 Laptop, Windows 11), the scripts that apply
-and verify it, and an Electron app (**My PC** health check + **Setup wizard**) on top. **Done and verified (2026-10-10):** peak 90 C,
+and verify it, and an Electron app on top (side menu: **Dashboard** health check, **System analysis**, **Optimizations** with CPU thermal tuning as the first item, **Restore**, **Help**). **Done and verified (2026-10-10):** peak 90 C,
 no thermal throttling in a 19-minute CS2 session, game smooth, 0 WHEA errors (`docs/RESULTS.md`).
 
 Live tuning (profile 0, saved in `ThrottleStop.ini`, applied at every logon by the scheduled task `ThrottleStop_Autostart`):
@@ -35,7 +35,7 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 | Path | What |
 |---|---|
 | `install.cmd` | one-click installer (self-elevates) -> `scripts/Install-Tuning.ps1` |
-| `app/` | Electron app. `src/main.js` (IPC, spawns `Steps.ps1`), `src/preload.js`, `src/demo.js` (demo mode), `renderer/` (My PC + wizard UI, `icon.svg`), `build/` (generated icons), `Launch-Wizard.cmd` |
+| `app/` | Electron app. `src/main.js` (IPC, spawns `Steps.ps1`), `src/preload.js`, `src/demo.js` (demo mode), `renderer/` (the five sections + the CPU-thermal-tuning wizard, `icon.svg`), `build/` (generated icons), `Launch-Wizard.cmd` |
 | `config/` | `ThrottleStop.settings.ini` (the tuning), `HWiNFO64.INI` (shared memory on), `defaults.json` (install dir + task name, read by PowerShell **and** Node) |
 | `scripts/lib/Tuning.ps1` | merge INI, register task, unpack ThrottleStop, VBS, verify, rollback, FIVR/V-F encoders, `Get-Defaults` |
 | `scripts/lib/Health.ps1` | health check (`Get-HealthReport`, `Compare-IniSettings`, `Get-Verdict`), Windows-build baseline, live telemetry, `Invoke-Fix` |
@@ -69,7 +69,10 @@ cd app; npx electron ..\tools\make-icons.js                           # regenera
 - Test installer changes in a throwaway directory (`-InstallDir <temp> -NoTask -NoStart`), never against the live ThrottleStop.
 
 ## Roadmap and open items
-- **Presets with a recommendation score** (not built): named tunings per CPU family; each with requirements (CPU generation, hybrid
+- **Menu names are provisional.** The sections follow the flow the TogsBoost site describes for a typical optimizer (system analysis,
+  preparation, optimizations, restore). The reference video could not be analyzed (YouTube blocks automated access), so adjust the
+  labels in `app/renderer/index.html` once the exact tab names are known. Planned cards in *Optimizations* (power plan, background
+  services, network latency, in-game settings) are disabled placeholders: do not present them as working.- **Presets with a recommendation score** (not built): named tunings per CPU family; each with requirements (CPU generation, hybrid
   or not, VBS, laptop vs desktop), risk and source, scored against the detected system. Only the current profile is validated;
   anything from forums must be labelled unverified. The current ini is the "Default preset" for the 83DE only.
 - **Guided test session** (not built): the app starts a sensor logger while the user plays and reports before/after. HWiNFO is

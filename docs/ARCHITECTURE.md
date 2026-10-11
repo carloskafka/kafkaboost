@@ -27,7 +27,7 @@ without administrator rights; `detect`, `verify` and `health` do not need them.
   `config/defaults.json`. Context isolation on, no Node in the renderer, strict CSP.
 - `src/preload.js`: the small `window.wizard` API.
 - `src/demo.js`: canned results for **demo mode** (`WIZARD_DEMO=1`): used for the docs screenshots, never touches the PC.
-- `renderer/`: *My PC* (health) and *Setup wizard* views; text is set with `textContent`, never `innerHTML`.
+- `renderer/`: five sections (Dashboard, System analysis, Optimizations, Restore, Help). Optimizations lists the available tunings; *CPU thermal tuning* opens the step-by-step wizard. Text is set with `textContent`, never `innerHTML`.
 - OS detection: `process.platform`. Windows + i9-14900HX gets the app; Linux, macOS or another CPU get an explanation screen.
 
 ## Always running

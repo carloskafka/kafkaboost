@@ -7,7 +7,7 @@
 
 A guided, reversible [ThrottleStop](https://www.techpowerup.com/download/techpowerup-throttlestop/) tuning for the **Lenovo Legion 83DE
 (Intel Core i9-14900HX)**: undervolt, boost-clock caps and power limits, a one-click installer, an always-on watchdog, and an
-Electron app whose **My PC** screen tells you whether the optimization is still in place after a Windows update.
+Electron app whose **Dashboard** screen tells you whether the optimization is still in place after a Windows update.
 
 ## What This Project Does
 
@@ -45,7 +45,7 @@ This project gives you a **guided and reversible** setup, an **always-on** watch
 
 ### 2. Install
 Double-click **`install.cmd`** (asks for administrator rights), answer **y** to the VBS question (needed for the undervolt; breaks
-WSL2/Docker until restored), then **reboot**. Or open the app with **`app\Launch-Wizard.cmd`** and follow the *Setup wizard*.
+WSL2/Docker until restored), then **reboot**. Or open the app with **`app\Launch-Wizard.cmd`** and open **Optimizations**, then **CPU thermal tuning**, and follow the steps.
 
 ```
 install.cmd -DisableVBS                      # no prompt
@@ -54,7 +54,7 @@ install.cmd -InstallDir "D:\ThrottleStop" -SkipVBS
 Options: `-InstallDir`, `-ZipPath <zip>`, `-SkipVBS`, `-NoStart`, `-HWiNFODir <dir>`, `-TaskOnly`.
 
 ### 3. Check it and make a shortcut
-Open the app: **My PC** should say *Your PC is optimized*. Create a desktop and Start Menu shortcut with the app icon (the
+Open the app: **Dashboard** should say *Your PC is optimized*. Create a desktop and Start Menu shortcut with the app icon (the
 "run as administrator" flag is set):
 
 ```powershell
@@ -63,16 +63,22 @@ powershell -File scripts\Create-Shortcut.ps1
 
 ## The app (`app/`)
 
-| My PC — health check | After a Windows update |
+| Dashboard — health check | After a Windows update |
 |---|---|
-| <img src="docs/assets/health-ok.png" alt="My PC: your PC is optimized"> | <img src="docs/assets/health-attention.png" alt="My PC: settings drifted after a Windows update, Fix it button"> |
+| <img src="docs/assets/health-ok.png" alt="Dashboard: your PC is optimized"> | <img src="docs/assets/health-attention.png" alt="Dashboard: settings drifted after a Windows update, Fix it button"> |
 
-*My PC* compares the settings, the startup task, VBS and the Windows build with the moment you set it up, shows live temperature,
-clock and power (when HWiNFO sensors are available) and offers **Fix it**, which re-applies only what drifted. The *Setup wizard*
-walks through step 0 (hardware check) to step 6 (verify) with a **Roll everything back** button; every step is in the
-[live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/#/walkthrough). Screenshots come from demo mode
-(`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
+The side menu has five sections: **Dashboard**, **System analysis**, **Optimizations**, **Restore** and **Help**.
 
+- **Dashboard** compares the settings, the startup task, VBS and the Windows build with the moment you set it up, shows live
+  temperature, clock and power (when HWiNFO sensors are available) and offers **Fix it**, which re-applies only what drifted.
+- **System analysis** is a read-only look at the PC (model, CPU, GPU, RAM, Windows, power plan, VBS) and whether the tuning can be applied.
+- **Optimizations** lists what can be optimized. The first item, **CPU thermal tuning**, is the ThrottleStop setup: a step-by-step
+  wizard from step 0 (hardware check) to step 6 (verify). Power plan, background services, network latency and in-game settings
+  are listed as *planned* and disabled.
+- **Restore** undoes everything (startup task, INI backup, optionally VBS). **Help** has short answers and the documentation links.
+
+Every screen is in the [live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/#/walkthrough). Screenshots come from
+demo mode (`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
 ## What gets applied (`config/ThrottleStop.settings.ini`, profile 0)
 
 | Setting | Value |
