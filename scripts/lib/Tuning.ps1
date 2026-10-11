@@ -7,6 +7,18 @@ function Get-Defaults {
     Get-Content -LiteralPath $f -Raw | ConvertFrom-Json
 }
 
+# FIVR offset (negative mV) -> ThrottleStop.ini hex. field = 2048 - round(|mV| x 1.024), value = field << 21.  See docs/ini-reference.md
+function ConvertTo-FivrHex([double]$mV) {
+    $field = (2048 - [int][math]::Round([math]::Abs($mV) * 1.024)) -band 0x7FF
+    if ($mV -eq 0) { return '0x00000000' }
+    return ('0x{0:X8}' -f (($field -shl 21) -band 0xFFFFFFFF))
+}
+
+# V/F point offset (signed mV) -> hex. field = round(mV x 1.024), value = field << 21.
+function ConvertTo-VfHex([double]$mV) {
+    $field = ([int][math]::Round($mV * 1.024)) -band 0x7FF
+    return ('0x{0:X8}' -f (($field -shl 21) -band 0xFFFFFFFF))
+}
 function Test-Admin {
 
     ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)

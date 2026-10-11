@@ -16,7 +16,7 @@ two's-complement field): `value = (field & 0x7FF) << 21`.
 | 0 | `0x00000000` | | -90 | `0xF4800000` |
 | -50 | `0xF9A00000` | | -100 | `0xF3400000` |
 | -75 | `0xF6600000` | | -115 | `0xF1400000` |
-| -125 | `0xF0000000` | | -140 | `0xEE000000` |
+| -125 | `0xF0000000` | | -140.6 | `0xEE000000` (your original core value; exactly -140 mV is `0xEE200000`) |
 
 - **Plane index** (first digit): `0` CPU Core, `1` Intel GPU, `2` CPU P-cache, `3` System Agent,
   `4` analog I/O / iGPU unslice, `5` CPU E-cache.

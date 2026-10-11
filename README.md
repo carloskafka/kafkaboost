@@ -48,7 +48,7 @@ always-on startup → verify, plus a **Roll everything back** button. It calls t
 | PL1 / PL2 | 65 W / 85 W |
 | IccMax (core) | 511.75 A (max) |
 
-Encoding of the values is documented in `AGENTS.md` §2. **The undervolt is silicon-specific.** This
+Encoding of the values is documented in `docs/ini-reference.md`. **The undervolt is silicon-specific.** This
 chip logged a corrected WHEA "Internal parity error" at −100 mV, so do not go deeper; on a different
 CPU start with −80 mV and check Event Viewer → System → WHEA-Logger (event 19) after a few days.
 
