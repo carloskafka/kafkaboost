@@ -23,7 +23,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$InstallDir = 'C:\Tools\ThrottleStop',
+    [string]$InstallDir,             # default: config\defaults.json
     [string]$ZipPath,
     [string]$SettingsFile = (Join-Path $PSScriptRoot '..\config\ThrottleStop.settings.ini'),
     [string]$HWiNFODir,
@@ -32,10 +32,13 @@ param(
     [switch]$NoTask,
     [switch]$NoStart,
     [switch]$TaskOnly,   # only (re)register the autostart/watchdog task; leave VBS, INI and the running process alone
-    [string]$TaskName = 'ThrottleStop_Autostart'
+    [string]$TaskName               # default: config\defaults.json
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\Tuning.ps1')
+$defaults = Get-Defaults
+if (-not $InstallDir) { $InstallDir = $defaults.installDir }
+if (-not $TaskName)   { $TaskName   = $defaults.taskName }
 
 function Step($m) { Write-Host "`n==> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "    OK  $m" -ForegroundColor Green }

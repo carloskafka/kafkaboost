@@ -1,7 +1,14 @@
 # Shared functions for the ThrottleStop tuning (used by Install-Tuning.ps1 and the Electron wizard via Steps.ps1).
 # Dot-source this file:  . "$PSScriptRoot\lib\Tuning.ps1"
 
+# Single source of truth for install dir and task name: config\defaults.json (also read by app\src\main.js).
+function Get-Defaults {
+    $f = Join-Path $PSScriptRoot '..\..\config\defaults.json'
+    Get-Content -LiteralPath $f -Raw | ConvertFrom-Json
+}
+
 function Test-Admin {
+
     ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 

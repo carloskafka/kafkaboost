@@ -7,10 +7,10 @@
 #>
 param(
     [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'rollback')][string]$Step,
-    [string]$InstallDir = 'C:\Tools\ThrottleStop',
+    [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
-    [string]$TaskName = 'ThrottleStop_Autostart',
+    [string]$TaskName,
     [switch]$DisableVBS,
     [switch]$RestoreVbs
 )
@@ -19,6 +19,9 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleStop.settings.ini' }
 . (Join-Path $root 'lib\Tuning.ps1')
+$defaults = Get-Defaults
+if (-not $InstallDir) { $InstallDir = $defaults.installDir }
+if (-not $TaskName)   { $TaskName   = $defaults.taskName }
 function Log($m) { Write-Output "LOG: $m" }
 function Done($ok, $msg, $data = $null) { Write-Output ("RESULT: " + (@{ ok = [bool]$ok; message = $msg; data = $data } | ConvertTo-Json -Depth 6 -Compress)) }
 
