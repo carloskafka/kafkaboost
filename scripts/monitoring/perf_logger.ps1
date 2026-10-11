@@ -2,9 +2,15 @@
     [int]$Minutes = 60,
     [int]$Seconds = 0,
     [int]$IntervalSec = 2,
-    [string]$Out = 'C:\Users\carlo\Downloads\test\cs2_backup\perf_log.csv'
+    [string]$Out   # default: <repo>\logs\perf_log.csv
 )
 $ErrorActionPreference = 'SilentlyContinue'
+if (-not $Out) {
+    $logs = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'logs'
+    New-Item -ItemType Directory -Force $logs | Out-Null
+    $Out = Join-Path $logs 'perf_log.csv'
+}
+
 $start = Get-Date
 $dur = if ($Seconds -gt 0) { New-Object TimeSpan(0, 0, $Seconds) } else { New-Object TimeSpan(0, $Minutes, 0) }
 $end = $start.Add($dur)

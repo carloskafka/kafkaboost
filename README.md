@@ -63,12 +63,12 @@ the task in Task Scheduler.
 
 - `config\HWiNFO64.INI` turns on HWiNFO shared memory (`SensorsSM=1`). Never launch HWiNFO with
   command-line arguments (the free version shows an error).
-- `scripts\hwinfo_logger.ps1` logs temps, clocks, power and throttle flags every 2 s to a CSV.
-- `scripts\perf_logger.ps1` logs CPU frequency / memory counters (needs a UTF-8 BOM, pt-BR counters).
+- `scripts\monitoring\hwinfo_logger.ps1` logs temps, clocks, power and throttle flags every 2 s to `logs\hwinfo_log.csv` (git-ignored).
+- `scripts\monitoring\perf_logger.ps1` logs CPU frequency / memory counters (needs a UTF-8 BOM, pt-BR counters).
 
 ## Restoring WSL2 / Docker
 
-`scripts\restore_vbs.ps1` (as administrator, then reboot) re-enables VBS/the hypervisor. The undervolt
+`scripts\maintenance\restore_vbs.ps1` (as administrator, then reboot) re-enables VBS/the hypervisor. The undervolt
 stops working while it is on; the boost and power caps are separate and may still apply.
 
 ## Limitations

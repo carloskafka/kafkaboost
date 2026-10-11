@@ -1,5 +1,11 @@
-param([int]$Minutes = 30, [int]$IntervalSec = 2, [string]$Out = "C:\Users\carlo\Downloads\test\cs2_backup\hwinfo_log2.csv")
+param([int]$Minutes = 30, [int]$IntervalSec = 2, [string]$Out)   # default: <repo>\logs\hwinfo_log.csv
 # Logs key HWiNFO readings via shared memory (needs SensorsSM=1 in HWiNFO64.INI).
+if (-not $Out) {
+    $logs = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'logs'
+    New-Item -ItemType Directory -Force $logs | Out-Null
+    $Out = Join-Path $logs 'hwinfo_log.csv'
+}
+
 $ci = [Globalization.CultureInfo]::InvariantCulture
 $m = [IO.MemoryMappedFiles.MemoryMappedFile]::OpenExisting('Global\HWiNFO_SENS_SM2', [IO.MemoryMappedFiles.MemoryMappedFileRights]::Read)
 $v = $m.CreateViewAccessor(0, 0, 'Read')
