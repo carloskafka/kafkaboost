@@ -3,8 +3,13 @@ const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const os = require('os');
 
-const DEFAULT_INSTALL_DIR = 'C:\\Tools\\ThrottleStop';
-const scriptsDir = app.isPackaged ? path.join(process.resourcesPath, 'scripts') : path.join(__dirname, '..', 'scripts');
+const fs = require('fs');
+const repoRoot = path.join(__dirname, '..', '..');
+const scriptsDir = app.isPackaged ? path.join(process.resourcesPath, 'scripts') : path.join(repoRoot, 'scripts');
+const configDir = app.isPackaged ? path.join(process.resourcesPath, 'config') : path.join(repoRoot, 'config');
+// Single source of truth shared with the PowerShell scripts: config/defaults.json
+const DEFAULTS = JSON.parse(fs.readFileSync(path.join(configDir, 'defaults.json'), 'utf8'));
+const DEFAULT_INSTALL_DIR = DEFAULTS.installDir;
 
 function isAdmin() {
   if (process.platform !== 'win32') return false;
@@ -18,7 +23,7 @@ function createWindow() {
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
-  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   return win;
 }
 
@@ -76,7 +81,7 @@ app.whenReady().then(() => {
   if (process.env.WIZARD_SCREENSHOT) {
     win.webContents.once('did-finish-load', () => setTimeout(async () => {
       const img = await win.webContents.capturePage();
-      require('fs').writeFileSync(process.env.WIZARD_SCREENSHOT, img.toPNG());
+      fs.writeFileSync(process.env.WIZARD_SCREENSHOT, img.toPNG());
       app.quit();
     }, 6000));
   }

@@ -1,52 +1,51 @@
-{
-  "name": "legion-tuning-wizard",
-  "productName": "Legion Tuning Wizard",
-  "version": "0.1.0",
-  "description": "Step-by-step wizard that applies the ThrottleStop undervolt/boost/power tuning for the Lenovo Legion 83DE (i9-14900HX).",
-  "main": "main.js",
-  "author": "carloskafka",
-  "license": "UNLICENSED",
-  "private": true,
-  "scripts": {
-    "start": "electron .",
-    "dist": "electron-builder --win"
-  },
-  "build": {
-    "appId": "dev.carloskafka.legion-tuning-wizard",
-    "productName": "Legion Tuning Wizard",
-    "files": [
-      "main.js",
-      "preload.js",
-      "renderer/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "../scripts",
-        "to": "scripts",
-        "filter": [
-          "**/*.ps1"
-        ]
-      },
-      {
-        "from": "../config",
-        "to": "config"
-      }
-    ],
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
-      "requestedExecutionLevel": "requireAdministrator"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    }
-  },
-  "devDependencies": {
-    "electron": "^44.7.0"
-  }
+﻿{
+    "name":  "legion-tuning-wizard",
+    "productName":  "Legion Tuning Wizard",
+    "version":  "0.1.0",
+    "description":  "Step-by-step wizard that applies the ThrottleStop undervolt/boost/power tuning for the Lenovo Legion 83DE (i9-14900HX).",
+    "main":  "src/main.js",
+    "author":  "carloskafka",
+    "license":  "UNLICENSED",
+    "private":  true,
+    "scripts":  {
+                    "start":  "electron .",
+                    "dist":  "electron-builder --win"
+                },
+    "build":  {
+                  "appId":  "dev.carloskafka.legion-tuning-wizard",
+                  "productName":  "Legion Tuning Wizard",
+                  "files":  [
+                                "src/**/*",
+                                "renderer/**/*"
+                            ],
+                  "extraResources":  [
+                                         {
+                                             "from":  "../scripts",
+                                             "to":  "scripts",
+                                             "filter":  [
+                                                            "**/*.ps1"
+                                                        ]
+                                         },
+                                         {
+                                             "from":  "../config",
+                                             "to":  "config"
+                                         }
+                                     ],
+                  "win":  {
+                              "target":  [
+                                             "nsis",
+                                             "portable"
+                                         ],
+                              "requestedExecutionLevel":  "requireAdministrator"
+                          },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true,
+                               "createDesktopShortcut":  true,
+                               "createStartMenuShortcut":  true
+                           }
+              },
+    "devDependencies":  {
+                            "electron":  "^44.7.0"
+                        }
 }
