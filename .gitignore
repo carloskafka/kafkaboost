@@ -1,11 +1,18 @@
-# Local-only material (see README "Limitations")
-cs2_backup/
-*.png
-# contains disk serial numbers
-HWMonitor.txt
-report_hwmonitor.txt
-latency*.tx
-latency*.txt
-report[0-9].txt
+# Local-only material: backups, evidence (screenshots, raw reports, HWMonitor.txt with disk serials),
+# experiment scripts. See README "Limitations".
+/local/
+# old name of local/ (kept until the folder is moved)
+/cs2_backup/
+# loose evidence still in the repo root
+/*.png
+/HWMonitor.txt
+/report_hwmonitor.txt
+/latency*.tx
+/latency*.txt
+/report[0-9].txt
+# generated output
+/logs/
 *.csv
 *.log
+app/node_modules/
+app/dist/
