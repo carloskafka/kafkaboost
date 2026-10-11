@@ -23,6 +23,19 @@ makes the whole setup reproducible after a Windows reinstall.
 Useful options: `-InstallDir "D:\ThrottleStop"`, `-ZipPath <zip>`, `-SkipVBS`, `-NoStart`,
 `-HWiNFODir <dir>` (enables shared-memory logging), `-TaskOnly` (only re-register the autostart task).
 
+## Desktop wizard (Electron, `app/`)
+
+A step-by-step app with a button per step: detect hardware → back up → get ThrottleStop → VBS choice → apply →
+always-on startup → verify, plus a **Roll everything back** button. It calls the same PowerShell logic as
+`install.cmd` (`scripts\Steps.ps1` + `scripts\lib\Tuning.ps1`), so there is one tested code path.
+
+- **Run it:** double-click `app\Launch-Wizard.cmd` (asks for administrator rights, installs Electron on first run;
+  needs Node.js). For a desktop-shortcut installer run `npm run dist` inside `app\` (electron-builder, Windows
+  NSIS + portable `.exe`, requests administrator rights) — *packaging is configured but not built/tested yet*.
+- **OS detection:** the app checks the OS at startup. Windows + i9-14900HX gets the wizard; Linux/macOS (or another
+  CPU) get an explanation screen, because ThrottleStop/FIVR only exist on Windows.
+- Tested: UI renders, hardware detection and verify run against the real machine, unsupported-OS screen.
+  Not tested: the destructive steps through the UI (they were tested through `Install-Tuning.ps1`).
 ## What gets applied (`config\ThrottleStop.settings.ini`, profile 0)
 
 | Setting | Value |
@@ -68,3 +81,4 @@ stops working while it is on; the boost and power caps are separate and may stil
 - The reasoning, measurements and every mistake along the way are in `AGENTS.md`,
   `CS2_STUTTER_PLAN.md` and `CS2_STUTTER_FIX_PLAN.md`. Local-only material (screenshots, raw reports,
   experiment scripts, INI snapshots in `cs2_backup\`) is intentionally not committed.
+
