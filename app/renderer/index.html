@@ -19,17 +19,16 @@
         </div>
       </div>
 
-      <nav class="nav" aria-label="Views">
-        <button class="nav-btn active" type="button" data-view="health"><span class="nav-ic" aria-hidden="true">♥</span>My PC</button>
-        <button class="nav-btn" type="button" data-view="wizard"><span class="nav-ic" aria-hidden="true">✦</span>Setup wizard</button>
+      <nav class="nav" aria-label="Sections">
+        <button class="nav-btn active" type="button" data-view="health"><span class="nav-ic" aria-hidden="true">♥</span>Dashboard</button>
+        <button class="nav-btn" type="button" data-view="analysis"><span class="nav-ic" aria-hidden="true">◎</span>System analysis</button>
+        <button class="nav-btn" type="button" data-view="optimizations"><span class="nav-ic" aria-hidden="true">✦</span>Optimizations</button>
+        <button class="nav-btn" type="button" data-view="restore"><span class="nav-ic" aria-hidden="true">↺</span>Restore</button>
+        <button class="nav-btn" type="button" data-view="help"><span class="nav-ic" aria-hidden="true">?</span>Help</button>
       </nav>
 
       <ol id="stepper" class="stepper" hidden></ol>
-
-      <div class="side-foot">
-        <label class="check"><input type="checkbox" id="restoreVbs"><span>Also re-enable VBS on rollback</span></label>
-        <button id="rollback" class="btn ghost danger" type="button">Roll everything back</button>
-      </div>
+      <div class="side-note">v<span id="ver">0.1</span> · reversible changes only</div>
     </aside>
 
     <main class="main">
@@ -44,12 +43,12 @@
         <p id="unsupportedText" class="muted"></p>
       </section>
 
-      <!-- ===== My PC (health check) ===== -->
+      <!-- ===== Dashboard (health check) ===== -->
       <section id="health" class="view" hidden>
         <div id="hero" class="hero checking">
           <div id="heroIcon" class="hero-icon" aria-hidden="true">…</div>
           <div class="hero-text">
-            <div class="kicker">My PC</div>
+            <div class="kicker">Dashboard</div>
             <h1 id="heroTitle">Checking…</h1>
             <p id="heroSub" class="muted"></p>
           </div>
@@ -75,8 +74,51 @@
         </div>
       </section>
 
-      <!-- ===== Setup wizard ===== -->
+      <!-- ===== System analysis ===== -->
+      <section id="analysis" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <div class="kicker">System analysis</div>
+            <h1>Your computer</h1>
+            <p class="muted">A read-only look at what this PC is and whether the tuning can be applied. Nothing is changed here.</p>
+          </div>
+          <button id="analyze" class="btn" type="button">Analyze again</button>
+        </div>
+        <div id="analysisResult" class="result" hidden></div>
+        <div class="card"><dl id="specs" class="specs"></dl></div>
+      </section>
+
+      <!-- ===== Optimizations ===== -->
+      <section id="optimizations" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <div class="kicker">Optimizations</div>
+            <h1>Choose what to optimize</h1>
+            <p class="muted">Every optimization is explained before it runs, backed up, and can be undone from <em>Restore</em>.</p>
+          </div>
+        </div>
+        <div class="opt-grid">
+          <article class="opt" id="optThrottle">
+            <div class="opt-top"><span class="chip level">Advanced</span><span id="optStatus" class="chip status">…</span></div>
+            <h3>CPU thermal tuning</h3>
+            <p class="muted">Undervolt, boost caps and power limits through ThrottleStop, applied at every logon, so the CPU stops hitting 100 °C.</p>
+            <ul class="opt-facts"><li>Undervolt −100 / −100 / −90 mV</li><li>Boost caps P 47x · E 36x</li><li>PL1 65 W · PL2 85 W</li></ul>
+            <div class="actions"><button id="openThrottle" class="btn primary" type="button">Open setup</button></div>
+          </article>
+          <article class="opt planned"><div class="opt-top"><span class="chip level">Safe</span><span class="chip">Planned</span></div>
+            <h3>Power plan</h3><p class="muted">Pick the Windows power plan and CPU boost mode that match your tuning.</p></article>
+          <article class="opt planned"><div class="opt-top"><span class="chip level">Safe</span><span class="chip">Planned</span></div>
+            <h3>Background services</h3><p class="muted">Pause non-essential services and startup apps while you play.</p></article>
+          <article class="opt planned"><div class="opt-top"><span class="chip level">Safe</span><span class="chip">Planned</span></div>
+            <h3>Network latency</h3><p class="muted">Reduce network lag with reversible adapter and DNS settings.</p></article>
+          <article class="opt planned"><div class="opt-top"><span class="chip level">Advanced</span><span class="chip">Planned</span></div>
+            <h3>In-game settings</h3><p class="muted">Per-game presets, starting with CS2.</p></article>
+        </div>
+      </section>
+
+      <!-- ===== Setup wizard (opened from Optimizations > CPU thermal tuning) ===== -->
       <section id="wizard" class="card" hidden>
+        <button id="backToOpt" class="btn small ghost back" type="button">‹ Optimizations</button>
         <div class="kicker" id="kicker"></div>
         <h1 id="title"></h1>
         <p id="desc" class="muted"></p>
@@ -97,7 +139,54 @@
         <div class="big-icon ok" aria-hidden="true">✓</div>
         <h1>All steps finished</h1>
         <p id="finishText" class="muted"></p>
-        <div class="actions center-actions"><button id="toHealth" class="btn primary" type="button">Open "My PC"</button></div>
+        <div class="actions center-actions"><button id="toHealth" class="btn primary" type="button">Open the Dashboard</button></div>
+      </section>
+
+      <!-- ===== Restore ===== -->
+      <section id="restore" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <div class="kicker">Restore</div>
+            <h1>Undo everything</h1>
+            <p class="muted">Put the PC back the way it was before the tuning.</p>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="h2">What "Roll everything back" does</h2>
+          <ul class="changes">
+            <li>Removes the always-on startup task (ThrottleStop stops being started for you).</li>
+            <li>Restores the newest <code>ThrottleStop.ini.bak_*</code> backup, undoing the undervolt, boost caps and power limits.</li>
+            <li>Optionally re-enables virtualization-based security so WSL2 and Docker work again (needs a reboot; the undervolt stops working).</li>
+          </ul>
+          <label class="check"><input type="checkbox" id="restoreVbs"><span>Also re-enable VBS / hypervisor (WSL2, Docker)</span></label>
+          <div id="restoreResult" class="result" hidden></div>
+          <div class="actions"><button id="rollback" class="btn danger-fill" type="button">Roll everything back</button></div>
+        </div>
+      </section>
+
+      <!-- ===== Help ===== -->
+      <section id="help" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <div class="kicker">Help</div>
+            <h1>Questions</h1>
+            <p class="muted">Short answers. The full documentation has the details.</p>
+          </div>
+        </div>
+        <div class="card faq">
+          <details><summary>What does this app change?</summary><p>Only ThrottleStop's profile (undervolt, boost caps, power limits), a startup task for ThrottleStop and, if you choose, the VBS/hypervisor setting. It does not touch game files.</p></details>
+          <details><summary>Is it safe?</summary><p>Every change is backed up and reversible from <em>Restore</em>. Still, changing CPU voltages can cause instability: this chip logged a corrected CPU error at −100 mV, so the app never goes deeper.</p></details>
+          <details><summary>Do I have to keep the app open?</summary><p>No. ThrottleStop starts at every logon and a 5-minute watchdog keeps it running. Open the Dashboard after a Windows update to check that the tuning is still in place.</p></details>
+          <details><summary>Why does it ask to turn VBS off?</summary><p>Windows blocks voltage changes while virtualization-based security is on. Turning it off is a security trade-off and breaks WSL2/Docker until you restore it.</p></details>
+          <details><summary>Will it work on my laptop?</summary><p>The values are specific to the Lenovo Legion 83DE with an i9-14900HX. On another CPU the app explains why it will not apply them.</p></details>
+        </div>
+        <div class="card">
+          <h2 class="h2">Documentation</h2>
+          <div class="actions left">
+            <button class="btn small" type="button" data-link="https://carloskafka.github.io/legion-14900hx-throttlestop/">Documentation site</button>
+            <button class="btn small ghost" type="button" data-link="https://github.com/carloskafka/legion-14900hx-throttlestop">GitHub</button>
+          </div>
+        </div>
       </section>
     </main>
   </div>

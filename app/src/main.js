@@ -38,6 +38,7 @@ ipcMain.handle('app:info', () => ({
   arch: process.arch,
   isAdmin: isAdmin(),
   demo: DEMO,
+  version: app.getVersion(),
   cpu: (os.cpus()[0] || {}).model || 'unknown',
   defaultInstallDir: DEFAULT_INSTALL_DIR
 }));
@@ -85,7 +86,7 @@ ipcMain.handle('app:relaunchAdmin', () => {
   return true;
 });
 
-ipcMain.handle('app:openExternal', (e, url) => { if (/^https:\/\/www\.techpowerup\.com\//.test(url)) return require('electron').shell.openExternal(url); });
+ipcMain.handle('app:openExternal', (e, url) => { if (/^https:\/\/(www\.techpowerup\.com\/|carloskafka\.github\.io\/legion-14900hx-throttlestop|github\.com\/carloskafka\/legion-14900hx-throttlestop)/.test(url)) return require('electron').shell.openExternal(url); });
 
 // ---- Test helpers (not used in normal runs) -------------------------------------------------------------------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -105,22 +106,26 @@ app.whenReady().then(() => {
     win.webContents.once('did-finish-load', async () => {
       await sleep(1500);
       if ((process.env.WIZARD_FAKE_PLATFORM || process.platform) !== 'win32') { await shot(win, path.join(dir, 'unsupported.png')); return app.quit(); }
+      const click = (sel) => js(win, `document.querySelector(${JSON.stringify(sel)}).click()`);
       await shot(win, path.join(dir, 'health-ok.png'));
       if (DEMO) {
         demo.state.scenario = 'updated'; demo.state.fixed = false;
-        await js(win, "document.getElementById('check').click()"); await sleep(700); await shot(win, path.join(dir, 'health-attention.png'));
-        await js(win, "document.getElementById('fix').click()"); await sleep(1200); await shot(win, path.join(dir, 'health-fixed.png'));
+        await click('#check'); await sleep(700); await shot(win, path.join(dir, 'health-attention.png'));
+        await click('#fix'); await sleep(1200); await shot(win, path.join(dir, 'health-fixed.png'));
       }
-      await js(win, "document.querySelector('[data-view=wizard]').click()"); await sleep(800);
+      await click('[data-view=analysis]'); await sleep(1200); await shot(win, path.join(dir, 'analysis.png'));
+      await click('[data-view=optimizations]'); await sleep(600); await shot(win, path.join(dir, 'optimizations.png'));
+      await click('#openThrottle'); await sleep(800);
       const ids = ['detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify'];
       for (let i = 0; i < ids.length; i++) {
-        if (i > 0) await js(win, "document.getElementById('run').click()");
+        if (i > 0) await click('#run');
         await waitIdle(win); await sleep(300);
         await shot(win, path.join(dir, `step-${i}-${ids[i]}.png`));
-        await js(win, "document.getElementById('next').click()"); await sleep(400);
+        await click('#next'); await sleep(400);
       }
       await shot(win, path.join(dir, 'finish.png'));
-      app.quit();
+      await click('[data-view=restore]'); await sleep(500); await shot(win, path.join(dir, 'restore.png'));
+      await click('[data-view=help]'); await sleep(500); await js(win, "document.querySelector('.faq details').open = true"); await shot(win, path.join(dir, 'help.png'));      app.quit();
     });
   }
 });
