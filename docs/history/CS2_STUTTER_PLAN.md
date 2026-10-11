@@ -1,3 +1,5 @@
+> **Historical document** (2026-10-10). Written while the work was in progress; some statements were later corrected (for example Event 37 is not 0, the 70/100 W limits never applied, the final settings are P 47x / E 36x / PL 65/85 W). Current state: [AGENTS.md](../../AGENTS.md), [esults.md](../results.md), [lessons.md](../lessons.md). Paths with <local> and <repo> refer to the git-ignored local/ folder and the repo root.
+
 # CS2 / Multi-Game Stutter Diagnosis & Remediation Plan
 
 Status: **EXECUTING — Phase 1/2 applied + late-session thermal work done 2026-10-10. See
@@ -136,7 +138,7 @@ Re-run §1 baseline after each phase:
 
 ## Execution log — 2026-10-10
 
-Backups: `C:\Users\carlo\Downloads\test\cs2_backup\` (HKCU_Run.reg, HKLM_Run.reg, Ollama.lnk).
+Backups: `<local>\` (HKCU_Run.reg, HKLM_Run.reg, Ollama.lnk).
 
 ### Done (verified)
 - [x] **Page file** → fixed **initial 16384 MB / max 32768 MB** on C:
@@ -168,7 +170,7 @@ Backups: `C:\Users\carlo\Downloads\test\cs2_backup\` (HKCU_Run.reg, HKLM_Run.reg
 - [x] **ThrottleStop.ini** undervolt built up in steps → final **−100 mV CPU Core (plane 0) /
       −100 mV P-Cache (plane 2) / −90 mV E-Cache (plane 5)** plus **V/F Point 1 (800 MHz)
       +100 mV** ("mV Boost", `UseVFCore=1`). *(Original file had ≈ −140 mV Core / −115 mV
-      Cache — very aggressive; backed up to `cs2_backup\ThrottleStop.ini.bak`.)*
+      Cache — very aggressive; backed up to `<local>\ThrottleStop.ini.bak`.)*
 - [x] **ThrottleStop autostart**: scheduled task `ThrottleStop_Autostart`
       (At log on · Run as `carlo` · Highest privileges → needed for FIVR access).
 - [ ] **After reboot, validate**: open ThrottleStop → FIVR window, confirm the offsets
@@ -183,7 +185,7 @@ Backups: `C:\Users\carlo\Downloads\test\cs2_backup\` (HKCU_Run.reg, HKLM_Run.reg
 - [x] **TPL (power limits)**: set **PL1 = 70 W / PL2 = 100 W**
       (`POWERLIMITEAX=0x00DD8230`, `POWERLIMITEDX=0x00428320`) with **`LockPowerLimits=1`**.
       MMIO lock is **not exposed** on this platform → absent. Pre-edit snapshot:
-      `cs2_backup\ThrottleStop.ini.pre_tpl`.
+      `<local>\ThrottleStop.ini.pre_tpl`.
 - [x] **Portability**: `replicate_undervolt.ps1` + `ThrottleStop_replication.ini` **tested
       end-to-end** on a throwaway copy.
 - [x] **perf_logger.ps1** CSV logging working (`perf_log.csv`, `perf_log_idle.csv`).
@@ -199,7 +201,7 @@ Backups: `C:\Users\carlo\Downloads\test\cs2_backup\` (HKCU_Run.reg, HKLM_Run.reg
       `LockPowerLimits=1`), with no `TurboRatio*` keys. The existing ratio keys are
       `NonTurboRatio1..4=0x15`; these are base ratios, not turbo caps.
 - [x] Saved a byte-identical pre-change copy at
-      `cs2_backup\ThrottleStop.ini.before_ratio_20261010_150757`; SHA-256 matched the
+      `<local>\ThrottleStop.ini.before_ratio_20261010_150757`; SHA-256 matched the
       active INI after inspection, so no setting was changed.
 - [ ] **Cap not applied:** the live ThrottleStop TPL dialog displays 140 / 190 in its
       PL1 / PL2 fields, while the persisted INI encodes 70 / 100 W. The UI also showed
@@ -234,12 +236,12 @@ Backups: `C:\Users\carlo\Downloads\test\cs2_backup\` (HKCU_Run.reg, HKLM_Run.reg
 - [x] ThrottleStop was **not running** (autostart task ended earlier); restarted via the task.
 - [x] **Turbo-ratio cap applied** via FIVR → Turbo Groups (needs elevated automation; ThrottleStop
       is elevated): P-core groups → **49x** (all 8), E-core → **36x**. Saved on clean exit
-      (`OneAD_EAX0/EDX0=0x31313131`, `Six50_EAX0=0x24`). Backup: `cs2_backup\ThrottleStop.ini.pre_turbo_20261010`.
+      (`OneAD_EAX0/EDX0=0x31313131`, `Six50_EAX0=0x24`). Backup: `<local>\ThrottleStop.ini.pre_turbo_20261010`.
 - [x] **Power limits fixed:** the 70/100 W never applied because TPL **"Disable Controls"** was
       checked. Now enabled with **PL1 65 W / PL2 85 W** (`PowerLimitEAX0=0x00DF8208`,
       `PowerLimitEDX0=0x004282A8`). HWiNFO now shows "Power Limit Exceeded" flags (limits enforcing).
 - [x] **PROCHOT offset read:** 3 (≈97 °C). Not changed.
-- [x] **HWiNFO shared-memory logging** enabled; `cs2_backup\hwinfo_logger.ps1` → `hwinfo_log2.csv`.
+- [x] **HWiNFO shared-memory logging** enabled; `<local>\hwinfo_logger.ps1` → `hwinfo_log2.csv`.
       (Do not launch HWiNFO with command-line args — free version errors.)
 - [x] **Result, 19-min CS2 session after PL change:** max 92 °C (was 99–100), avg ≈80 °C,
       package power max 82 W (was 139 W), P clock ≤ 4.89 GHz, **0 WHEA**, thermal-throttle
@@ -254,15 +256,15 @@ Backups: `C:\Users\carlo\Downloads\test\cs2_backup\` (HKCU_Run.reg, HKLM_Run.reg
 
 ### Update 21:34 — P-core cap lowered to 47x (user-approved, to trim ~92 °C peaks)
 P-core turbo groups now **47x** (`OneAD_EAX0/EDX0=0x2F2F2F2F`); E-core 36x, PL1/PL2 65/85 W, undervolt unchanged.
-Snapshot before this change: `cs2_backup\ThrottleStop.ini.pre_p47_20261010` (revert = 49x). Needs a matched CS2
+Snapshot before this change: `<local>\ThrottleStop.ini.pre_p47_20261010` (revert = 49x). Needs a matched CS2
 session to compare peak temp and 1% lows against the 49x run (max 92 °C, avg ≈80 °C).
 - [x] **47x result (19-min CS2 session, 21:35–21:54):** max 90 °C (49x run: 92), avg ≈79 °C, package power max 73 W,
       P clock ≤ 4.69 GHz, **0 thermal-throttle samples**, 0 WHEA, temps flat across the session. Keep 47x unless
-      the user reports FPS/smoothness loss (revert: `cs2_backup\ThrottleStop.ini.pre_p47_20261010`).
+      the user reports FPS/smoothness loss (revert: `<local>\ThrottleStop.ini.pre_p47_20261010`).
 
 ### Reproducible install + always-running (2026-10-10, 22:00)
 - Repo layout: `install.cmd` → `scripts\Install-Tuning.ps1` (unpack ThrottleStop zip, optional VBS off, merge
-  `config\ThrottleStop.settings.ini`, register task, start). See `README.md`. `cs2_backup\` stays local-only (gitignored).
+  `config\ThrottleStop.settings.ini`, register task, start). See `README.md`. `<local>\` stays local-only (gitignored).
 - Task `ThrottleStop_Autostart` now = logon trigger **+ 5-min repetition** with action
   `powershell -Command "if not running → Start-Process ThrottleStop.exe"` (highest privileges, no time/battery limits,
   `MultipleInstances=IgnoreNew`). Exiting ThrottleStop from the tray → back within 5 min; verified no duplicate instance.

@@ -78,8 +78,18 @@ stops working while it is on; the boost and power caps are separate and may stil
 - ThrottleStop is not redistributed here; download it yourself.
 - Model-specific: Lenovo Legion type 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"). Other models need
   their own limits.
-- The reasoning, measurements and every mistake along the way are in `AGENTS.md`,
-  `CS2_STUTTER_PLAN.md` and `CS2_STUTTER_FIX_PLAN.md`. Local-only material (screenshots, raw reports,
-  experiment scripts, INI snapshots in `cs2_backup\`) is intentionally not committed.
+- The reasoning, measurements and every mistake along the way are in [`docs/`](docs) (start with
+  [`AGENTS.md`](AGENTS.md), then `docs/lessons.md`). Local-only material (screenshots, raw reports, experiment
+  scripts, INI snapshots) lives in the git-ignored `local/` folder and is intentionally not committed.
 
+## Repository layout
 
+```
+install.cmd            one-click installer (self-elevates)
+app/                   Electron step-by-step wizard (src/, renderer/, Launch-Wizard.cmd)
+config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json
+scripts/               Install-Tuning.ps1, Steps.ps1, lib/Tuning.ps1, monitoring/, maintenance/
+tests/                 Pester tests for the tuning library
+docs/                  ini-reference, lessons, results, machine, history/
+local/                 git-ignored: backups, evidence, experiments
+```

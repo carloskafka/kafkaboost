@@ -1,3 +1,5 @@
+> **Historical document** (2026-10-10). Written while the work was in progress; some statements were later corrected (for example Event 37 is not 0, the 70/100 W limits never applied, the final settings are P 47x / E 36x / PL 65/85 W). Current state: [AGENTS.md](../../AGENTS.md), [esults.md](../results.md), [lessons.md](../lessons.md). Paths with <local> and <repo> refer to the git-ignored local/ folder and the repo root.
+
 # CS2 / Multi-Game Stutter Fix Plan
 
 **For review only — no settings have been changed.** This plan reconciles the project notes with the recent HWiNFO/ThrottleStop screenshots and current reference material. It is not an instruction to apply every tuning suggestion.
@@ -52,4 +54,4 @@ Before each test, preserve the current INI/profile and screenshot the live UI. R
 - ThrottleStop developer thread, [ThrottleStop 9.7](https://www.techpowerup.com/forums/threads/throttlestop-9-7.284677/) — third-party utility/developer discussion, not Lenovo firmware documentation.
 - TechPowerUp forum [i9-14900HX undervolting discussion](https://www.techpowerup.com/forums/threads/undervolting-i9-14900hx.320844/) — anecdotal user reports only; individual voltage, ratio, temperature, and stability results are not transferable guarantees.
 
-**Local evidence:** `AGENTS.md`, `CS2_STUTTER_PLAN.md`, `cs2_backup\ThrottleStop.ini.pre_tpl`, `cs2_backup\ThrottleStop.ini.before_ratio_20261010_150757`, and the user-provided HWiNFO/ThrottleStop screenshots. The INI snapshots document saved state, not necessarily live hardware behavior.
+**Local evidence:** `AGENTS.md`, `CS2_STUTTER_PLAN.md`, `<local>\ThrottleStop.ini.pre_tpl`, `<local>\ThrottleStop.ini.before_ratio_20261010_150757`, and the user-provided HWiNFO/ThrottleStop screenshots. The INI snapshots document saved state, not necessarily live hardware behavior.
