@@ -49,7 +49,7 @@ PowerLimitEDX0=0x004282A8  ; PL2 = 85 W
 OneAD_EAX0=0x2F2F2F2F      ; P-core turbo groups 1-4 = 47x
 OneAD_EDX0=0x2F2F2F2F      ; P-core turbo groups 5-8 = 47x
 Six50_EAX0=0x00000024      ; E-core turbo = 36x
-NoSetPL=0xE                ; TPL controls enabled for profile 0 (see docs/lessons.md: "Disable Controls")
+NoSetPL=0xE                ; TPL controls enabled for profile 0 (see docs/TROUBLESHOOTING.md: "Disable Controls")
 SaveOnExit=2
 ```
 

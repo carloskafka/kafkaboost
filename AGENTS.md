@@ -1,12 +1,11 @@
 # AGENTS.md — Legion 83DE ThrottleStop tuning
 
-Read this first, then `docs/lessons.md` before you change anything. This file is the current state; the history is in
-`docs/history/`.
+Read this first, then `docs/TROUBLESHOOTING.md` before you change anything. This file is the current state; the old plan files were folded into the docs (git history keeps them).
 
 ## Goal and state
 Stop the i9-14900HX in a Lenovo Legion 83DE (RTX 4090 Laptop, Windows 11) from hitting 100 C in CS2 and other games, with
 little FPS cost. **Done and verified (2026-10-10):** peak 90 C, no thermal throttling in a 19-minute CS2 session, game smooth,
-0 WHEA errors (see `docs/results.md`).
+0 WHEA errors (see `docs/RESULTS.md`).
 
 Live tuning (profile 0, saved in `ThrottleStop.ini`, applied at every logon by the scheduled task `ThrottleStop_Autostart`):
 
@@ -21,7 +20,7 @@ Live tuning (profile 0, saved in `ThrottleStop.ini`, applied at every logon by t
 1. **Do not deepen the undervolt.** WHEA 19 "Internal parity error" was logged at -100 mV. If it returns, use -80/-80/-70 mV.
 2. VBS/hypervisor stays **off** (required for FIVR). It breaks WSL2/Docker; `scripts/maintenance/restore_vbs.ps1` undoes it.
 3. ThrottleStop is elevated: automation needs an elevated PowerShell. Edit `ThrottleStop.ini` only with it stopped.
-4. Change one thing at a time and verify with `scripts/monitoring/hwinfo_logger.ps1`; keep the matched-run method in `docs/results.md`.
+4. Change one thing at a time and verify with `scripts/monitoring/hwinfo_logger.ps1`; keep the matched-run method in `docs/RESULTS.md`.
 5. Never raise the PROCHOT offset to hide throttle flags. Never start HWiNFO with command-line arguments.
 6. Installer code must stop only its **own** ThrottleStop copy.
 7. Do not commit anything from `local/` (backups, screenshots, raw reports, `HWMonitor.txt` with disk serials).
@@ -37,7 +36,7 @@ Live tuning (profile 0, saved in `ThrottleStop.ini`, applied at every logon by t
 | `scripts/monitoring/` | `hwinfo_logger.ps1`, `perf_logger.ps1` (output goes to `logs/`, git-ignored) |
 | `scripts/maintenance/` | `restore_vbs.ps1` |
 | `tests/` | Pester tests for the library |
-| `docs/` | `ini-reference.md`, `lessons.md`, `results.md`, `machine.md`, `history/` (original plans, historical) |
+| `docs/` | `CONFIGURATION.md` (INI keys and encoding), `TROUBLESHOOTING.md` (lessons, stop conditions), `RESULTS.md` (measurements, reference machine) |
 | `local/` | git-ignored: backups, evidence, experiments (not in the repo) |
 
 ## Useful commands

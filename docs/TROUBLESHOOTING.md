@@ -49,3 +49,20 @@ Read this before changing anything.
 - Lenovo's own limits (Legion Balance Mode) were PL1 80 W / PL2 119 W dynamic, 140/190 W static, PL4 246 W.
 - LatencyMon is secondary: the newest distinct report shows interrupt-to-process 6432 us, ISR 705 us (Wdf01000), DPC 1583 us;
   several saved reports were byte-identical copies, so check hashes before trusting "new" captures.
+
+## Test protocol, stop conditions and rollback
+
+Carried over from the original review plan, because they are still the right way to change anything:
+
+1. **Snapshot first.** Copy `ThrottleStop.ini` (the installer does this) and note the BIOS version, Lenovo mode and VBS state.
+   Keep the laptop on AC and in the same Lenovo mode for every comparison.
+2. **Matched runs.** Same route, duration, AC power, background load (VM/Docker/WSL) and ambient conditions; log with
+   `scripts/monitoring/hwinfo_logger.ps1`; reset or note HWiNFO/HWMonitor Max values for each run.
+3. **One variable per run.** Never combine voltage, boost cap, power limit and Lenovo mode in the same test.
+4. **Stop at once** on any new WHEA error, BSOD/restart, freeze, calculation error or unexplained app crash, and revert the
+   last change. A brief 90-93 C peak is fine; repeated thermal-throttle periods during the game segment are a failed result.
+5. **Keep a change only if** two matched runs show no new WHEA/instability, less sustained throttling, no clock collapse at the
+   stutter points, and stable or better frametimes (no more than 3 % regression in median 1 % lows).
+6. **Rollback:** revert only the last change through the ThrottleStop UI, or run the app's *Roll everything back* (restores the
+   newest `ThrottleStop.ini.bak_*`, removes the task). For undervolt instability go to offsets of zero rather than back to the
+   old aggressive INI (about -140 mV).

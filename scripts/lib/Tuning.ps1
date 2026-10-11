@@ -7,7 +7,7 @@ function Get-Defaults {
     Get-Content -LiteralPath $f -Raw | ConvertFrom-Json
 }
 
-# FIVR offset (negative mV) -> ThrottleStop.ini hex. field = 2048 - round(|mV| x 1.024), value = field << 21.  See docs/ini-reference.md
+# FIVR offset (negative mV) -> ThrottleStop.ini hex. field = 2048 - round(|mV| x 1.024), value = field << 21.  See docs/CONFIGURATION.md
 function ConvertTo-FivrHex([double]$mV) {
     $field = (2048 - [int][math]::Round([math]::Abs($mV) * 1.024)) -band 0x7FF
     if ($mV -eq 0) { return '0x00000000' }

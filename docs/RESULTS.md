@@ -19,3 +19,16 @@ Notes
 
 How to repeat: start HWiNFO (sensors only, `SensorsSM=1`), run `scripts/monitoring/hwinfo_logger.ps1 -Minutes 20`, play the
 same route, then compare the CSV in `logs/`.
+
+## Reference machine
+
+| Item | Value |
+|---|---|
+| Model | LENOVO 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"; the first notes said "Legion Pro 5 16IRX9 class") |
+| CPU | Intel Core i9-14900HX (8 P + 16 E, 24C/32T), TjMax 100 C |
+| GPU / RAM / OS | RTX 4090 Laptop / 32 GB / Windows 11 Home build 26300 |
+| Tools | ThrottleStop 9.7.3, HWiNFO64 8.30, LatencyMon |
+
+System changes made before the tuning (latency and background load): Nahimic, Razer Synapse 3 and NGENUITY removed; fixed
+16-32 GB page file; autostart entries (Epic, FACEIT, Spotify, G-Menu, Ollama, Edge, TightVNC, WingMan) disabled; Edge
+background mode disabled; VBS/hypervisor off so FIVR writes work.

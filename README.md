@@ -48,7 +48,7 @@ always-on startup → verify, plus a **Roll everything back** button. It calls t
 | PL1 / PL2 | 65 W / 85 W |
 | IccMax (core) | 511.75 A (max) |
 
-Encoding of the values is documented in `docs/ini-reference.md`. **The undervolt is silicon-specific.** This
+Encoding of the values is documented in `docs/CONFIGURATION.md`. **The undervolt is silicon-specific.** This
 chip logged a corrected WHEA "Internal parity error" at −100 mV, so do not go deeper; on a different
 CPU start with −80 mV and check Event Viewer → System → WHEA-Logger (event 19) after a few days.
 
@@ -79,7 +79,7 @@ stops working while it is on; the boost and power caps are separate and may stil
 - Model-specific: Lenovo Legion type 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"). Other models need
   their own limits.
 - The reasoning, measurements and every mistake along the way are in [`docs/`](docs) (start with
-  [`AGENTS.md`](AGENTS.md), then `docs/lessons.md`). Local-only material (screenshots, raw reports, experiment
+  [`AGENTS.md`](AGENTS.md), then `docs/TROUBLESHOOTING.md`). Local-only material (screenshots, raw reports, experiment
   scripts, INI snapshots) lives in the git-ignored `local/` folder and is intentionally not committed.
 
 ## Repository layout
@@ -90,6 +90,6 @@ app/                   Electron step-by-step wizard (src/, renderer/, Launch-Wiz
 config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json
 scripts/               Install-Tuning.ps1, Steps.ps1, lib/Tuning.ps1, monitoring/, maintenance/
 tests/                 Pester tests for the tuning library
-docs/                  ini-reference, lessons, results, machine, history/
+docs/                  CONFIGURATION, TROUBLESHOOTING, RESULTS
 local/                 git-ignored: backups, evidence, experiments
 ```

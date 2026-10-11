@@ -13,7 +13,7 @@ function New-Sandbox {
     return $d
 }
 
-Describe 'FIVR / V-F encoding (docs/ini-reference.md)' {
+Describe 'FIVR / V-F encoding (docs/CONFIGURATION.md)' {
     $cases = @{ 0 = '0x00000000'; -50 = '0xF9A00000'; -75 = '0xF6600000'; -90 = '0xF4800000'; -100 = '0xF3400000'
                 -115 = '0xF1400000'; -125 = '0xF0000000'; -140 = '0xEE200000' }
     It 'encodes negative offsets like the documented table' {
