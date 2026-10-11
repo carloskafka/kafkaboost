@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>Legion Tuning Wizard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="brand-name">Legion Tuning</div>
+          <div class="brand-sub">ThrottleStop wizard</div>
+        </div>
+      </div>
+      <ol id="stepper" class="stepper"></ol>
+      <div class="side-foot">
+        <label class="check"><input type="checkbox" id="restoreVbs"><span>Also re-enable VBS on rollback</span></label>
+        <button id="rollback" class="btn ghost danger" type="button">Roll everything back</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="banner" class="banner" hidden>
+        <span id="bannerText"></span>
+        <button id="bannerBtn" class="btn small" type="button">Restart as administrator</button>
+      </div>
+
+      <section id="unsupported" class="card center" hidden>
+        <div class="big-icon" aria-hidden="true">⚠</div>
+        <h1 id="unsupportedTitle">Not supported on this system</h1>
+        <p id="unsupportedText" class="muted"></p>
+      </section>
+
+      <section id="wizard" class="card" hidden>
+        <div class="kicker" id="kicker"></div>
+        <h1 id="title"></h1>
+        <p id="desc" class="muted"></p>
+        <ul id="changes" class="changes"></ul>
+
+        <div id="options" class="options"></div>
+
+        <div id="result" class="result" hidden></div>
+        <pre id="log" class="log" aria-live="polite"></pre>
+
+        <div class="actions">
+          <button id="run" class="btn primary" type="button">Run this step</button>
+          <button id="next" class="btn" type="button" disabled>Next ›</button>
+        </div>
+      </section>
+
+      <section id="finish" class="card center" hidden>
+        <div class="big-icon ok" aria-hidden="true">✓</div>
+        <h1>All steps finished</h1>
+        <p id="finishText" class="muted"></p>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

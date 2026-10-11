@@ -1,0 +1,84 @@
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { spawn, execFileSync } = require('child_process');
+const path = require('path');
+const os = require('os');
+
+const DEFAULT_INSTALL_DIR = 'C:\\Tools\\ThrottleStop';
+const scriptsDir = app.isPackaged ? path.join(process.resourcesPath, 'scripts') : path.join(__dirname, '..', 'scripts');
+
+function isAdmin() {
+  if (process.platform !== 'win32') return false;
+  try { execFileSync('net', ['session'], { stdio: 'ignore' }); return true; } catch { return false; }
+}
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1080, height: 720, minWidth: 900, minHeight: 620,
+    backgroundColor: '#0d1017', title: 'Legion Tuning Wizard',
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
+  });
+  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  return win;
+}
+
+ipcMain.handle('app:info', () => ({
+  platform: process.env.WIZARD_FAKE_PLATFORM || process.platform,   // win32 | linux | darwin (override is for UI tests only)
+  arch: process.arch,
+  isAdmin: isAdmin(),
+  cpu: (os.cpus()[0] || {}).model || 'unknown',
+  defaultInstallDir: DEFAULT_INSTALL_DIR
+}));
+
+// Runs scripts\Steps.ps1 -Step <id>. Streams "LOG:" lines to the renderer, resolves with the parsed "RESULT:" json.
+ipcMain.handle('step:run', (event, step, opts = {}) => new Promise((resolve) => {
+  if (process.platform !== 'win32') return resolve({ ok: false, message: 'Tuning steps are only available on Windows.' });
+  const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(scriptsDir, 'Steps.ps1'), '-Step', step,
+                '-InstallDir', opts.installDir || DEFAULT_INSTALL_DIR];
+  if (opts.zipPath) args.push('-ZipPath', opts.zipPath);
+  if (opts.disableVbs) args.push('-DisableVBS');
+  if (opts.restoreVbs) args.push('-RestoreVbs');
+  const ps = spawn('powershell.exe', args, { windowsHide: true });
+  let buf = '', result = null, stderr = '';
+  const handle = (line) => {
+    line = line.replace(/\r$/, '');
+    if (line.startsWith('LOG: ')) event.sender.send('step:log', step, line.slice(5));
+    else if (line.startsWith('RESULT: ')) { try { result = JSON.parse(line.slice(8)); } catch { /* ignore */ } }
+    else if (line.trim()) event.sender.send('step:log', step, line);
+  };
+  ps.stdout.on('data', (d) => { buf += d.toString('utf8'); let i; while ((i = buf.indexOf('\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 1); } });
+  ps.stderr.on('data', (d) => { stderr += d.toString('utf8'); });
+  ps.on('close', () => {
+    if (buf.trim()) handle(buf);
+    resolve(result || { ok: false, message: stderr.trim() || 'The step produced no result.' });
+  });
+  ps.on('error', (e) => resolve({ ok: false, message: e.message }));
+}));
+
+ipcMain.handle('dialog:zip', async () => {
+  const r = await dialog.showOpenDialog({ title: 'Select the ThrottleStop zip', properties: ['openFile'], filters: [{ name: 'Zip', extensions: ['zip'] }] });
+  return r.canceled ? null : r.filePaths[0];
+});
+
+ipcMain.handle('app:relaunchAdmin', () => {
+  if (process.platform !== 'win32') return false;
+  const argList = app.isPackaged ? '' : `-ArgumentList '"${app.getAppPath()}"'`;
+  spawn('powershell.exe', ['-NoProfile', '-Command', `Start-Process -FilePath '${process.execPath}' ${argList} -Verb RunAs`], { windowsHide: true, detached: true, stdio: 'ignore' }).unref();
+  app.quit();
+  return true;
+});
+
+ipcMain.handle('app:openExternal', (e, url) => { if (/^https:\/\/www\.techpowerup\.com\//.test(url)) return require('electron').shell.openExternal(url); });
+
+app.whenReady().then(() => {
+  const win = createWindow();
+  // Test helper: WIZARD_SCREENSHOT=<file.png> saves the window contents after the first detection and quits.
+  if (process.env.WIZARD_SCREENSHOT) {
+    win.webContents.once('did-finish-load', () => setTimeout(async () => {
+      const img = await win.webContents.capturePage();
+      require('fs').writeFileSync(process.env.WIZARD_SCREENSHOT, img.toPNG());
+      app.quit();
+    }, 6000));
+  }
+});
+app.on('window-all-closed', () => app.quit());
