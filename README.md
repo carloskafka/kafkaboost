@@ -82,3 +82,4 @@ stops working while it is on; the boost and power caps are separate and may stil
   `CS2_STUTTER_PLAN.md` and `CS2_STUTTER_FIX_PLAN.md`. Local-only material (screenshots, raw reports,
   experiment scripts, INI snapshots in `cs2_backup\`) is intentionally not committed.
 
+
