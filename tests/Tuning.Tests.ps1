@@ -1,22 +1,27 @@
-# Pester tests for scripts\lib\Tuning.ps1  (written for Pester 3.4, the version that ships with Windows; plain
-# `throw` assertions keep them runnable on newer Pester too).   Run:  Invoke-Pester tests
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
-. (Join-Path $here '..\scripts\lib\Tuning.ps1')
+# Pester tests for scripts\lib\Tuning.ps1 and scripts\lib\Health.ps1.
+# Written to run on Pester 3.4 (ships with Windows) and on Pester 5 (CI): setup lives in BeforeAll inside each
+# Describe, and assertions are plain `throw`s instead of `Should`.   Run:  Invoke-Pester tests
 
-function Assert-Equal($actual, $expected, $what) {
-    if ($actual -ne $expected) { throw "$what : expected '$expected' but got '$actual'" }
-}
-function New-Sandbox {
-    $d = Join-Path ([IO.Path]::GetTempPath()) ("tuning_test_" + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Force $d | Out-Null
-    Set-Content (Join-Path $d 'ThrottleStop.exe') 'fake' -Encoding ASCII   # never executed
-    return $d
+$script:Setup = {
+    $root = Join-Path $PSScriptRoot '..'
+    . (Join-Path $root 'scripts\lib\Tuning.ps1')
+    . (Join-Path $root 'scripts\lib\Health.ps1')
+    function Assert-Equal($actual, $expected, $what) {
+        if ($actual -ne $expected) { throw "$what : expected '$expected' but got '$actual'" }
+    }
+    function New-Sandbox {
+        $d = Join-Path ([IO.Path]::GetTempPath()) ("tuning_test_" + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Force $d | Out-Null
+        Set-Content (Join-Path $d 'ThrottleStop.exe') 'fake' -Encoding ASCII   # never executed
+        return $d
+    }
 }
 
 Describe 'FIVR / V-F encoding (docs/CONFIGURATION.md)' {
-    $cases = @{ 0 = '0x00000000'; -50 = '0xF9A00000'; -75 = '0xF6600000'; -90 = '0xF4800000'; -100 = '0xF3400000'
-                -115 = '0xF1400000'; -125 = '0xF0000000'; -140 = '0xEE200000' }
+    BeforeAll { . $script:Setup }
     It 'encodes negative offsets like the documented table' {
+        $cases = @{ 0 = '0x00000000'; -50 = '0xF9A00000'; -75 = '0xF6600000'; -90 = '0xF4800000'; -100 = '0xF3400000'
+                    -115 = '0xF1400000'; -125 = '0xF0000000'; -140 = '0xEE200000' }
         foreach ($k in $cases.Keys) { Assert-Equal (ConvertTo-FivrHex $k) $cases[$k] "FIVR $k mV" }
     }
     It 'encodes the V/F point 1 boost of +100 mV' {
@@ -25,6 +30,7 @@ Describe 'FIVR / V-F encoding (docs/CONFIGURATION.md)' {
 }
 
 Describe 'Get-Defaults' {
+    BeforeAll { . $script:Setup }
     It 'returns the install dir and task name from config/defaults.json' {
         $d = Get-Defaults
         Assert-Equal $d.taskName 'ThrottleStop_Autostart' 'taskName'
@@ -33,6 +39,7 @@ Describe 'Get-Defaults' {
 }
 
 Describe 'Merge-ThrottleStopSettings' {
+    BeforeAll { . $script:Setup }
     It 'replaces existing keys, appends new ones, keeps the rest and creates no duplicates' {
         $dir = New-Sandbox
         try {
@@ -68,14 +75,15 @@ Describe 'Merge-ThrottleStopSettings' {
             Assert-Equal ($second -join '|') ($first -join '|') 'second merge changes nothing'
         } finally { Remove-Item $dir -Recurse -Force }
     }
-    It 'ignores a ThrottleStop process that is not the one in the install dir' {
+    It 'only stops a ThrottleStop whose path is the install dir exe' {
         # Regression: an early installer killed every ThrottleStop.exe, including the user's live copy.
-        $src = Get-Content (Join-Path $here '..\scripts\lib\Tuning.ps1') -Raw
+        $src = Get-Content (Join-Path $PSScriptRoot '..\scripts\lib\Tuning.ps1') -Raw
         if ($src -notmatch 'Where-Object \{ \$_\.Path -eq \$exe \}') { throw 'Merge-ThrottleStopSettings must filter processes by Path' }
     }
 }
 
 Describe 'Test-Tuning' {
+    BeforeAll { . $script:Setup }
     It 'passes the ini check when all keys match and flags drift by key name' {
         $dir = New-Sandbox
         try {
@@ -99,9 +107,38 @@ Describe 'Test-Tuning' {
     }
 }
 
+Describe 'Health check helpers' {
+    BeforeAll { . $script:Setup }
+    It 'Compare-IniSettings reports changed and missing keys with expected and actual values' {
+        $d = Compare-IniSettings @('[ThrottleStop]', 'A=1', 'B=9') @('A=1', 'B=2', 'C=3')
+        Assert-Equal $d.Count 2 'drifted keys'
+        $b = $d | Where-Object { $_.key -eq 'B' }; Assert-Equal $b.expected '2' 'B expected'; Assert-Equal $b.actual '9' 'B actual'
+        $c = $d | Where-Object { $_.key -eq 'C' }; if ($null -ne $c.actual) { throw 'missing key should have a null actual value' }
+    }
+    It 'Compare-IniSettings is empty when everything matches (and ignores comments)' {
+        $d = Compare-IniSettings @('A=1', 'B=2') @('; comment', '', 'A=1', 'B=2')
+        Assert-Equal $d.Count 0 'no drift'
+    }
+    It 'Get-TurboCapMHz reads the lowest P-core ratio from the template' {
+        Assert-Equal (Get-TurboCapMHz @('OneAD_EAX0=0x2F2F2F2F', 'OneAD_EDX0=0x2F2F2F2F')) 4700 'uniform 47x'
+        Assert-Equal (Get-TurboCapMHz @('OneAD_EAX0=0x34343636', 'OneAD_EDX0=0x31313232')) 4900 'stock groups -> lowest is 49x'
+        if ($null -ne (Get-TurboCapMHz @('A=1'))) { throw 'no turbo keys should give $null' }
+    }
+    It 'Get-Verdict: fail beats warn beats ok, and info never counts' {
+        $ok   = [pscustomobject]@{ ok = $true;  severity = 'fail' }
+        $warn = [pscustomobject]@{ ok = $false; severity = 'warn' }
+        $fail = [pscustomobject]@{ ok = $false; severity = 'fail' }
+        $info = [pscustomobject]@{ ok = $false; severity = 'info' }
+        Assert-Equal (Get-Verdict @($ok, $info)) 'ok' 'info only'
+        Assert-Equal (Get-Verdict @($ok, $warn, $info)) 'warn' 'warn'
+        Assert-Equal (Get-Verdict @($ok, $warn, $fail)) 'fail' 'fail'
+    }
+}
+
 Describe 'Config template' {
+    BeforeAll { . $script:Setup }
     It 'keeps the tested values in config/ThrottleStop.settings.ini' {
-        $cfg = Get-Content (Join-Path $here '..\config\ThrottleStop.settings.ini')
+        $cfg = Get-Content (Join-Path $PSScriptRoot '..\config\ThrottleStop.settings.ini')
         foreach ($l in 'FIVRVoltage00=0xF3400000', 'FIVRVoltage20=0xF3400000', 'FIVRVoltage50=0xF4800000', 'VFPoint110=0x0CC00000',
                        'OneAD_EAX0=0x2F2F2F2F', 'OneAD_EDX0=0x2F2F2F2F', 'Six50_EAX0=0x00000024',
                        'PowerLimitEAX0=0x00DF8208', 'PowerLimitEDX0=0x004282A8') {

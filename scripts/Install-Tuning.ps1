@@ -36,6 +36,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\Tuning.ps1')
+. (Join-Path $PSScriptRoot 'lib\Health.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -76,6 +77,7 @@ if ($NoTask) { Warn 'task skipped (-NoTask)' }
 else {
     Step "Scheduled task '$TaskName' (logon + 5-min watchdog, highest privileges)"
     Ok "registered for $(Register-ThrottleStopTask $InstallDir $TaskName)"
+    Save-Baseline $InstallDir; Ok 'baseline saved (used by the health check to notice Windows updates)'
 }
 
 if ($HWiNFODir) {

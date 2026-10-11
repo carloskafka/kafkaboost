@@ -3,10 +3,10 @@
 .SYNOPSIS  Runs ONE wizard step and reports it as machine-readable lines for the Electron app.
 .DESCRIPTION
   Output protocol (stdout, one per line):  LOG: <text>   and a final   RESULT: <json {ok, message, data}>
-  Steps: detect | backup | get | vbs | apply | task | verify | rollback
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | rollback
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'rollback')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'rollback')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -19,6 +19,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleStop.settings.ini' }
 . (Join-Path $root 'lib\Tuning.ps1')
+. (Join-Path $root 'lib\Health.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -26,7 +27,7 @@ function Log($m) { Write-Output "LOG: $m" }
 function Done($ok, $msg, $data = $null) { Write-Output ("RESULT: " + (@{ ok = [bool]$ok; message = $msg; data = $data } | ConvertTo-Json -Depth 6 -Compress)) }
 
 try {
-    if ($Step -ne 'detect' -and $Step -ne 'verify' -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
+    if ($Step -ne 'detect' -and $Step -ne 'verify' -and $Step -ne 'health' -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
     switch ($Step) {
         'detect' {
@@ -61,6 +62,7 @@ try {
             $u = Register-ThrottleStopTask $InstallDir $TaskName
             $exe = Join-Path $InstallDir 'ThrottleStop.exe'
             if (-not (Get-Process ThrottleStop -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe })) { Start-Process -FilePath $exe -WorkingDirectory $InstallDir; Log 'ThrottleStop started' }
+            Save-Baseline $InstallDir; Log 'baseline saved (Windows build at setup time)'
             Done $true "Autostart + 5-minute watchdog registered for $u." }
         'verify' {
             $res = Test-Tuning $InstallDir $SettingsFile $TaskName
@@ -68,7 +70,18 @@ try {
             $bad = @($res | Where-Object { -not $_.ok }).Count
             Done ($bad -eq 0) $(if ($bad) { "$bad check(s) need attention." } else { 'Everything checks out.' }) $res
         }
-        'rollback' {
+        'health' {
+            $h = Get-HealthReport $InstallDir $SettingsFile $TaskName
+            $h.checks | ForEach-Object { Log ("{0}: {1} - {2}" -f $_.name, $(if ($_.ok) { 'OK' } else { 'ATTENTION' }), $_.detail) }
+            $msg = switch ($h.verdict) { 'ok' { 'Your PC is still optimized.' } 'warn' { 'Mostly fine, one thing needs a look.' } default { 'The optimization is not fully in place.' } }
+            Done ($h.verdict -ne 'fail') $msg $h
+        }
+        'fix' {
+            $l = Invoke-Fix $InstallDir $SettingsFile $TaskName -DisableVbs:$DisableVBS
+            $l | ForEach-Object { Log $_ }
+            $h = Get-HealthReport $InstallDir $SettingsFile $TaskName
+            Done ($h.verdict -ne 'fail') $(if ($h.verdict -eq 'ok') { 'Fixed. Your PC is optimized again.' } else { 'Applied what was possible; some items still need attention (see the list).' }) $h
+        }        'rollback' {
             $l = Invoke-Rollback $InstallDir $TaskName -RestoreVbs:$RestoreVbs
             $l | ForEach-Object { Log $_ }
             Done $true 'Rolled back.' $l
