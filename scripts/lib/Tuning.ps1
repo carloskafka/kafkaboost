@@ -33,6 +33,9 @@ function Get-HardwareInfo([string]$InstallDir, [string]$TaskName) {
     [pscustomobject]@{
         os                = 'windows'
         osVersion         = "$($os.Caption) (build $($os.BuildNumber))"
+        gpu               = ((Get-CimInstance Win32_VideoController | Where-Object { $_.Name -notmatch 'Microsoft|Basic' } | ForEach-Object { $_.Name }) -join ', ')
+        ramGB             = [int][math]::Round($cs.TotalPhysicalMemory / 1GB)
+        powerPlan         = $(if ((powercfg /getactivescheme) -match '\((.+)\)\s*$') { $Matches[1].Trim() } else { 'unknown' })
         manufacturer      = $cs.Manufacturer
         model             = $cs.Model
         cpu               = $cpu.Name.Trim()
