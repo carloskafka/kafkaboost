@@ -9,6 +9,9 @@
     "private":  true,
     "scripts":  {
                     "start":  "electron .",
+                    "demo":  "node -e \"process.env.WIZARD_DEMO=1;require(\u0027child_process\u0027).spawn(require(\u0027electron\u0027),[\u0027.\u0027],{stdio:\u0027inherit\u0027,env:process.env})\"",
+                    "icons":  "electron ../tools/make-icons.js",
+                    "shortcut":  "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/Create-Shortcut.ps1",
                     "dist":  "electron-builder --win"
                 },
     "build":  {
@@ -16,7 +19,8 @@
                   "productName":  "Legion Tuning Wizard",
                   "files":  [
                                 "src/**/*",
-                                "renderer/**/*"
+                                "renderer/**/*",
+                                "build/icon.png"
                             ],
                   "extraResources":  [
                                          {
@@ -36,7 +40,8 @@
                                              "nsis",
                                              "portable"
                                          ],
-                              "requestedExecutionLevel":  "requireAdministrator"
+                              "requestedExecutionLevel":  "requireAdministrator",
+                              "icon":  "build/icon.ico"
                           },
                   "nsis":  {
                                "oneClick":  false,

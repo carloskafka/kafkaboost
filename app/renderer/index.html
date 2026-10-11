@@ -3,21 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
-  <title>Legion Tuning Wizard</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'">
+  <title>Legion Tuning</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app">
     <aside class="side">
       <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
+        <img class="logo" src="icon.svg" alt="" width="40" height="40">
         <div>
           <div class="brand-name">Legion Tuning</div>
-          <div class="brand-sub">ThrottleStop wizard</div>
+          <div class="brand-sub">keep your PC cool and fast</div>
         </div>
       </div>
-      <ol id="stepper" class="stepper"></ol>
+
+      <nav class="nav" aria-label="Views">
+        <button class="nav-btn active" type="button" data-view="health"><span class="nav-ic" aria-hidden="true">♥</span>My PC</button>
+        <button class="nav-btn" type="button" data-view="wizard"><span class="nav-ic" aria-hidden="true">✦</span>Setup wizard</button>
+      </nav>
+
+      <ol id="stepper" class="stepper" hidden></ol>
+
       <div class="side-foot">
         <label class="check"><input type="checkbox" id="restoreVbs"><span>Also re-enable VBS on rollback</span></label>
         <button id="rollback" class="btn ghost danger" type="button">Roll everything back</button>
@@ -36,6 +44,38 @@
         <p id="unsupportedText" class="muted"></p>
       </section>
 
+      <!-- ===== My PC (health check) ===== -->
+      <section id="health" class="view" hidden>
+        <div id="hero" class="hero checking">
+          <div id="heroIcon" class="hero-icon" aria-hidden="true">…</div>
+          <div class="hero-text">
+            <div class="kicker">My PC</div>
+            <h1 id="heroTitle">Checking…</h1>
+            <p id="heroSub" class="muted"></p>
+          </div>
+          <div class="hero-actions">
+            <button id="check" class="btn" type="button">Check again</button>
+            <button id="fix" class="btn primary" type="button" hidden>Fix it</button>
+          </div>
+        </div>
+
+        <div id="updateNote" class="result warn" hidden></div>
+
+        <div id="tiles" class="tiles" hidden>
+          <div class="tile"><div class="tile-v" id="tTemp">–</div><div class="tile-l">CPU package</div></div>
+          <div class="tile"><div class="tile-v" id="tClock">–</div><div class="tile-l">Highest P-core clock</div></div>
+          <div class="tile"><div class="tile-v" id="tPower">–</div><div class="tile-l">Package power</div></div>
+        </div>
+
+        <div class="card">
+          <h2 class="h2">What I checked</h2>
+          <ul id="checks" class="checks"></ul>
+          <label id="vbsAllow" class="check" hidden><input type="checkbox" id="vbsAllowBox"><span>Allow "Fix it" to turn VBS/hypervisor off again (a security setting; breaks WSL2/Docker)</span></label>
+          <pre id="healthLog" class="log" hidden></pre>
+        </div>
+      </section>
+
+      <!-- ===== Setup wizard ===== -->
       <section id="wizard" class="card" hidden>
         <div class="kicker" id="kicker"></div>
         <h1 id="title"></h1>
@@ -57,6 +97,7 @@
         <div class="big-icon ok" aria-hidden="true">✓</div>
         <h1>All steps finished</h1>
         <p id="finishText" class="muted"></p>
+        <div class="actions center-actions"><button id="toHealth" class="btn primary" type="button">Open "My PC"</button></div>
       </section>
     </main>
   </div>

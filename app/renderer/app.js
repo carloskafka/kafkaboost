@@ -1,34 +1,107 @@
 'use strict';
 
 const STEPS = [
-  { id: 'detect', title: 'Detect your hardware', kicker: 'Safety check',
+  { id: 'detect', title: 'Detect your hardware', kicker: 'Step 0 · Safety check',
     desc: 'Reads your operating system, CPU and laptop model. The tuning values are specific to the Intel Core i9-14900HX, so the wizard refuses to continue on any other CPU.',
     changes: ['Nothing is changed in this step.'] },
-  { id: 'backup', title: 'Back up current settings', kicker: 'Step 2',
+  { id: 'backup', title: 'Back up current settings', kicker: 'Step 1',
     desc: 'Saves a timestamped copy of ThrottleStop.ini so you can always return to where you started.',
     changes: ['Creates ThrottleStop.ini.bak_<date> next to the ini (skipped on a fresh install).'] },
-  { id: 'get', title: 'Get ThrottleStop', kicker: 'Step 3',
+  { id: 'get', title: 'Get ThrottleStop', kicker: 'Step 2',
     desc: 'Unpacks ThrottleStop (tested with 9.7.3) into the install folder. Download the zip from TechPowerUp first and keep it in Downloads, or pick it manually.',
     changes: ['Extracts the zip to C:\\Tools\\ThrottleStop (or the folder you chose).'], options: ['zip'] },
-  { id: 'vbs', title: 'Turn off VBS / hypervisor', kicker: 'Step 4',
+  { id: 'vbs', title: 'Turn off VBS / hypervisor', kicker: 'Step 3',
     desc: 'ThrottleStop can only change CPU voltages while Windows virtualization-based security is off. This is a security setting, so it is your choice.',
     changes: ['bcdedit hypervisorlaunchtype off, VBS off, memory integrity off.', 'Breaks WSL2 and Docker (WSL2) until you roll back.', 'Needs a reboot to take effect.'], options: ['vbs'] },
-  { id: 'apply', title: 'Apply the tuning', kicker: 'Step 5',
+  { id: 'apply', title: 'Apply the tuning', kicker: 'Step 4',
     desc: 'Writes the tested profile into ThrottleStop.ini.',
     changes: ['Undervolt: -100 mV core and P-cache, -90 mV E-cache.', 'Boost caps: P-cores 47x (4.7 GHz), E-cores 36x (3.6 GHz).', 'Power limits: PL1 65 W / PL2 85 W.'] },
-  { id: 'task', title: 'Always-on startup', kicker: 'Step 6',
+  { id: 'task', title: 'Always-on startup', kicker: 'Step 5',
     desc: 'Registers a Windows scheduled task so ThrottleStop starts at every logon and a 5-minute watchdog brings it back if it is closed. It never starts a second copy.',
-    changes: ['Task "ThrottleStop_Autostart", highest privileges, no battery limits.', 'Starts ThrottleStop now.'] },
-  { id: 'verify', title: 'Verify', kicker: 'Final check',
+    changes: ['Task "ThrottleStop_Autostart", highest privileges, no battery limits.', 'Starts ThrottleStop now and remembers your Windows build for the health check.'] },
+  { id: 'verify', title: 'Verify', kicker: 'Step 6 · Final check',
     desc: 'Compares the saved settings with the profile and checks that ThrottleStop, the task and the hypervisor setting are in the expected state.',
     changes: ['Read-only. If VBS was just disabled, reboot first and run this again.'] }
 ];
 
 const $ = (id) => document.getElementById(id);
-const state = { index: 0, status: STEPS.map(() => 'idle'), info: null, zipPath: null, disableVbs: true, vbsRan: false, installDir: null };
+const state = { view: 'health', index: 0, status: STEPS.map(() => 'idle'), info: null, zipPath: null, disableVbs: true, vbsRan: false,
+                installDir: null, wizardStarted: false, health: null };
+const setText = (el, text) => { el.textContent = text; };
 
-function setText(el, text) { el.textContent = text; }
+// ---------------------------------------------------------------- views
+function showView(name) {
+  state.view = name;
+  document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
+  $('health').hidden = name !== 'health';
+  $('wizard').hidden = name !== 'wizard'; $('finish').hidden = true;
+  $('stepper').hidden = name !== 'wizard';
+  if (name === 'wizard') { renderStep(); if (!state.wizardStarted) { state.wizardStarted = true; runStep(true); } }
+}
 
+// ---------------------------------------------------------------- health ("My PC")
+const VERDICT = {
+  ok:   { cls: 'ok',   icon: '✓', title: 'Your PC is optimized' },
+  warn: { cls: 'warn', icon: '!', title: 'Almost there' },
+  fail: { cls: 'fail', icon: '✕', title: 'The optimization is not fully in place' }
+};
+
+function renderHealth(h, msg) {
+  state.health = h;
+  const v = VERDICT[h.verdict] || VERDICT.fail;
+  $('hero').className = 'hero ' + v.cls;
+  setText($('heroIcon'), v.icon); setText($('heroTitle'), v.title);
+  const when = h.checkedAt ? ' · checked ' + h.checkedAt.replace('T', ' ').slice(0, 16) : '';
+  setText($('heroSub'), (h.windows || '') + when);
+
+  const upd = (h.checks || []).find((c) => c.id === 'windows' && !c.ok);
+  $('updateNote').hidden = !upd; if (upd) setText($('updateNote'), '🛈  ' + upd.detail);
+
+  const live = h.live;
+  $('tiles').hidden = !live;
+  if (live) {
+    setText($('tTemp'), live.packageTempC != null ? live.packageTempC + ' °C' : '–');
+    setText($('tClock'), live.pClockMaxMHz != null ? (live.pClockMaxMHz / 1000).toFixed(2) + ' GHz' : '–');
+    setText($('tPower'), live.packagePowerW != null ? live.packagePowerW + ' W' : '–');
+  }
+
+  const ul = $('checks'); ul.textContent = '';
+  (h.checks || []).forEach((c) => {
+    const li = document.createElement('li'); li.className = 'check-row ' + (c.ok ? 'ok' : (c.severity === 'info' ? 'info' : c.severity === 'warn' ? 'warn' : 'fail'));
+    const ic = document.createElement('span'); ic.className = 'check-ic'; ic.textContent = c.ok ? '✓' : (c.severity === 'info' ? 'i' : '!');
+    const body = document.createElement('div');
+    const name = document.createElement('div'); name.className = 'check-name'; name.textContent = c.name;
+    const det = document.createElement('div'); det.className = 'check-detail'; det.textContent = c.detail;
+    body.append(name, det); li.append(ic, body); ul.append(li);
+  });
+
+  const fixable = (h.checks || []).some((c) => !c.ok && c.fix);
+  $('fix').hidden = !(fixable && h.verdict !== 'ok');
+  $('vbsAllow').hidden = !(h.checks || []).some((c) => c.id === 'vbs' && !c.ok);
+  if (msg) setText($('heroSub'), msg + ' · ' + (h.windows || ''));
+}
+
+async function runHealth() {
+  $('check').disabled = true; $('fix').disabled = true;
+  $('hero').className = 'hero checking'; setText($('heroIcon'), '…'); setText($('heroTitle'), 'Checking…');
+  const res = await window.wizard.runStep('health', { installDir: state.installDir });
+  $('check').disabled = false; $('fix').disabled = false;
+  if (res.data && res.data.checks) { renderHealth(res.data); return res.data; }
+  $('hero').className = 'hero fail'; setText($('heroIcon'), '✕'); setText($('heroTitle'), 'Could not check'); setText($('heroSub'), res.message || '');
+  return null;
+}
+
+async function runFix() {
+  $('check').disabled = true; $('fix').disabled = true;
+  setText($('heroTitle'), 'Fixing…');
+  const log = $('healthLog'); log.hidden = false; log.textContent = '';
+  const res = await window.wizard.runStep('fix', { installDir: state.installDir, disableVbs: $('vbsAllowBox').checked });
+  $('check').disabled = false; $('fix').disabled = false;
+  if (res.data && res.data.checks) renderHealth(res.data, res.message);
+  else { setText($('heroTitle'), 'Could not fix'); setText($('heroSub'), res.message || ''); }
+}
+
+// ---------------------------------------------------------------- setup wizard
 function renderStepper() {
   const ol = $('stepper'); ol.textContent = '';
   STEPS.forEach((s, i) => {
@@ -36,7 +109,7 @@ function renderStepper() {
     const st = state.status[i];
     li.className = [i === state.index ? 'active' : '', st !== 'idle' ? st : ''].join(' ').trim();
     const dot = document.createElement('span'); dot.className = 'dot';
-    dot.textContent = st === 'ok' ? '✓' : st === 'fail' ? '!' : String(i + 1);
+    dot.textContent = st === 'ok' ? '✓' : st === 'fail' ? '!' : String(i);
     const label = document.createElement('span'); label.textContent = s.title;
     li.append(dot, label); ol.append(li);
   });
@@ -105,29 +178,38 @@ function next() {
   else {
     $('wizard').hidden = true; $('finish').hidden = false;
     setText($('finishText'), state.vbsRan
-      ? 'Reboot Windows once so the VBS change takes effect, then open this app again and run "Verify". After that, ThrottleStop starts by itself at every logon.'
-      : 'ThrottleStop starts by itself at every logon and the watchdog keeps it running.');
+      ? 'Reboot Windows once so the VBS change takes effect, then open this app again: "My PC" will tell you whether everything is in place. After that, ThrottleStop starts by itself at every logon.'
+      : 'ThrottleStop starts by itself at every logon and the watchdog keeps it running. Open "My PC" any time (for example after a Windows update) to check that the optimization is still in place.');
   }
 }
 
 async function rollback() {
   if (!window.confirm('Remove the autostart task and restore the newest ThrottleStop.ini backup?')) return;
   const res = await window.wizard.runStep('rollback', { installDir: state.installDir, restoreVbs: $('restoreVbs').checked });
-  state.status = STEPS.map(() => 'idle'); state.index = 0; renderStep();
+  state.status = STEPS.map(() => 'idle'); state.index = 0; state.wizardStarted = true;
+  showView('wizard');
   showResult(res.ok ? 'ok' : 'fail', res.ok ? 'Rolled back: ' + (res.data || []).join('; ') : res.message);
 }
 
+// ---------------------------------------------------------------- start
 async function init() {
-  window.wizard.onLog((step, line) => { const log = $('log'); log.textContent += line + '\n'; log.scrollTop = log.scrollHeight; });
+  window.wizard.onLog((step, line) => {
+    const log = step === 'fix' ? $('healthLog') : $('log');
+    log.textContent += line + '\n'; log.scrollTop = log.scrollHeight;
+  });
   $('run').addEventListener('click', () => runStep(false));
   $('next').addEventListener('click', next);
   $('rollback').addEventListener('click', rollback);
+  $('check').addEventListener('click', runHealth);
+  $('fix').addEventListener('click', runFix);
+  $('toHealth').addEventListener('click', () => { showView('health'); runHealth(); });
+  document.querySelectorAll('.nav-btn').forEach((b) => b.addEventListener('click', () => { showView(b.dataset.view); if (b.dataset.view === 'health') runHealth(); }));
 
   const info = await window.wizard.info();
   state.info = info; state.installDir = info.defaultInstallDir;
   if (info.platform !== 'win32') {
     const name = info.platform === 'darwin' ? 'macOS' : 'Linux';
-    $('stepper').textContent = ''; $('unsupported').hidden = false; document.querySelector('.side-foot').hidden = true;
+    document.querySelector('.nav').hidden = true; $('stepper').hidden = true; $('unsupported').hidden = false; document.querySelector('.side-foot').hidden = true;
     setText($('unsupportedTitle'), name + ' is not supported yet');
     setText($('unsupportedText'), info.platform === 'darwin'
       ? 'This tuning relies on ThrottleStop and Intel FIVR voltage controls, which only exist on Windows. macOS has no equivalent for this CPU. Detected: ' + info.cpu + '.'
@@ -136,11 +218,13 @@ async function init() {
   }
   if (!info.isAdmin) {
     $('banner').hidden = false;
-    setText($('bannerText'), 'Administrator rights are needed to change settings (steps 2–6).');
+    setText($('bannerText'), 'Administrator rights are needed to fix or change settings. Checking works without them.');
     $('bannerBtn').addEventListener('click', () => window.wizard.relaunchAdmin());
   }
-  renderStep();
-  runStep(true);   // hardware detection runs automatically
+  // Home = health check when the tuning was set up before; otherwise start the wizard.
+  showView('health');
+  const h = await runHealth();
+  if (h && h.installed === false) showView('wizard');
 }
 
 init();

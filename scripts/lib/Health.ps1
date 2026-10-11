@@ -124,6 +124,7 @@ function Get-HealthReport([string]$InstallDir, [string]$SettingsFile, [string]$T
 
     [pscustomobject]@{
         verdict = (Get-Verdict $checks)
+        installed = (Test-Path -LiteralPath $ini)
         checks = @($checks)
         live = $live
         baseline = $base

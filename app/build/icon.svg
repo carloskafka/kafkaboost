@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Legion Tuning">
+  <!-- CPU chip with a gauge whose needle rests in the green (cool) zone. Source of every icon size: tools/make-icons.js -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b7cff"/>
+      <stop offset="1" stop-color="#b05cff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.2" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#bg)"/>
+  <rect width="256" height="256" rx="58" fill="url(#glow)"/>
+  <!-- pins -->
+  <g stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.92">
+    <path d="M92 44v22M116 44v22M140 44v22M164 44v22"/>
+    <path d="M92 190v22M116 190v22M140 190v22M164 190v22"/>
+    <path d="M44 92h22M44 116h22M44 140h22M44 164h22"/>
+    <path d="M190 92h22M190 116h22M190 140h22M190 164h22"/>
+  </g>
+  <!-- die -->
+  <rect x="64" y="64" width="128" height="128" rx="28" fill="#ffffff"/>
+  <rect x="64" y="64" width="128" height="128" rx="28" fill="none" stroke="#1b2340" stroke-opacity="0.12" stroke-width="3"/>
+  <!-- gauge: green / amber / red arcs, needle in green -->
+  <g fill="none" stroke-width="10" stroke-linecap="round">
+    <path d="M90 142A38 38 0 0 1 109 109.1" stroke="#2fd39a"/>
+    <path d="M115 105.6A38 38 0 0 1 141 105.6" stroke="#f5b93e"/>
+    <path d="M147 109.1A38 38 0 0 1 166 142" stroke="#ff6b81"/>
+  </g>
+  <path d="M128 142L103 126" stroke="#1b2340" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="128" cy="142" r="9" fill="#1b2340"/>
+  <circle cx="128" cy="142" r="3.5" fill="#ffffff"/>
+  <!-- cool tick under the gauge -->
+  <path d="M104 168h48" stroke="#2fd39a" stroke-width="7" stroke-linecap="round"/>
+</svg>

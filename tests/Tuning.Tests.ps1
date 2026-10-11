@@ -2,23 +2,8 @@
 # Written to run on Pester 3.4 (ships with Windows) and on Pester 5 (CI): setup lives in BeforeAll inside each
 # Describe, and assertions are plain `throw`s instead of `Should`.   Run:  Invoke-Pester tests
 
-$script:Setup = {
-    $root = Join-Path $PSScriptRoot '..'
-    . (Join-Path $root 'scripts\lib\Tuning.ps1')
-    . (Join-Path $root 'scripts\lib\Health.ps1')
-    function Assert-Equal($actual, $expected, $what) {
-        if ($actual -ne $expected) { throw "$what : expected '$expected' but got '$actual'" }
-    }
-    function New-Sandbox {
-        $d = Join-Path ([IO.Path]::GetTempPath()) ("tuning_test_" + [guid]::NewGuid().ToString('N'))
-        New-Item -ItemType Directory -Force $d | Out-Null
-        Set-Content (Join-Path $d 'ThrottleStop.exe') 'fake' -Encoding ASCII   # never executed
-        return $d
-    }
-}
-
 Describe 'FIVR / V-F encoding (docs/CONFIGURATION.md)' {
-    BeforeAll { . $script:Setup }
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
     It 'encodes negative offsets like the documented table' {
         $cases = @{ 0 = '0x00000000'; -50 = '0xF9A00000'; -75 = '0xF6600000'; -90 = '0xF4800000'; -100 = '0xF3400000'
                     -115 = '0xF1400000'; -125 = '0xF0000000'; -140 = '0xEE200000' }
@@ -30,7 +15,7 @@ Describe 'FIVR / V-F encoding (docs/CONFIGURATION.md)' {
 }
 
 Describe 'Get-Defaults' {
-    BeforeAll { . $script:Setup }
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
     It 'returns the install dir and task name from config/defaults.json' {
         $d = Get-Defaults
         Assert-Equal $d.taskName 'ThrottleStop_Autostart' 'taskName'
@@ -39,7 +24,7 @@ Describe 'Get-Defaults' {
 }
 
 Describe 'Merge-ThrottleStopSettings' {
-    BeforeAll { . $script:Setup }
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
     It 'replaces existing keys, appends new ones, keeps the rest and creates no duplicates' {
         $dir = New-Sandbox
         try {
@@ -83,7 +68,7 @@ Describe 'Merge-ThrottleStopSettings' {
 }
 
 Describe 'Test-Tuning' {
-    BeforeAll { . $script:Setup }
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
     It 'passes the ini check when all keys match and flags drift by key name' {
         $dir = New-Sandbox
         try {
@@ -108,7 +93,7 @@ Describe 'Test-Tuning' {
 }
 
 Describe 'Health check helpers' {
-    BeforeAll { . $script:Setup }
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
     It 'Compare-IniSettings reports changed and missing keys with expected and actual values' {
         $d = Compare-IniSettings @('[ThrottleStop]', 'A=1', 'B=9') @('A=1', 'B=2', 'C=3')
         Assert-Equal $d.Count 2 'drifted keys'
@@ -136,7 +121,7 @@ Describe 'Health check helpers' {
 }
 
 Describe 'Config template' {
-    BeforeAll { . $script:Setup }
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
     It 'keeps the tested values in config/ThrottleStop.settings.ini' {
         $cfg = Get-Content (Join-Path $PSScriptRoot '..\config\ThrottleStop.settings.ini')
         foreach ($l in 'FIVRVoltage00=0xF3400000', 'FIVRVoltage20=0xF3400000', 'FIVRVoltage50=0xF4800000', 'VFPoint110=0x0CC00000',

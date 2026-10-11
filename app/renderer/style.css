@@ -93,3 +93,52 @@ h1 { margin: 6px 0 8px; font-size: 26px; letter-spacing: .1px; }
 [hidden] { display: none !important; }
 @media (max-width: 860px) { .app { grid-template-columns: 1fr; } .side { display: none; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---- nav (My PC / Setup wizard) ---- */
+.nav { display: flex; flex-direction: column; gap: 6px; }
+.nav-btn {
+  appearance: none; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+  padding: 11px 12px; border-radius: 11px; border: 1px solid transparent; background: transparent; color: var(--muted); font: inherit; font-weight: 600;
+}
+.nav-btn:hover { background: rgba(255,255,255,.03); color: var(--text); }
+.nav-btn.active { background: var(--panel-2); color: var(--text); border-color: var(--line); }
+.nav-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav-ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; background: var(--panel-2); border: 1px solid var(--line); }
+.nav-btn.active .nav-ic { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; }
+.logo { border-radius: 11px; box-shadow: 0 6px 22px rgba(108,140,255,.35); flex: none; }
+
+/* ---- My PC ---- */
+.view { display: flex; flex-direction: column; gap: 16px; }
+.hero {
+  display: flex; align-items: center; gap: 22px; padding: 26px 28px; border-radius: var(--radius); border: 1px solid var(--line);
+  background: linear-gradient(135deg, rgba(108,140,255,.10), rgba(179,108,255,.06)), var(--panel);
+}
+.hero-icon { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; font-size: 38px; font-weight: 700; flex: none; border: 2px solid var(--line); color: var(--muted); }
+.hero.ok { border-color: rgba(56,211,159,.45); background: linear-gradient(135deg, rgba(56,211,159,.12), rgba(108,140,255,.05)), var(--panel); }
+.hero.ok .hero-icon { color: var(--ok); border-color: var(--ok); background: rgba(56,211,159,.12); box-shadow: 0 0 34px rgba(56,211,159,.25); }
+.hero.warn { border-color: rgba(245,185,62,.45); background: linear-gradient(135deg, rgba(245,185,62,.12), rgba(108,140,255,.04)), var(--panel); }
+.hero.warn .hero-icon { color: var(--warn); border-color: var(--warn); background: rgba(245,185,62,.12); }
+.hero.fail { border-color: rgba(255,107,129,.45); background: linear-gradient(135deg, rgba(255,107,129,.12), rgba(108,140,255,.04)), var(--panel); }
+.hero.fail .hero-icon { color: var(--bad); border-color: var(--bad); background: rgba(255,107,129,.12); }
+.hero.checking .hero-icon { animation: pulse 1s ease-in-out infinite; }
+.hero-text { flex: 1; min-width: 0; }
+.hero-text h1 { margin: 4px 0 4px; }
+.hero-text .muted { margin: 0; }
+.hero-actions { display: flex; gap: 10px; flex: none; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.tile-v { font-size: 26px; font-weight: 700; letter-spacing: .2px; }
+.tile-l { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.h2 { margin: 0 0 12px; font-size: 16px; }
+.checks { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.check-row { display: flex; gap: 14px; align-items: flex-start; padding: 10px 12px; border-radius: 11px; }
+.check-row:hover { background: rgba(255,255,255,.025); }
+.check-ic { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none; margin-top: 1px; border: 1px solid var(--line); }
+.check-row.ok .check-ic { color: var(--ok); border-color: rgba(56,211,159,.5); background: rgba(56,211,159,.12); }
+.check-row.warn .check-ic { color: var(--warn); border-color: rgba(245,185,62,.5); background: rgba(245,185,62,.12); }
+.check-row.fail .check-ic { color: var(--bad); border-color: rgba(255,107,129,.5); background: rgba(255,107,129,.12); }
+.check-row.info .check-ic { color: var(--accent); border-color: rgba(108,140,255,.5); background: rgba(108,140,255,.12); }
+.check-name { font-weight: 600; }
+.check-detail { color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.center-actions { justify-content: center; margin-top: 8px; }
+@media (max-width: 1000px) { .hero { flex-wrap: wrap; } .tiles { grid-template-columns: 1fr; } }
