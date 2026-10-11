@@ -1,95 +1,143 @@
-# Legion 83DE (i9-14900HX) — ThrottleStop tuning, plug and play
+> **Live docs → <https://carloskafka.github.io/legion-14900hx-throttlestop/#/overview>**
+> The same content with the app walkthrough, screenshot by screenshot, from the hardware check to the last step.
 
-Stops the CPU from hitting 100 °C in CS2 and other games, without noticeable FPS loss, and
-makes the whole setup reproducible after a Windows reinstall.
+<p align="center"><img src="docs/apple-touch-icon.png" alt="Legion Tuning icon: a CPU chip with a gauge needle in the green zone" width="96"></p>
 
-| Result on the original machine (19-min CS2 sessions) | Before | After |
+# Legion Tuning — keep a gaming laptop under 100 °C
+
+A guided, reversible [ThrottleStop](https://www.techpowerup.com/download/techpowerup-throttlestop/) tuning for the **Lenovo Legion 83DE
+(Intel Core i9-14900HX)**: undervolt, boost-clock caps and power limits, a one-click installer, an always-on watchdog, and an
+Electron app whose **My PC** screen tells you whether the optimization is still in place after a Windows update.
+
+## What This Project Does
+
+It lowers the CPU's heat (voltage, boost ratios, power limits) and makes sure the tuning is applied at every logon and stays applied.
+
+| Result on the reference laptop (19-min CS2 sessions) | Before | After |
 |---|---|---|
 | Peak CPU temperature | 99–100 °C | **90 °C**, no thermal throttling |
 | Peak package power | 139 W | 73 W |
 | Peak P-core clock | 5.39 GHz | 4.69 GHz (47x) |
 
-## Quick start (new / freshly formatted Windows)
+Measured with HWiNFO shared memory; the "before" figures are maxima from screenshots, not a controlled A/B test. FPS was not
+measured (the game felt as smooth). See [`docs/RESULTS.md`](docs/RESULTS.md).
 
-1. Download ThrottleStop (tested with **9.7.3**) from
-   <https://www.techpowerup.com/download/techpowerup-throttlestop/> and leave the `.zip` in `Downloads`.
-2. Clone or download this repo, then double-click **`install.cmd`** (it asks for administrator rights).
-3. Answer **y** to the VBS question (needed for undervolting; breaks WSL2/Docker-WSL2, see below), or
-   run `install.cmd -DisableVBS` to skip the prompt.
-4. **Reboot.** ThrottleStop now starts at every logon, with the settings applied.
-5. Check the result: ThrottleStop → **FIVR** (offsets −0.0996 / −0.0996 / −0.0898, Turbo Groups 47,
-   E-cores 36) and **TPL** (PL1 65 / PL2 85, "Disable Controls" unchecked).
+## The problem it solves
 
-Useful options: `-InstallDir "D:\ThrottleStop"`, `-ZipPath <zip>`, `-SkipVBS`, `-NoStart`,
-`-HWiNFODir <dir>` (enables shared-memory logging), `-TaskOnly` (only re-register the autostart task).
+- **Stutter that grows with session length:** the CPU hits 100 °C, throttles, frame times spike — in CS2 and every other game.
+- **The fix is scattered and easy to get wrong:** undervolt values, boost-ratio bytes, power-limit encodings and hidden checkboxes
+  are copied between forum threads and are specific to a chip. One hidden checkbox ("Disable Controls") silently blocked every
+  power limit we set.
+- **It does not survive:** ThrottleStop is not a service. Close it, reboot without it, or take a Windows update (which can switch
+  VBS back on and lock the voltage controls) and the laptop quietly returns to stock heat.
+- **It is easy to go too far:** aggressive undervolts on 13th/14th-gen chips cause silent errors or degradation; without backups
+  and a baseline you cannot tell.
 
-## Desktop wizard (Electron, `app/`)
+This project gives you a **guided and reversible** setup, an **always-on** watchdog, and a **health check** with a one-click *Fix it*.
 
-A step-by-step app with a button per step: detect hardware → back up → get ThrottleStop → VBS choice → apply →
-always-on startup → verify, plus a **Roll everything back** button. It calls the same PowerShell logic as
-`install.cmd` (`scripts\Steps.ps1` + `scripts\lib\Tuning.ps1`), so there is one tested code path.
+## Quick Start
 
-- **Run it:** double-click `app\Launch-Wizard.cmd` (asks for administrator rights, installs Electron on first run;
-  needs Node.js). For a desktop-shortcut installer run `npm run dist` inside `app\` (electron-builder, Windows
-  NSIS + portable `.exe`, requests administrator rights) — *packaging is configured but not built/tested yet*.
-- **OS detection:** the app checks the OS at startup. Windows + i9-14900HX gets the wizard; Linux/macOS (or another
-  CPU) get an explanation screen, because ThrottleStop/FIVR only exist on Windows.
-- Tested: UI renders, hardware detection and verify run against the real machine, unsupported-OS screen.
-  Not tested: the destructive steps through the UI (they were tested through `Install-Tuning.ps1`).
-## What gets applied (`config\ThrottleStop.settings.ini`, profile 0)
+### 1. Prerequisites
+- Windows 11 on a Lenovo Legion 83DE with an i9-14900HX (other systems are refused), administrator rights, laptop plugged in.
+- The ThrottleStop zip (tested with **9.7.3**) from [TechPowerUp](https://www.techpowerup.com/download/techpowerup-throttlestop/),
+  left in `Downloads`.
+- Optional: Node.js 20+ to run the app from a clone.
+
+### 2. Install
+Double-click **`install.cmd`** (asks for administrator rights), answer **y** to the VBS question (needed for the undervolt; breaks
+WSL2/Docker until restored), then **reboot**. Or open the app with **`app\Launch-Wizard.cmd`** and follow the *Setup wizard*.
+
+```
+install.cmd -DisableVBS                      # no prompt
+install.cmd -InstallDir "D:\ThrottleStop" -SkipVBS
+```
+Options: `-InstallDir`, `-ZipPath <zip>`, `-SkipVBS`, `-NoStart`, `-HWiNFODir <dir>`, `-TaskOnly`.
+
+### 3. Check it and make a shortcut
+Open the app: **My PC** should say *Your PC is optimized*. Create a desktop and Start Menu shortcut with the app icon (the
+"run as administrator" flag is set):
+
+```powershell
+powershell -File scripts\Create-Shortcut.ps1
+```
+
+## The app (`app/`)
+
+| My PC — health check | After a Windows update |
+|---|---|
+| <img src="docs/assets/health-ok.png" alt="My PC: your PC is optimized"> | <img src="docs/assets/health-attention.png" alt="My PC: settings drifted after a Windows update, Fix it button"> |
+
+*My PC* compares the settings, the startup task, VBS and the Windows build with the moment you set it up, shows live temperature,
+clock and power (when HWiNFO sensors are available) and offers **Fix it**, which re-applies only what drifted. The *Setup wizard*
+walks through step 0 (hardware check) to step 6 (verify) with a **Roll everything back** button; every step is in the
+[live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/#/walkthrough). Screenshots come from demo mode
+(`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
+
+## What gets applied (`config/ThrottleStop.settings.ini`, profile 0)
 
 | Setting | Value |
 |---|---|
 | CPU Core / P-cache undervolt | −100 mV / −100 mV |
 | E-cache undervolt | −90 mV |
 | V/F point 1 (800 MHz) "mV Boost" | +100 mV |
-| P-core turbo cap (all groups) | 47x |
-| E-core turbo cap | 36x |
+| P-core / E-core turbo cap | 47x (4.7 GHz) / 36x (3.6 GHz) |
 | PL1 / PL2 | 65 W / 85 W |
 | IccMax (core) | 511.75 A (max) |
 
-Encoding of the values is documented in `docs/CONFIGURATION.md`. **The undervolt is silicon-specific.** This
-chip logged a corrected WHEA "Internal parity error" at −100 mV, so do not go deeper; on a different
-CPU start with −80 mV and check Event Viewer → System → WHEA-Logger (event 19) after a few days.
+**The undervolt is silicon-specific.** This chip logged a corrected WHEA "Internal parity error" at −100 mV, so do not go deeper; on
+a different CPU these values are not a recipe. Encoding and every key: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 
-## "Always running"
+## Always running
 
-The installer registers the task `ThrottleStop_Autostart`: at logon, highest privileges, no battery or
-time limits, **plus a 5-minute watchdog** that starts ThrottleStop only if it is not running (no
-duplicates). If you exit it from the tray it comes back within 5 minutes. To stop it for real, disable
-the task in Task Scheduler.
+The installer registers the task `ThrottleStop_Autostart`: at logon, highest privileges, no battery or time limits, **plus a
+5-minute watchdog** that starts ThrottleStop only if it is not running (never a second copy).
 
 ## Monitoring
 
-- `config\HWiNFO64.INI` turns on HWiNFO shared memory (`SensorsSM=1`). Never launch HWiNFO with
-  command-line arguments (the free version shows an error).
-- `scripts\monitoring\hwinfo_logger.ps1` logs temps, clocks, power and throttle flags every 2 s to `logs\hwinfo_log.csv` (git-ignored).
-- `scripts\monitoring\perf_logger.ps1` logs CPU frequency / memory counters (needs a UTF-8 BOM, pt-BR counters).
+- `config\HWiNFO64.INI` turns on HWiNFO shared memory (`SensorsSM=1`). Never launch HWiNFO with command-line arguments (the free
+  version shows an error).
+- `scripts\monitoring\hwinfo_logger.ps1` logs temperatures, clocks, power and throttle flags every 2 s to `logs\hwinfo_log.csv`.
+- `scripts\monitoring\perf_logger.ps1` logs CPU frequency / memory counters (UTF-8 BOM, pt-BR counter names).
 
 ## Restoring WSL2 / Docker
 
-`scripts\maintenance\restore_vbs.ps1` (as administrator, then reboot) re-enables VBS/the hypervisor. The undervolt
-stops working while it is on; the boost and power caps are separate and may still apply.
+`scripts\maintenance\restore_vbs.ps1` (as administrator, then reboot) re-enables VBS and the hypervisor. The undervolt stops working
+while it is on; the boost and power caps are separate and may still apply.
 
 ## Limitations
 
-- **Not tested on a fresh Windows install.** Tested here: unpacking from a zip, creating/merging the
-  INI, registering the task, and the watchdog (no duplicates, restarts when closed).
-- ThrottleStop is not redistributed here; download it yourself.
-- Model-specific: Lenovo Legion type 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"). Other models need
-  their own limits.
-- The reasoning, measurements and every mistake along the way are in [`docs/`](docs) (start with
-  [`AGENTS.md`](AGENTS.md), then `docs/TROUBLESHOOTING.md`). Local-only material (screenshots, raw reports, experiment
-  scripts, INI snapshots) lives in the git-ignored `local/` folder and is intentionally not committed.
+- **Not tested on a fresh Windows install.** Tested: unpacking from a zip, creating/merging the INI, registering the task, the
+  watchdog (no duplicates, restarts when closed), the health check and the demo UI. Not tested: the changing wizard steps through
+  the UI, the Windows installer package (`npm run dist` is configured, not built).
+- ThrottleStop and HWiNFO are not redistributed here; download them yourself.
+- Model-specific: Lenovo Legion type 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"). Other models need their own limits.
+- Changing CPU voltages can cause instability. Use at your own risk.
 
-## Repository layout
+## Documentation
+
+| Document | What |
+|---|---|
+| [`docs/getting-started.md`](docs/getting-started.md) | step-by-step onboarding |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | how the app, step runner and library fit together |
+| [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) | INI keys, voltage encoding, community comparison |
+| [`docs/TESTING.md`](docs/TESTING.md) | unit tests, demo mode, testing a tuning change safely |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | lessons learned, stop conditions, rollback |
+| [`docs/RESULTS.md`](docs/RESULTS.md) | measurements and the reference machine |
+| [`AGENTS.md`](AGENTS.md) | current state, rules and repo map for contributors (human or AI) |
+
+### Repository layout
 
 ```
 install.cmd            one-click installer (self-elevates)
-app/                   Electron step-by-step wizard (src/, renderer/, Launch-Wizard.cmd)
+app/                   Electron app: src/ (main, preload, demo), renderer/, build/ (icons), Launch-Wizard.cmd
 config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json
-scripts/               Install-Tuning.ps1, Steps.ps1, lib/Tuning.ps1, monitoring/, maintenance/
-tests/                 Pester tests for the tuning library
-docs/                  CONFIGURATION, TROUBLESHOOTING, RESULTS
+scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/, monitoring/, maintenance/
+tests/                 Pester tests for the library
+tools/                 make-icons.js, make-shots.ps1
+docs/                  GitHub Pages site (index.html, assets/, favicons) and the reference documents
 local/                 git-ignored: backups, evidence, experiments
 ```
+
+## License
+
+No license has been chosen yet, so all rights are reserved by default. Open an issue if you want to reuse the code.
