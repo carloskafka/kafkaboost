@@ -23,6 +23,7 @@
         <button class="nav-btn active" type="button" data-view="health"><span class="nav-ic" aria-hidden="true">♥</span><span data-i18n="nav.dashboard">Dashboard</span></button>
         <button class="nav-btn" type="button" data-view="analysis"><span class="nav-ic" aria-hidden="true">◎</span><span data-i18n="nav.analysis">System analysis</span></button>
         <button class="nav-btn" type="button" data-view="optimizations"><span class="nav-ic" aria-hidden="true">✦</span><span data-i18n="nav.optimizations">Optimizations</span></button>
+        <button class="nav-btn" type="button" data-view="cleanup"><span class="nav-ic" aria-hidden="true">♻</span><span data-i18n="nav.cleanup">Cleanup</span></button>
         <button class="nav-btn" type="button" data-view="restore"><span class="nav-ic" aria-hidden="true">↺</span><span data-i18n="nav.restore">Restore</span></button>
         <button class="nav-btn" type="button" data-view="settings"><span class="nav-ic" aria-hidden="true">⚙</span><span data-i18n="nav.settings">Settings</span></button>
         <button class="nav-btn" type="button" data-view="help"><span class="nav-ic" aria-hidden="true">?</span><span data-i18n="nav.help">Help</span></button>
@@ -154,6 +155,24 @@
       </section>
 
       <!-- ===== Restore ===== -->
+      <section id="cleanup" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <div class="kicker" data-i18n="cleanup.kicker"></div>
+            <h1 data-i18n="cleanup.title"></h1>
+            <p class="muted" data-i18n="cleanup.intro"></p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="clean-top"><span id="cleanLast" class="muted"></span>
+            <button id="cleanScan" class="btn small" type="button" data-i18n="cleanup.scan"></button></div>
+          <div id="cleanList" class="clean-list"></div>
+          <div class="clean-foot"><span id="cleanSelected" class="muted"></span>
+            <button id="cleanRun" class="btn primary" type="button" data-i18n="cleanup.run" disabled></button></div>
+          <div id="cleanResult" class="result" hidden></div>
+        </div>
+      </section>
+
       <section id="restore" class="view" hidden>
         <div class="page-head">
           <div>
@@ -317,6 +336,7 @@
   <script src="js/wizard.js"></script>
   <script src="js/restore.js"></script>
   <script src="js/optimizations.js"></script>
+<script src="js/cleanup.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/updates.js"></script>
   <script src="js/boot.js"></script>

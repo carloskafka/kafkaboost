@@ -14,10 +14,11 @@
     const okBtn = $('cfOk'); okBtn.textContent = ok; okBtn.className = 'btn small ' + (danger ? 'danger-fill' : 'primary');
     const dlg = $('confirmDlg');
     let settled = false;
-    const finish = (v) => { if (settled) return; settled = true; okBtn.onclick = null; $('cfCancel').onclick = null; resolve(v); };
+    const onClose = () => { if (!dlg.open) finish(false); };   // Esc (a stale close event from the previous dialog arrives while this one is open: ignore it)
+    const finish = (v) => { if (settled) return; settled = true; okBtn.onclick = null; $('cfCancel').onclick = null; dlg.removeEventListener('close', onClose); resolve(v); };
     okBtn.onclick = () => { finish(true); dlg.close(); };
     $('cfCancel').onclick = () => { finish(false); dlg.close(); };
-    dlg.addEventListener('close', () => finish(false), { once: true });   // Esc
+    dlg.addEventListener('close', onClose);
     dlg.showModal();
   });
 

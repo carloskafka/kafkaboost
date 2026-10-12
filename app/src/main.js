@@ -96,6 +96,7 @@ function runStep(step, opts = {}, onLog = () => {}) {
     if (opts.download && !opts.zipPath) args.push('-Download');
     if (opts.tweakId) args.push('-TweakId', String(opts.tweakId), '-TweakMode', opts.tweakMode === 'off' ? 'off' : 'on');
     if (opts.allowRisky) args.push('-AllowRisky');
+    if (opts.cleanupIds && /^[a-z,-]+$/.test(opts.cleanupIds)) args.push('-CleanupIds', opts.cleanupIds);
     if (opts.disableVbs) args.push('-DisableVBS');
     if (opts.restoreVbs) args.push('-RestoreVbs');
     if (opts.mode) args.push('-Mode', opts.mode);

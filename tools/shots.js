@@ -32,6 +32,8 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     await click('[data-view=optimizations]'); await sleep(1200); await shot(win, out('optimizations'));
     await js(win, "document.getElementById('tweakSearch').scrollIntoView({ block: 'start' }); document.querySelector('main, .main, body').scrollTop = 0; window.scrollTo(0,0); 0");
     await js(win, "document.querySelector('.tweaks-head').scrollIntoView({ block: 'start' }); 0"); await sleep(300); await shot(win, out('tweaks'));
+    await click('[data-view=cleanup]'); await sleep(1500); await shot(win, out('cleanup'));
+    await click('[data-view=optimizations]'); await sleep(400);
     await click('#openThrottle'); await sleep(900);
     const ids = ['detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify'];
     for (let i = 0; i < ids.length; i++) {

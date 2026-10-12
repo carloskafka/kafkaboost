@@ -8,7 +8,7 @@
   Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -21,6 +21,7 @@ param(
     [string]$TweakId,
     [ValidateSet('on', 'off')][string]$TweakMode = 'on',   # tweak-set step
     [switch]$AllowRisky,
+    [string]$CleanupIds,       # cleanup-run: comma separated target ids
     [switch]$Download          # get step: fetch ThrottleStop from TechPowerUp when it is not on the PC (the user agreed in the app)
 )
 $ErrorActionPreference = 'Stop'
@@ -30,6 +31,7 @@ if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleSto
 . (Join-Path $root 'lib\Tuning.ps1')
 . (Join-Path $root 'lib\Health.ps1')
 . (Join-Path $root 'lib\Tweaks.ps1')
+. (Join-Path $root 'lib\Cleanup.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -41,7 +43,7 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
     switch ($Step) {
@@ -134,6 +136,19 @@ try {
             $bad = @($rs | Where-Object { -not $_.ok }).Count
             $rs | ForEach-Object { Log "$($_.id): $(if ($_.ok) { 'applied' } else { $_.error })" }
             Done ($bad -eq 0) "$($rs.Count - $bad) applied, $bad failed." @{ results = $rs } $(if ($bad) { 'msg.tweaks.recommendedPartial' } else { 'msg.tweaks.recommendedOk' }) @{ ok = ($rs.Count - $bad); failed = $bad }
+        }
+        'cleanup-scan' {
+            $sizes = @(Get-CleanupSizes)
+            $total = [int64]0; foreach ($s in $sizes) { if (-not $s.danger) { $total += $s.bytes } }
+            Done $true "$([math]::Round($total / 1MB)) MB can be cleaned." @{ targets = $sizes; admin = (Test-Admin) } 'msg.cleanup.scanned' @{ mb = [math]::Round($total / 1MB) }
+        }
+        'cleanup-run' {
+            $ids = @($CleanupIds -split '[,\s]+' | Where-Object { $_ })
+            if (-not $ids.Count) { throw 'cleanup-run needs -CleanupIds.' }
+            $res = @(Invoke-Cleanup $ids)
+            $bytes = [int64]0; $files = 0; $skipped = 0
+            foreach ($r in $res) { $bytes += $r.bytes; $files += $r.files; $skipped += $r.skipped; Log "$($r.id): $($r.files) files, $([math]::Round($r.bytes / 1MB, 1)) MB, $($r.skipped) skipped" }
+            Done $true "Freed $([math]::Round($bytes / 1MB, 1)) MB ($files files, $skipped skipped)." @{ results = $res; bytes = $bytes; files = $files; skipped = $skipped } 'msg.cleanup.done' @{ mb = [math]::Round($bytes / 1MB, 1); files = $files; skipped = $skipped }
         }
         'rollback' {
             $l = Invoke-Rollback $InstallDir $TaskName -RestoreVbs:$RestoreVbs

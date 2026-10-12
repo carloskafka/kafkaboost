@@ -92,10 +92,31 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
   check('a risky tweak asks a second, final time', (await js(win, 'document.getElementById("confirmDlg").open')) && (await q('#cfTitle')).length > 0 && (await js(win, 'document.getElementById("cfTitle").textContent')) === 'Final confirmation', await q('#cfTitle'));
   await click('#cfCancel'); await sleep(300);
   check('stopping at the second risky confirmation changes nothing', (await isOn('defender-realtime-off')) === false);
+  await js(win, "document.querySelector('.tweak[data-id=\"defender-realtime-off\"] input').click(); 0"); await sleep(300);
+  await click('#cfOk'); await sleep(300); await click('#cfOk'); await sleep(1200);
+  check('a risky tweak applies after both confirmations', (await isOn('defender-realtime-off')) === true);
+  await js(win, "document.querySelector('.tweak[data-id=\"defender-realtime-off\"] input').click(); 0"); await sleep(900);
+  check('a risky tweak reverts without confirmation', (await isOn('defender-realtime-off')) === false);
   await click('#tweakRecommended'); await sleep(300);
   const recoOpen = await js(win, 'document.getElementById("confirmDlg").open');
   if (recoOpen) { await click('#cfOk'); await sleep(900); }
   check('after Apply recommended the safe recommended ones are on', await js(win, "['fast-startup-off','background-apps-off','game-dvr-off','mouse-accel-off','advertising-id-off'].every(id => document.querySelector('.tweak[data-id=' + id + '] input').checked)"));
+
+  // cleanup
+  await click('[data-view=cleanup]'); await sleep(900);
+  check('cleanup lists 6 targets', (await js(win, "document.querySelectorAll('.clean-row').length")) === 6);
+  check('the Recycle Bin starts unticked, safe targets ticked', (await js(win, "document.querySelector('.clean-row[data-id=recycle-bin] input').checked")) === false && (await js(win, "document.querySelector('.clean-row[data-id=user-temp] input').checked")) === true);
+  await click('#cleanRun'); await sleep(300);
+  check('cleaning asks for confirmation first', await js(win, 'document.getElementById("confirmDlg").open'));
+  await click('#cfCancel'); await sleep(200);
+  check('cancelling cleans nothing', (await js(win, "document.querySelector('.clean-row[data-id=user-temp] .clean-size').textContent")).startsWith('4'));
+  await js(win, "document.querySelector('.clean-row[data-id=recycle-bin] input').click(); 0"); await sleep(200);
+  await click('#cleanRun'); await sleep(300); await click('#cfOk'); await sleep(300);
+  check('the Recycle Bin needs a second confirmation', (await js(win, 'document.getElementById("confirmDlg").open')) && (await js(win, 'document.getElementById("cfTitle").textContent')) === 'Empty the Recycle Bin?', await q('#cfTitle'));
+  await click('#cfOk'); await sleep(1500);
+  check('cleaning reports what was freed', (await q('#cleanResult')).startsWith('Freed'), await q('#cleanResult'));
+  check('last cleanup time is saved', !!settings.get().lastCleanup);
+  check('sizes read zero after cleaning', (await js(win, "document.querySelector('.clean-row[data-id=user-temp] .clean-size').textContent")).startsWith('0'));
 
   await click('#openThrottle'); await sleep(900);
   check('wizard opens on step 0', await visible('wizard') && (await q('#title')) === 'Detect your hardware', await q('#title'));

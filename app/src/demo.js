@@ -68,7 +68,16 @@ function tweakList(configDir) {
   });
 }
 
+const cleanState = { 'user-temp': [428e6, 1224], 'win-temp': [64e6, 310], prefetch: [38e6, 212], 'update-cache': [1.6e9, 41], thumbnails: [11e6, 15], 'recycle-bin': [1.2e6, 57] };
+function cleanTargets() { return Object.entries(cleanState).map(([id, [bytes, files]]) => ({ id, danger: id === 'recycle-bin', bytes, files })); }
+
 function demoStep(step, opts = {}, configDir) {
+  if (step === 'cleanup-scan') { const l = cleanTargets(); const mb = Math.round(l.filter((x) => !x.danger).reduce((s, x) => s + x.bytes, 0) / 1048576); return { logs: [], res: { ok: true, code: 'msg.cleanup.scanned', args: { mb }, message: mb + ' MB', data: { targets: l, admin: true } } }; }
+  if (step === 'cleanup-run') {
+    const ids = String(opts.cleanupIds || '').split(',').filter(Boolean); let bytes = 0, files = 0;
+    ids.forEach((id) => { if (cleanState[id]) { bytes += cleanState[id][0]; files += cleanState[id][1]; cleanState[id] = [0, 0]; } });
+    return { logs: ids.map((i) => i + ': cleaned'), res: { ok: true, code: 'msg.cleanup.done', args: { mb: Math.round(bytes / 104857.6) / 10, files, skipped: 0 }, message: 'ok', data: { bytes, files, skipped: 0 } } };
+  }
   if (step === 'tweaks-list') { const l = tweakList(configDir); return { logs: [], res: { ok: true, code: 'msg.tweaks.listed', args: { count: l.length }, message: l.length + ' tweaks.', data: { tweaks: l, admin: true, build: 26300 } } }; }
   if (step === 'tweak-set') {
     const t = catalog(configDir).find((x) => x.id === opts.tweakId);

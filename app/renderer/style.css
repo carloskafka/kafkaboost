@@ -213,3 +213,12 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 .chip.risk-safe { color: var(--ok); } .chip.risk-advanced { color: var(--warn); } .chip.risk-risky { color: var(--bad); }
 .cf-body p { margin: 6px 0; color: var(--text-soft); font-size: 14px; }
 .btn.danger-fill.primary, .btn.danger-fill { background: rgba(255,107,129,.14); }
+
+/* ---- cleanup ---- */
+.clean-top, .clean-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.clean-list { margin: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+.clean-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel-2); cursor: pointer; }
+.clean-row.danger { border-color: rgba(255,107,129,.45); }
+.clean-text { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; font-size: 14px; }
+.clean-text .muted { font-size: 13px; }
+.clean-size { color: var(--text-soft); font-size: 13px; white-space: nowrap; }
