@@ -131,3 +131,31 @@ Describe 'Config template' {
         }
     }
 }
+
+Describe 'Entry scripts started with powershell -File (how install.cmd and the app start them)' {
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
+    It 'no script uses $PSScriptRoot in a param() default (it is empty under -File in Windows PowerShell 5.1)' {
+        $bad = @()
+        Get-ChildItem (Join-Path $PSScriptRoot '..\scripts') -Recurse -Filter *.ps1 | ForEach-Object {
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$null)
+            if ($ast.ParamBlock) {
+                $hits = $ast.ParamBlock.FindAll({ param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst] -and $n.VariablePath.UserPath -eq 'PSScriptRoot' }, $true)
+                if ($hits.Count) { $bad += $_.Name }
+            }
+        }
+        if ($bad.Count) { throw "param() default uses PSScriptRoot in: $($bad -join ', ')" }
+    }
+    It 'Install-Tuning.ps1 gets past argument binding under -File (regression: install.cmd failed in Join-Path)' {
+        $dir = New-Sandbox
+        try {
+            $script = (Resolve-Path (Join-Path $PSScriptRoot '..\scripts\Install-Tuning.ps1')).Path
+            $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $script -InstallDir $dir -SkipVBS -NoTask -NoStart 2>&1 | Out-String
+            if ($out -match 'ParameterArgumentValidationError') { throw "argument binding failed:`n$out" }
+        } finally { Remove-Item $dir -Recurse -Force }
+    }
+    It 'Steps.ps1 runs the read-only detect step under -File' {
+        $script = (Resolve-Path (Join-Path $PSScriptRoot '..\scripts\Steps.ps1')).Path
+        $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $script -Step detect 2>&1 | Out-String
+        if ($out -notmatch 'RESULT: ') { throw "no RESULT line:`n$out" }
+    }
+}

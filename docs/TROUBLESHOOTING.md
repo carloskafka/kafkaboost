@@ -35,6 +35,7 @@ Read this before changing anything.
   the copy whose `Path` equals the install dir's exe (`Merge-ThrottleStopSettings`).
 - `$PSScriptRoot` in a `param()` default is empty in Windows PowerShell 5.1 without `[CmdletBinding()]`; resolve it in the
   script body instead (see `Steps.ps1`).
+  This broke `install.cmd` (it starts the script with `-File`) on 2026-10-12: Join-Path failed on an empty path. Tests that called the script with `&` missed it, so `tests/` now also launch the entry scripts with `powershell -File` and scan for the pattern.
 - `perf_logger.ps1` needs a UTF-8 **BOM** and pt-BR performance-counter names.
 
 ## HWiNFO and monitoring
