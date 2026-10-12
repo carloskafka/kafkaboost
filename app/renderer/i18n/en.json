@@ -338,5 +338,6 @@
   "update.preparing": "Preparing the update…",
   "update.downloading": "Downloading the update… {percent}%",
   "update.restarting": "Downloaded. Restarting to finish the update…",
-  "update.installFailed": "The automatic update did not work. Use the download page instead."
+  "update.installFailed": "The automatic update did not work. Use the download page instead.",
+  "wizard.downloadCheck": "If ThrottleStop is not on this PC, download it for me from TechPowerUp (the official source, about 2 MB)"
 }

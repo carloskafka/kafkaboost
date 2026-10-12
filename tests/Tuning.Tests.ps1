@@ -227,3 +227,28 @@ Describe 'Remove-OldBackups' {
         Assert-Equal (Remove-OldBackups 'Z:\no\such\folder' 3) 0 'missing folder'
     }
 }
+
+Describe 'ThrottleStop download helpers (TechPowerUp flow)' {
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
+    It 'reads the first hidden form value by name' {
+        $html = '<form><input type="hidden" name="id" value="2835" /></form><form><input type="hidden" name="id" value="2775" /></form><input type="hidden" name="server_id" value="26">'
+        Assert-Equal (Get-HtmlFieldValue $html 'id') '2835' 'newest version id'
+        Assert-Equal (Get-HtmlFieldValue $html 'server_id') '26' 'server'
+        Assert-Equal (Get-HtmlFieldValue $html 'nothing') $null 'absent'
+    }
+    It 'accepts a zip that holds ThrottleStop.exe and rejects HTML or other zips' {
+        $d = New-Sandbox
+        try {
+            $src = Join-Path $d 'src'; New-Item -ItemType Directory $src | Out-Null
+            Set-Content (Join-Path $src 'ThrottleStop.exe') 'x' -Encoding ASCII
+            $good = Join-Path $d 'good.zip'; Compress-Archive -Path (Join-Path $src 'ThrottleStop.exe') -DestinationPath $good
+            Set-Content (Join-Path $src 'other.txt') 'x' -Encoding ASCII
+            $bad = Join-Path $d 'bad.zip'; Compress-Archive -Path (Join-Path $src 'other.txt') -DestinationPath $bad
+            $html = Join-Path $d 'page.zip'; Set-Content $html '<html>error</html>' -Encoding ASCII
+            Assert-Equal (Test-ThrottleStopZip $good) $true 'good zip'
+            Assert-Equal (Test-ThrottleStopZip $bad) $false 'zip without the exe'
+            Assert-Equal (Test-ThrottleStopZip $html) $false 'html saved as zip'
+            Assert-Equal (Test-ThrottleStopZip (Join-Path $d 'missing.zip')) $false 'missing file'
+        } finally { Remove-Item $d -Recurse -Force }
+    }
+}

@@ -20,7 +20,8 @@ param(
     [string]$AppArgs,
     [string]$TweakId,
     [ValidateSet('on', 'off')][string]$TweakMode = 'on',   # tweak-set step
-    [switch]$AllowRisky
+    [switch]$AllowRisky,
+    [switch]$Download          # get step: fetch ThrottleStop from TechPowerUp when it is not on the PC (the user agreed in the app)
 )
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -60,7 +61,7 @@ try {
             } else { Log 'no ThrottleStop.ini yet'; Done $true 'Nothing to back up yet (fresh install).' $null 'msg.backup.none' @{} }
         }
         'get' {
-            $exe = Install-ThrottleStopBinaries $InstallDir $ZipPath
+            $exe = Install-ThrottleStopBinaries $InstallDir $ZipPath -Download:$Download
             Log $exe; Done $true 'ThrottleStop is ready.' @{ exe = $exe } 'msg.get.ready' @{}
         }
         'vbs' {

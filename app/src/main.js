@@ -93,6 +93,7 @@ function runStep(step, opts = {}, onLog = () => {}) {
     const installDir = opts.installDir || settings.get().installDir;
     if (installDir) args.push('-InstallDir', installDir);
     if (opts.zipPath) args.push('-ZipPath', opts.zipPath);
+    if (opts.download && !opts.zipPath) args.push('-Download');
     if (opts.disableVbs) args.push('-DisableVBS');
     if (opts.restoreVbs) args.push('-RestoreVbs');
     if (opts.mode) args.push('-Mode', opts.mode);

@@ -55,10 +55,55 @@ function Find-ThrottleStopZip {
 }
 
 # Returns the path of ThrottleStop.exe, unpacking a zip if needed. Throws with a user-facing message if unavailable.
-function Install-ThrottleStopBinaries([string]$InstallDir, [string]$ZipPath) {
+# ---- download ThrottleStop from TechPowerUp (only when the user asked for it) -------------------------------------
+$script:TpuPage = 'https://www.techpowerup.com/download/techpowerup-throttlestop/'
+
+# First value of a hidden form field (name="id" value="2835") in a page; $null when absent.
+function Get-HtmlFieldValue([string]$Html, [string]$Name) {
+    $m = [regex]::Match($Html, 'name="' + [regex]::Escape($Name) + '"\s+value="([^"]*)"')
+    if ($m.Success) { return $m.Groups[1].Value }
+    return $null
+}
+
+# True when the file is a zip that holds ThrottleStop.exe (guards against saving an HTML error page as the "download").
+function Test-ThrottleStopZip([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $false }
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $z = [IO.Compression.ZipFile]::OpenRead($Path)
+        try { return [bool]($z.Entries | Where-Object { $_.Name -eq 'ThrottleStop.exe' }) } finally { $z.Dispose() }
+    } catch { return $false }
+}
+
+# The TechPowerUp flow: version list (newest first) -> pick that version -> pick a server -> the zip.
+# Returns @{ path; version; source }. Throws a readable message when the site changes shape or blocks us.
+function Save-ThrottleStopDownload([string]$DestDir) {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    $ua = 'Mozilla/5.0 (KafkaBoost setup)'
+    $page = Invoke-WebRequest -Uri $script:TpuPage -UserAgent $ua -UseBasicParsing -TimeoutSec 30
+    $id = Get-HtmlFieldValue $page.Content 'id'
+    if (-not $id) { throw 'The TechPowerUp page changed and the version list was not found. Download ThrottleStop yourself and choose the zip.' }
+    $pick = Invoke-WebRequest -Uri $script:TpuPage -Method Post -Body @{ id = $id } -UserAgent $ua -UseBasicParsing -TimeoutSec 30
+    $server = Get-HtmlFieldValue $pick.Content 'server_id'
+    if (-not $server) { throw 'TechPowerUp did not offer a download server. Download ThrottleStop yourself and choose the zip.' }
+    New-Item -ItemType Directory -Force $DestDir | Out-Null
+    $tmp = Join-Path $DestDir ('ThrottleStop_download_' + [guid]::NewGuid().ToString('N') + '.zip')
+    $resp = Invoke-WebRequest -Uri $script:TpuPage -Method Post -Body @{ id = $id; server_id = $server } -UserAgent $ua -UseBasicParsing -OutFile $tmp -PassThru -TimeoutSec 180
+    if (-not (Test-ThrottleStopZip $tmp)) { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; throw 'The downloaded file is not a ThrottleStop zip. Download it yourself and choose the zip.' }
+    $final = try { $resp.BaseResponse.ResponseUri.AbsoluteUri } catch { $script:TpuPage }
+    $ver = if ($final -match 'ThrottleStop_([0-9][0-9.]*)\.zip') { $Matches[1] } else { '' }
+    return @{ path = $tmp; version = $ver; source = $final }
+}
+
+function Install-ThrottleStopBinaries([string]$InstallDir, [string]$ZipPath, [switch]$Download) {
     $exe = Join-Path $InstallDir 'ThrottleStop.exe'
     if (Test-Path -LiteralPath $exe) { return $exe }
     if (-not $ZipPath) { $ZipPath = Find-ThrottleStopZip }
+    $downloaded = $null
+    if ((-not $ZipPath -or -not (Test-Path -LiteralPath $ZipPath)) -and $Download) {
+        $d = Save-ThrottleStopDownload (Join-Path $env:TEMP 'KafkaBoost_dl')
+        $ZipPath = $d.path; $downloaded = $d.path
+    }
     if (-not $ZipPath -or -not (Test-Path -LiteralPath $ZipPath)) {
         throw "ThrottleStop not found in '$InstallDir', and no ThrottleStop folder or ThrottleStop*.zip was found in Downloads, Desktop or Documents. Download it from https://www.techpowerup.com/download/techpowerup-throttlestop/ (tested with 9.7.3), keep the .zip in Downloads (or pass -ZipPath, or extract it and pass -InstallDir) and run this step again."
     }
@@ -68,6 +113,7 @@ function Install-ThrottleStopBinaries([string]$InstallDir, [string]$ZipPath) {
         $sub = Get-ChildItem $InstallDir -Recurse -Filter ThrottleStop.exe | Select-Object -First 1
         if ($sub) { Get-ChildItem $sub.Directory.FullName | Move-Item -Destination $InstallDir -Force }
     }
+    if ($downloaded) { Remove-Item -LiteralPath $downloaded -Force -ErrorAction SilentlyContinue }
     if (-not (Test-Path -LiteralPath $exe)) { throw "ThrottleStop.exe not found after unpacking $ZipPath" }
     return $exe
 }

@@ -7,7 +7,7 @@
     { id: 'detect', n: 1 }, { id: 'backup', n: 1 }, { id: 'get', n: 1, options: ['zip'] },
     { id: 'vbs', n: 3, options: ['vbs'] }, { id: 'apply', n: 3 }, { id: 'task', n: 2 }, { id: 'verify', n: 1 }
   ];
-  const state = { index: 0, status: STEPS.map(() => 'idle'), zipPath: null, disableVbs: true, vbsRan: false, started: false };
+  const state = { index: 0, status: STEPS.map(() => 'idle'), zipPath: null, download: true, disableVbs: true, vbsRan: false, started: false };
 
   // ---- card status on the Optimizations page ------------------------------------------------------------------
   KB.renderOptStatus = function () {
@@ -43,7 +43,12 @@
         pick.addEventListener('click', async () => { const p = await window.kb.pickZip(); if (p) { state.zipPath = p; lbl.textContent = p; } });
         const link = document.createElement('button'); link.className = 'btn small ghost'; link.type = 'button'; link.textContent = t('wizard.openDownload');
         link.addEventListener('click', () => window.kb.openExternal('https://www.techpowerup.com/download/techpowerup-throttlestop/'));
-        box.append(pick, link, lbl);
+        const dl = document.createElement('label'); dl.className = 'check';
+        const dcb = document.createElement('input'); dcb.type = 'checkbox'; dcb.checked = state.download;
+        dcb.addEventListener('change', () => { state.download = dcb.checked; });
+        const dsp = document.createElement('span'); dsp.textContent = t('wizard.downloadCheck');
+        dl.append(dcb, dsp);
+        box.append(dl, pick, link, lbl);
       }
       if (o === 'vbs') {
         const label = document.createElement('label'); label.className = 'check';
@@ -74,7 +79,7 @@
     const i = state.index, s = STEPS[i];
     state.status[i] = 'running'; renderStepper();
     $('run').disabled = true; $('next').disabled = true; $('log').textContent = ''; KB.showResult($('result'), '', '');
-    const res = await window.kb.runStep(s.id, { zipPath: state.zipPath, disableVbs: state.disableVbs });
+    const res = await window.kb.runStep(s.id, { zipPath: state.zipPath, disableVbs: state.disableVbs, download: state.download });
     state.status[i] = res.ok ? 'ok' : 'fail';
     if (s.id === 'vbs' && res.ok && state.disableVbs) state.vbsRan = true;
     const warn = res.ok && s.id === 'detect' && res.data && !res.data.modelVerified;
