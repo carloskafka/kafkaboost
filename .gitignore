@@ -16,3 +16,7 @@
 *.log
 app/node_modules/
 app/dist/
+
+# per-machine shortcuts (absolute paths)
+/*.lnk
+/KafkaBoost.desktop

@@ -8,3 +8,5 @@
 *.css text eol=lf
 *.ini text eol=crlf
 *.png binary
+*.sh text eol=lf
+*.command text eol=lf
