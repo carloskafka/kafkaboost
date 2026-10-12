@@ -171,8 +171,36 @@ Describe 'Resolve-InstallDir' {
         $dir = New-Sandbox
         try { Assert-Equal (Resolve-InstallDir $dir 'No_Such_Task_For_Tests') $dir 'requested folder' } finally { Remove-Item $dir -Recurse -Force }
     }
-    It 'falls back to the requested folder when nothing is installed and there is no task' {
-        $nowhere = Join-Path ([IO.Path]::GetTempPath()) 'no_throttlestop_here'
-        Assert-Equal (Resolve-InstallDir $nowhere 'No_Such_Task_For_Tests') $nowhere 'fallback'
+    It 'falls back to the requested folder when nothing is installed, there is no task and nothing is found in the search roots' {
+        $empty = New-Sandbox; Remove-Item (Join-Path $empty 'ThrottleStop.exe') -Force   # an empty search root, so the real Downloads is not used
+        try {
+            $nowhere = Join-Path $empty 'no_throttlestop_here'
+            Assert-Equal (Resolve-InstallDir $nowhere 'No_Such_Task_For_Tests' @($empty)) $nowhere 'fallback'
+        } finally { Remove-Item $empty -Recurse -Force }
+    }
+}
+
+Describe 'Find-ThrottleStopFolder' {
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
+    It 'finds an extracted ThrottleStop one level down and returns its folder' {
+        $root = New-Sandbox; Remove-Item (Join-Path $root 'ThrottleStop.exe') -Force
+        try {
+            $sub = Join-Path $root 'ThrottleStop_9.7.3'; New-Item -ItemType Directory $sub | Out-Null
+            Set-Content (Join-Path $sub 'ThrottleStop.exe') 'fake' -Encoding ASCII
+            Assert-Equal (Find-ThrottleStopFolder @($root)) $sub 'folder'
+        } finally { Remove-Item $root -Recurse -Force }
+    }
+    It 'returns nothing when there is no ThrottleStop (and ignores roots that do not exist)' {
+        $root = New-Sandbox; Remove-Item (Join-Path $root 'ThrottleStop.exe') -Force
+        try { if ($null -ne (Find-ThrottleStopFolder @($root, 'Z:\no\such\root'))) { throw 'expected $null' } } finally { Remove-Item $root -Recurse -Force }
+    }
+    It 'Resolve-InstallDir uses the folder it finds when the requested one is empty and there is no task' {
+        $root = New-Sandbox; Remove-Item (Join-Path $root 'ThrottleStop.exe') -Force
+        try {
+            $sub = Join-Path $root 'ts'; New-Item -ItemType Directory $sub | Out-Null
+            Set-Content (Join-Path $sub 'ThrottleStop.exe') 'fake' -Encoding ASCII
+            $requested = Join-Path $root 'does_not_exist'
+            Assert-Equal (Resolve-InstallDir $requested 'No_Such_Task_For_Tests' @($root)) $sub 'resolved'
+        } finally { Remove-Item $root -Recurse -Force }
     }
 }

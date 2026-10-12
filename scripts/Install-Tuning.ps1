@@ -42,6 +42,8 @@ if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleSto
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
+$requestedDir = $InstallDir
+$InstallDir = Resolve-InstallDir $InstallDir $TaskName   # use the ThrottleStop you already have (task / Downloads / ...) instead of unpacking a new copy
 
 function Step($m) { Write-Host "`n==> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "    OK  $m" -ForegroundColor Green }
@@ -52,6 +54,7 @@ if (-not (Test-Path -LiteralPath $SettingsFile)) { throw "Settings file not foun
 $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path
 
 Step "ThrottleStop in $InstallDir"
+if ($InstallDir -ne $requestedDir) { Ok "found your existing ThrottleStop here instead of $requestedDir (use -InstallDir to choose another folder)" }
 $exe = Install-ThrottleStopBinaries $InstallDir $ZipPath
 Ok $exe
 

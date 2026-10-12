@@ -60,7 +60,7 @@ function Install-ThrottleStopBinaries([string]$InstallDir, [string]$ZipPath) {
     if (Test-Path -LiteralPath $exe) { return $exe }
     if (-not $ZipPath) { $ZipPath = Find-ThrottleStopZip }
     if (-not $ZipPath -or -not (Test-Path -LiteralPath $ZipPath)) {
-        throw 'ThrottleStop not found. Download it from https://www.techpowerup.com/download/techpowerup-throttlestop/ (tested with 9.7.3), keep the .zip in Downloads and run this step again.'
+        throw "ThrottleStop not found in '$InstallDir', and no ThrottleStop folder or ThrottleStop*.zip was found in Downloads, Desktop or Documents. Download it from https://www.techpowerup.com/download/techpowerup-throttlestop/ (tested with 9.7.3), keep the .zip in Downloads (or pass -ZipPath, or extract it and pass -InstallDir) and run this step again."
     }
     New-Item -ItemType Directory -Force $InstallDir | Out-Null
     Expand-Archive -LiteralPath $ZipPath -DestinationPath $InstallDir -Force
@@ -184,9 +184,27 @@ function Get-ExeFromTaskArguments([string]$Arguments) {
     return $null
 }
 
-# The folder the user asked for if ThrottleStop is there; otherwise the folder the existing watchdog task starts it from
-# (people keep ThrottleStop in Downloads, not in the default folder); otherwise the requested folder unchanged.
-function Resolve-InstallDir([string]$Requested, [string]$TaskName) {
+# Looks for an already extracted ThrottleStop (a folder containing ThrottleStop.exe, at most two levels deep) in the places people
+# keep it. Returns the folder of the most recently modified copy, or $null.
+function Find-ThrottleStopFolder([string[]]$Roots) {
+    if (-not $Roots) {
+        $Roots = @((Join-Path $env:USERPROFILE 'Downloads'), (Join-Path $env:USERPROFILE 'Desktop'), (Join-Path $env:USERPROFILE 'Documents'),
+                   'C:\Tools', 'C:\ThrottleStop', $env:ProgramFiles)
+    }
+    $hits = foreach ($r in $Roots) {
+        if ($r -and (Test-Path -LiteralPath $r)) {
+            Get-ChildItem -LiteralPath $r -Filter 'ThrottleStop.exe' -Recurse -Depth 2 -File -ErrorAction SilentlyContinue
+        }
+    }
+    $best = $hits | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($best) { return $best.DirectoryName }
+    return $null
+}
+
+# The folder the user asked for if ThrottleStop is there; otherwise the folder the existing watchdog task starts it from; otherwise
+# an already extracted copy found in the usual places (Downloads, Desktop, ...); otherwise the requested folder unchanged
+# (so a fresh install still unpacks a zip into it).
+function Resolve-InstallDir([string]$Requested, [string]$TaskName, [string[]]$SearchRoots) {
     if ($Requested -and (Test-Path -LiteralPath (Join-Path $Requested 'ThrottleStop.exe'))) { return $Requested }
     $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     if ($task) {
@@ -195,5 +213,7 @@ function Resolve-InstallDir([string]$Requested, [string]$TaskName) {
             if ($exe -and (Test-Path -LiteralPath $exe)) { return (Split-Path -Parent $exe) }
         }
     }
+    $found = Find-ThrottleStopFolder $SearchRoots
+    if ($found) { return $found }
     return $Requested
 }
