@@ -88,38 +88,53 @@ function Get-LiveTelemetry {
 
 function Get-HealthReport([string]$InstallDir, [string]$SettingsFile, [string]$TaskName) {
     $checks = [System.Collections.Generic.List[object]]::new()
-    $add = { param($id, $name, $ok, $sev, $detail, $fix) $checks.Add([pscustomobject]@{ id = $id; name = $name; ok = [bool]$ok; severity = $sev; detail = $detail; fix = $fix }) }
+    # code = i18n key of the detail text (check.<id>.<state>), cargs = values for its {placeholders}.
+    # name/detail stay as the English fallback for scripts and for languages without a translation.
+    $add = { param($id, $name, $ok, $sev, $detail, $fix, $code, $cargs) $checks.Add([pscustomobject]@{ id = $id; name = $name; ok = [bool]$ok; severity = $sev; detail = $detail; fix = $fix; code = $code; args = $cargs }) }
     $settings = Get-Content -LiteralPath $SettingsFile
 
     $ini = Join-Path $InstallDir 'ThrottleStop.ini'
     if (Test-Path -LiteralPath $ini) {
         $drift = Compare-IniSettings (Get-Content -LiteralPath $ini) $settings
-        $detail = if ($drift.Count) { 'Changed or missing: ' + (($drift | ForEach-Object { "$($_.key) (want $($_.expected), found $(if ($null -eq $_.actual) { 'nothing' } else { $_.actual }))" }) -join '; ') } else { 'Undervolt, boost caps and power limits are in the INI.' }
-        & $add 'settings' 'Tuning settings' ($drift.Count -eq 0) 'fail' $detail 'settings'
-    } else { & $add 'settings' 'Tuning settings' $false 'fail' 'ThrottleStop.ini was not found. Run the setup wizard first.' 'settings' }
+        if ($drift.Count) {
+            $detail = 'Changed or missing: ' + (($drift | ForEach-Object { "$($_.key) (want $($_.expected), found $(if ($null -eq $_.actual) { 'nothing' } else { $_.actual }))" }) -join '; ')
+            & $add 'settings' 'Tuning settings' $false 'fail' $detail 'settings' 'check.settings.drift' @{ keys = (($drift | ForEach-Object { $_.key }) -join ', ') }
+        } else {
+            & $add 'settings' 'Tuning settings' $true 'fail' 'Undervolt, boost caps and power limits are in the INI.' 'settings' 'check.settings.ok' @{}
+        }
+    } else { & $add 'settings' 'Tuning settings' $false 'fail' 'ThrottleStop.ini was not found. Run the setup wizard first.' 'settings' 'check.settings.missingIni' @{} }
 
     $exe = Join-Path $InstallDir 'ThrottleStop.exe'
     $ts = Get-Process ThrottleStop -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe -or -not $_.Path } | Select-Object -First 1   # Path is unreadable from a non-elevated process
-    & $add 'running' 'ThrottleStop is running' ([bool]$ts) 'warn' $(if ($ts) { "PID $($ts.Id)" } else { 'Not running, so the tuning is not applied right now.' }) 'start'
+    if ($ts) { & $add 'running' 'ThrottleStop is running' $true 'warn' "PID $($ts.Id)" 'start' 'check.running.ok' @{ pid = $ts.Id } }
+    else { & $add 'running' 'ThrottleStop is running' $false 'warn' 'Not running, so the tuning is not applied right now.' 'start' 'check.running.no' @{} }
 
     $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    & $add 'task' 'Always-on startup' ([bool]$task) 'fail' $(if ($task) { 'Starts at logon and a 5-minute watchdog keeps it running.' } else { 'The autostart task is missing.' }) 'task'
+    if ($task) { & $add 'task' 'Always-on startup' $true 'fail' 'Starts at logon and a 5-minute watchdog keeps it running.' 'task' 'check.task.ok' @{} }
+    else { & $add 'task' 'Always-on startup' $false 'fail' 'The autostart task is missing.' 'task' 'check.task.no' @{} }
 
     $hv = [bool](Get-CimInstance Win32_ComputerSystem).HypervisorPresent
-    & $add 'vbs' 'Virtualization-based security off' (-not $hv) 'fail' $(if ($hv) { 'VBS/hypervisor is back ON (a Windows update can do this). Voltage changes are locked while it is on.' } else { 'Off, so voltage changes can be applied.' }) 'vbs'
+    if ($hv) { & $add 'vbs' 'Virtualization-based security off' $false 'fail' 'VBS/hypervisor is back ON (a Windows update can do this). Voltage changes are locked while it is on.' 'vbs' 'check.vbs.no' @{} }
+    else { & $add 'vbs' 'Virtualization-based security off' $true 'fail' 'Off, so voltage changes can be applied.' 'vbs' 'check.vbs.ok' @{} }
 
     $base = Get-Baseline
     $os = Get-CimInstance Win32_OperatingSystem
     if ($base) {
-        $same = ($base.windowsBuild -eq $os.BuildNumber)
-        & $add 'windows' 'Windows build since setup' $same 'info' $(if ($same) { "Unchanged (build $($os.BuildNumber), applied $($base.appliedAt))." } else { "Windows was updated: build $($base.windowsBuild) -> $($os.BuildNumber) since the tuning was applied on $($base.appliedAt)." }) $null
+        if ($base.windowsBuild -eq $os.BuildNumber) {
+            & $add 'windows' 'Windows build since setup' $true 'info' "Unchanged (build $($os.BuildNumber), applied $($base.appliedAt))." $null 'check.windows.ok' @{ build = $os.BuildNumber; applied = $base.appliedAt }
+        } else {
+            & $add 'windows' 'Windows build since setup' $false 'info' "Windows was updated: build $($base.windowsBuild) -> $($os.BuildNumber) since the tuning was applied on $($base.appliedAt)." $null 'check.windows.no' @{ from = $base.windowsBuild; to = $os.BuildNumber; applied = $base.appliedAt }
+        }
     }
 
     $live = Get-LiveTelemetry
     $cap = Get-TurboCapMHz $settings
     if ($live -and $live.pClockMaxMHz -and $cap) {
-        $over = $live.pClockMaxMHz -gt ($cap * 1.03)
-        & $add 'cap' 'Boost cap is active' (-not $over) 'warn' $(if ($over) { "A P-core is at $($live.pClockMaxMHz) MHz, above the $cap MHz cap." } else { "Highest P-core clock right now: $($live.pClockMaxMHz) MHz (cap $cap MHz)." }) 'settings'
+        if ($live.pClockMaxMHz -gt ($cap * 1.03)) {
+            & $add 'cap' 'Boost cap is active' $false 'warn' "A P-core is at $($live.pClockMaxMHz) MHz, above the $cap MHz cap." 'settings' 'check.cap.no' @{ clock = $live.pClockMaxMHz; cap = $cap }
+        } else {
+            & $add 'cap' 'Boost cap is active' $true 'warn' "Highest P-core clock right now: $($live.pClockMaxMHz) MHz (cap $cap MHz)." 'settings' 'check.cap.ok' @{ clock = $live.pClockMaxMHz; cap = $cap }
+        }
     }
 
     [pscustomobject]@{
@@ -132,7 +147,6 @@ function Get-HealthReport([string]$InstallDir, [string]$SettingsFile, [string]$T
         checkedAt = (Get-Date).ToString('s')
     }
 }
-
 # ---------------------------------------------------------------- one-click fix
 
 # Re-applies only what drifted. VBS is a security setting, so it is touched only with -DisableVbs. Returns log lines.

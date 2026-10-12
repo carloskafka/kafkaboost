@@ -204,3 +204,26 @@ Describe 'Find-ThrottleStopFolder' {
         } finally { Remove-Item $root -Recurse -Force }
     }
 }
+
+Describe 'Remove-OldBackups' {
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
+    It 'keeps the newest N backups and deletes the rest, leaving other files alone' {
+        $dir = New-Sandbox
+        try {
+            1..6 | ForEach-Object {
+                $f = Join-Path $dir ("ThrottleStop.ini.bak_2026101$_")
+                Set-Content $f "bak $_" -Encoding ASCII
+                (Get-Item $f).LastWriteTime = (Get-Date).AddMinutes(-60 + $_)
+            }
+            Set-Content (Join-Path $dir 'ThrottleStop.ini') 'live' -Encoding ASCII
+            $n = Remove-OldBackups $dir 3
+            Assert-Equal $n 3 'removed'
+            $left = @(Get-ChildItem $dir -Filter 'ThrottleStop.ini.bak_*' | Select-Object -ExpandProperty Name | Sort-Object)
+            Assert-Equal ($left -join ',') 'ThrottleStop.ini.bak_20261014,ThrottleStop.ini.bak_20261015,ThrottleStop.ini.bak_20261016' 'newest kept'
+            if (-not (Test-Path (Join-Path $dir 'ThrottleStop.ini'))) { throw 'the live ini must not be touched' }
+        } finally { Remove-Item $dir -Recurse -Force }
+    }
+    It 'returns 0 for a folder that does not exist' {
+        Assert-Equal (Remove-OldBackups 'Z:\no\such\folder' 3) 0 'missing folder'
+    }
+}

@@ -217,3 +217,12 @@ function Resolve-InstallDir([string]$Requested, [string]$TaskName, [string[]]$Se
     if ($found) { return $found }
     return $Requested
 }
+
+# Deletes ThrottleStop.ini.bak_* backups beyond the newest $Keep. Returns how many were removed.
+function Remove-OldBackups([string]$InstallDir, [int]$Keep = 3) {
+    if (-not (Test-Path -LiteralPath $InstallDir)) { return 0 }
+    $files = @(Get-ChildItem -LiteralPath $InstallDir -Filter 'ThrottleStop.ini.bak_*' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
+    $old = @($files | Select-Object -Skip $Keep)
+    foreach ($f in $old) { Remove-Item -LiteralPath $f.FullName -Force }
+    return $old.Count
+}
