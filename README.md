@@ -79,6 +79,13 @@ The side menu has five sections: **Dashboard**, **System analysis**, **Optimizat
 
 Every screen is in the [live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/#/walkthrough). Screenshots come from
 demo mode (`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
+## Runs in the background (system tray)
+
+Close the window and the app keeps running next to the clock. The tray icon carries the verdict as a coloured dot (green optimized,
+amber needs a look, red not fully in place, grey checking). It re-checks every 30 minutes and shows a notification when something
+breaks, for example after a Windows update; click the icon to open the app, right-click for *Open*, *Check now*, *Start with Windows*
+and *Quit*. *Start with Windows* (also in **Help > Background**) registers a scheduled task that opens the app hidden in the tray at
+logon. Only one copy runs at a time.
 ## What gets applied (`config/ThrottleStop.settings.ini`, profile 0)
 
 | Setting | Value |

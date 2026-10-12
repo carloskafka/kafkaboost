@@ -27,7 +27,7 @@ cd app; $env:WIZARD_DEMO='1'; npx electron .             # canned results; add W
 powershell -File tools\make-shots.ps1                    # regenerates docs\assets\*.png
 ```
 `WIZARD_SCREENSHOT=<file.png>` saves the window after load and quits (a safe way to look at the UI from automation);
-`WIZARD_FAKE_PLATFORM=linux` shows the unsupported-OS screen.
+`WIZARD_FAKE_PLATFORM=linux` shows the unsupported-OS screen. `WIZARD_TRAYTEST=<file.json>` closes the window, then records that the process and the tray survive it and that the window can be reopened from the tray.
 
 ## Testing a tuning change on the laptop
 Follow the protocol in `TROUBLESHOOTING.md` (matched runs, one variable at a time, stop conditions). In short: log

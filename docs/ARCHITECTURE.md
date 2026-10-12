@@ -30,6 +30,13 @@ without administrator rights; `detect`, `verify` and `health` do not need them.
 - `renderer/`: five sections (Dashboard, System analysis, Optimizations, Restore, Help). Optimizations lists the available tunings; *CPU thermal tuning* opens the step-by-step wizard. Text is set with `textContent`, never `innerHTML`.
 - OS detection: `process.platform`. Windows + i9-14900HX gets the app; Linux, macOS or another CPU get an explanation screen.
 
+## Background (system tray)
+`src/tray.js` creates the tray icon (`build/tray-{ok,warn,fail,unknown}.png`: the app icon with a status dot), its menu and the
+toast notifications. `src/main.js` keeps the app alive when the window is closed (hide instead of quit, single instance lock),
+runs `Steps.ps1 -Step health` 20 seconds after start and then every 30 minutes, feeds every `health`/`fix` result (also those
+requested by the UI) into the tray, and notifies when the state gets worse. *Start with Windows* is the `autostart` step: a
+scheduled task `LegionTuning_App` (name in `config/defaults.json`) that starts the app with `--hidden` at logon, elevated.
+`Resolve-InstallDir` finds the real ThrottleStop folder from the watchdog task when it is not in the default folder.
 ## Always running
 Task `ThrottleStop_Autostart`: logon trigger with a 5-minute repetition, highest privileges, no time or battery limits. Its action
 starts ThrottleStop only if no process of that name exists, so there is never a second copy.

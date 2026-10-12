@@ -31,6 +31,9 @@ Make a shortcut with the app icon:
 powershell -File scripts\Create-Shortcut.ps1        # Desktop + Start Menu, "run as administrator" set
 ```
 
+## 3b. Keep it in the tray
+Close the window: the app keeps running next to the clock and re-checks every 30 minutes (notification if something breaks).
+Tick **Help > Background > Start with Windows** to have it start hidden at every logon.
 ## 4. After a Windows update
 Open **Dashboard** again. If it is amber or red, read the list (a Windows update can reset settings or switch VBS back on) and
 press **Fix it**. VBS is only turned off again if you tick the box.

@@ -29,13 +29,13 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 5. Never raise the PROCHOT offset to hide throttle flags. Never start HWiNFO with command-line arguments.
 6. Installer and library code must stop only its **own** ThrottleStop copy (filter by `Path`), never every `ThrottleStop.exe`.
 7. Do not commit anything from `local/` (backups, screenshots, raw reports, `HWMonitor.txt` with disk serials) or `logs/`.
-8. The app is a thin UI: logic belongs in `scripts/lib/`, behind `scripts/Steps.ps1`, with a unit test.
+8. Closing the window hides it to the tray; only the tray menu "Quit" exits. The app is a thin UI: logic belongs in `scripts/lib/`, behind `scripts/Steps.ps1`, with a unit test.
 
 ## Layout
 | Path | What |
 |---|---|
 | `install.cmd` | one-click installer (self-elevates) -> `scripts/Install-Tuning.ps1` |
-| `app/` | Electron app. `src/main.js` (IPC, spawns `Steps.ps1`), `src/preload.js`, `src/demo.js` (demo mode), `renderer/` (the five sections + the CPU-thermal-tuning wizard, `icon.svg`), `build/` (generated icons), `Launch-Wizard.cmd` |
+| `app/` | Electron app. `src/main.js` (IPC, spawns `Steps.ps1`), `src/preload.js`, `src/tray.js` (system tray + notifications), `src/demo.js` (demo mode), `renderer/` (the five sections + the CPU-thermal-tuning wizard, `icon.svg`), `build/` (generated icons), `Launch-Wizard.cmd` |
 | `config/` | `ThrottleStop.settings.ini` (the tuning), `HWiNFO64.INI` (shared memory on), `defaults.json` (install dir + task name, read by PowerShell **and** Node) |
 | `scripts/lib/Tuning.ps1` | merge INI, register task, unpack ThrottleStop, VBS, verify, rollback, FIVR/V-F encoders, `Get-Defaults` |
 | `scripts/lib/Health.ps1` | health check (`Get-HealthReport`, `Compare-IniSettings`, `Get-Verdict`), Windows-build baseline, live telemetry, `Invoke-Fix` |
