@@ -37,7 +37,7 @@
     const btn = $('checkUpdate'); btn.disabled = true; KB.showResult($('updateResult'), '', ''); $('updateActions').hidden = true;
     const r = await window.kb.checkUpdate(); btn.disabled = false;
     if (!r.ok) { KB.showResult($('updateResult'), 'fail', t('settings.updateFailed', { error: r.error })); return; }
-    if (r.newer) { KB.showResult($('updateResult'), 'warn', t('settings.newer', { latest: r.latest, current: r.current })); $('updateActions').hidden = false; $('openRelease').dataset.url = r.url; }
+    if (r.newer) { KB.showResult($('updateResult'), 'warn', t('settings.newer', { latest: r.latest, current: r.current })); $('updateActions').hidden = false; $('openRelease').dataset.url = r.url; KB.updates.banner(r); KB.updates.open(r, 'available'); }
     else KB.showResult($('updateResult'), 'ok', t('settings.upToDate', { version: r.current }));
   }
 

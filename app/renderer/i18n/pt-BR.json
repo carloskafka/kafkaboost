@@ -199,7 +199,7 @@
   "settings.updates": "Atualizações",
   "settings.version": "Versão {version}",
   "settings.checkNow": "Verificar atualizações",
-  "settings.checkDaily": "Verificar atualizações uma vez por dia (desligado por padrão)",
+  "settings.checkDaily": "Procurar atualizações automaticamente (só uma consulta; nada é baixado sem o seu clique)",
   "settings.upToDate": "Você está com a versão mais recente ({version}).",
   "settings.newer": "A versão {latest} está disponível (você tem a {current}).",
   "settings.updateFailed": "Não foi possível verificar atualizações: {error}",
@@ -327,5 +327,16 @@
   "tweak.error.failed": "A alteração falhou e foi desfeita.",
   "msg.tweaks.listed": "{count} ajustes carregados.",
   "msg.tweaks.recommendedOk": "{ok} ajustes recomendados aplicados.",
-  "msg.tweaks.recommendedPartial": "{ok} aplicados, {failed} falharam."
+  "msg.tweaks.recommendedPartial": "{ok} aplicados, {failed} falharam.",
+  "update.view": "Ver as novidades",
+  "update.later": "Depois",
+  "update.close": "Fechar",
+  "update.install": "Atualizar e reiniciar",
+  "update.available": "A versão {latest} está disponível (você tem a {current})",
+  "update.whatsNew": "Novidades da versão {version}",
+  "update.noNotes": "Esta versão não tem notas.",
+  "update.preparing": "Preparando a atualização…",
+  "update.downloading": "Baixando a atualização… {percent}%",
+  "update.restarting": "Baixada. Reiniciando para concluir a atualização…",
+  "update.installFailed": "A atualização automática não funcionou. Use a página de download."
 }

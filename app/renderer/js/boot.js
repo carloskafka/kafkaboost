@@ -31,6 +31,9 @@
     $('bannerBtn').addEventListener('click', () => window.kb.relaunchAdmin());
   }
 
+  // After an update, show what changed in the version that is now running (once).
+  window.kb.whatsNew().then((w) => { if (w && w.show) KB.updates.open(w, 'whatsnew'); }).catch(() => {});
+
   // Home is the Dashboard. On Windows without a set-up tuning, guide the user to Optimizations instead.
   KB.showView('health');
   if (KB.featureOn('optimizations')) {

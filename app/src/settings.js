@@ -12,7 +12,8 @@ const DEFAULTS = Object.freeze({
   notifications: true,        // toast when the optimization gets worse
   checkIntervalMin: 30,       // background health check
   installDir: '',             // ThrottleStop folder ('' = automatic)
-  checkForUpdates: false,     // daily GitHub release lookup (off by default; the manual button always works)
+  checkForUpdates: true,      // look at GitHub Releases every few hours (a lookup only; nothing downloads without a click)
+  lastSeenVersion: '',        // version whose "what's new" was already shown
   lastCleanup: null           // ISO time of the last cleanup run
 });
 
@@ -26,6 +27,7 @@ const RULES = Object.freeze({
   checkIntervalMin: (v) => Number.isInteger(v) && v >= 5 && v <= 1440,
   installDir: (v) => typeof v === 'string' && v.length <= 260,
   checkForUpdates: isBool,
+  lastSeenVersion: (v) => typeof v === 'string' && v.length <= 40,
   lastCleanup: (v) => v === null || (typeof v === 'string' && v.length <= 40)
 });
 

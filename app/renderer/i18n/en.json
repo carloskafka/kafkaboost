@@ -199,7 +199,7 @@
   "settings.updates": "Updates",
   "settings.version": "Version {version}",
   "settings.checkNow": "Check for updates",
-  "settings.checkDaily": "Check for updates once a day (off by default)",
+  "settings.checkDaily": "Look for updates automatically (a lookup only; nothing is downloaded without your click)",
   "settings.upToDate": "You have the latest version ({version}).",
   "settings.newer": "Version {latest} is available (you have {current}).",
   "settings.updateFailed": "Could not check for updates: {error}",
@@ -327,5 +327,16 @@
   "tweak.error.failed": "The change failed and was undone.",
   "msg.tweaks.listed": "{count} tweaks loaded.",
   "msg.tweaks.recommendedOk": "{ok} recommended tweaks applied.",
-  "msg.tweaks.recommendedPartial": "{ok} applied, {failed} failed."
+  "msg.tweaks.recommendedPartial": "{ok} applied, {failed} failed.",
+  "update.view": "See what is new",
+  "update.later": "Later",
+  "update.close": "Close",
+  "update.install": "Update and restart",
+  "update.available": "Version {latest} is available (you have {current})",
+  "update.whatsNew": "What is new in version {version}",
+  "update.noNotes": "This release has no notes.",
+  "update.preparing": "Preparing the update…",
+  "update.downloading": "Downloading the update… {percent}%",
+  "update.restarting": "Downloaded. Restarting to finish the update…",
+  "update.installFailed": "The automatic update did not work. Use the download page instead."
 }

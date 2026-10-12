@@ -37,7 +37,11 @@
     </aside>
 
     <main class="main">
-      <div id="banner" class="banner" hidden>
+      <div id="updateBanner" class="banner info" hidden>
+<span id="updateBannerText"></span>
+<button id="updateBannerBtn" class="btn small" type="button" data-i18n="update.view"></button>
+</div>
+<div id="banner" class="banner" hidden>
         <span id="bannerText" data-i18n="banner.admin"></span>
         <button id="bannerBtn" class="btn small" type="button" data-i18n="banner.restart"></button>
       </div>
@@ -285,12 +289,23 @@
     </main>
   </div>
 
-  <script src="js/core.js"></script>
+  <dialog id="changelog" class="dialog" aria-labelledby="clTitle">
+<h2 class="h2" id="clTitle"></h2>
+<div id="clBody" class="cl-body"></div>
+<div id="clProgress" class="result" hidden></div>
+<div class="actions">
+<button id="clLater" class="btn small" type="button" data-i18n="update.later"></button>
+<button id="clOpen" class="btn small" type="button" data-i18n="settings.download"></button>
+<button id="clInstall" class="btn small primary" type="button" data-i18n="update.install"></button>
+</div>
+</dialog>
+<script src="js/core.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/analysis.js"></script>
   <script src="js/wizard.js"></script>
   <script src="js/restore.js"></script>
   <script src="js/settings.js"></script>
+<script src="js/updates.js"></script>
   <script src="js/boot.js"></script>
 </body>
 </html>

@@ -148,30 +148,87 @@ function scheduleBackground() {
   backgroundTimer = setInterval(backgroundCheck, settings.get().checkIntervalMin * 60 * 1000);
 }
 
-// ---- updates (GitHub releases) -----------------------------------------------------------------------------
-const parseVer = (v) => String(v).replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
-function isNewer(latest, current) {
-  const a = parseVer(latest), b = parseVer(current);
-  for (let i = 0; i < Math.max(a.length, b.length); i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); }
-  return false;
+// ---- updates (GitHub releases + changelog) -------------------------------------------------------------------
+// Looks at the repository's GitHub Releases. When newer ones exist the page shows their notes (the changelog).
+// The installed Windows build can download and install by itself (electron-updater); a portable exe or a source
+// checkout only gets the notes and a link, because it has nothing to replace in place.
+const updates = require('./updates');
+const selfUpdate = () => updates.canSelfUpdate({ isPackaged: app.isPackaged, platform: process.platform, portable: !!process.env.PORTABLE_EXECUTABLE_DIR }) && !DEMO;
+let lastUpdate = null;      // last successful check result (also what the "Update available" banner shows)
+
+async function fetchReleases() {
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 10000);
+  try {
+    const r = await net.fetch(`https://api.github.com/repos/${REPO}/releases?per_page=15`, { headers: { 'User-Agent': 'KafkaBoost', Accept: 'application/vnd.github+json' }, signal: ctl.signal });
+    if (r.status === 404) return [];
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } finally { clearTimeout(timer); }
 }
+
 async function checkUpdate() {
   const current = app.getVersion();
   try {
-    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 10000);
-    const r = await net.fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'KafkaBoost', Accept: 'application/vnd.github+json' }, signal: ctl.signal });
-    clearTimeout(timer);
-    if (r.status === 404) return { ok: true, current, latest: current, newer: false, url: `https://github.com/${REPO}/releases` };
-    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
-    const j = await r.json();
-    return { ok: true, current, latest: String(j.tag_name || current).replace(/^v/i, ''), newer: isNewer(j.tag_name || current, current), url: j.html_url || `https://github.com/${REPO}/releases` };
+    const list = updates.newerReleases(await fetchReleases(), current);
+    const latest = list.length ? list[0] : null;
+    lastUpdate = {
+      ok: true, current, latest: latest ? latest.version : current, newer: !!latest,
+      url: latest ? latest.url : `https://github.com/${REPO}/releases`,
+      releases: list.map((r) => ({ version: r.version, name: r.name, date: r.date, notes: updates.parseNotes(r.body) })),
+      canInstall: selfUpdate()
+    };
+    return lastUpdate;
   } catch (e) { return { ok: false, error: e.name === 'AbortError' ? 'timeout' : e.message }; }
 }
+
+// "What's new": after the app was updated, show the notes of the version now running, once.
+async function whatsNew() {
+  const current = app.getVersion(); const seen = settings.get().lastSeenVersion;
+  if (seen === current) return { show: false };
+  settings.set({ lastSeenVersion: current });
+  if (!seen) return { show: false };                       // first run ever: nothing was "updated"
+  try {
+    const rel = updates.releaseFor(await fetchReleases(), current);
+    if (!rel) return { show: false };
+    return { show: true, current, releases: [{ version: rel.version, name: rel.name, date: rel.date, notes: updates.parseNotes(rel.body) }] };
+  } catch { return { show: false }; }
+}
+
+let updaterWired = false;
+function wireUpdater(send) {
+  const { autoUpdater } = require('electron-updater');
+  autoUpdater.autoDownload = false; autoUpdater.autoInstallOnAppQuit = true;
+  if (!updaterWired) {
+    updaterWired = true;
+    autoUpdater.on('download-progress', (p) => send({ stage: 'downloading', percent: Math.round(p.percent || 0) }));
+    autoUpdater.on('update-downloaded', () => { send({ stage: 'ready' }); setTimeout(() => { quitting = true; autoUpdater.quitAndInstall(false, true); }, 1500); });
+    autoUpdater.on('error', (e) => send({ stage: 'error', error: e && e.message ? e.message : String(e) }));
+  }
+  return autoUpdater;
+}
+async function installUpdate(send) {
+  if (!selfUpdate()) return { ok: false, error: 'not-installable' };
+  try {
+    const au = wireUpdater(send);
+    const r = await au.checkForUpdates();
+    if (!r || !r.updateInfo || !updates.isNewer(r.updateInfo.version, app.getVersion())) return { ok: false, error: 'no-update-file' };
+    send({ stage: 'downloading', percent: 0 });
+    au.downloadUpdate();
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
 function scheduleUpdateCheck() {
   if (updateTimer) clearInterval(updateTimer);
   if (!settings.get().checkForUpdates || TEST_MODE || DEMO) return;
-  const run = async () => { const r = await checkUpdate(); if (r.ok && r.newer && tray && settings.get().notifications) tray.notify('KafkaBoost', i18n.t('settings.newer', { latest: r.latest, current: r.current }), showWindow); };
-  setTimeout(run, 60 * 1000); updateTimer = setInterval(run, 24 * 3600 * 1000);
+  const run = async () => {
+    const before = lastUpdate && lastUpdate.latest;
+    const r = await checkUpdate();
+    if (!(r.ok && r.newer)) return;
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:available', r);
+    if (r.latest !== before && tray && settings.get().notifications) tray.notify('KafkaBoost', i18n.t('settings.newer', { latest: r.latest, current: r.current }), () => { showWindow(); if (mainWindow) mainWindow.webContents.send('update:show', r); });
+  };
+  setTimeout(run, 15 * 1000); updateTimer = setInterval(run, 6 * 3600 * 1000);
 }
 
 // ---- start with the system ----------------------------------------------------------------------------------
@@ -230,6 +287,8 @@ ipcMain.handle('step:run', async (event, step, opts = {}) => {
 
 ipcMain.handle('app:autostart', async (_e, mode) => (mode === 'status' ? { enabled: await getAutostart() } : setAutostart(mode === 'on')));
 ipcMain.handle('app:checkUpdate', () => checkUpdate());
+ipcMain.handle('app:whatsNew', () => whatsNew());
+ipcMain.handle('app:installUpdate', (event) => installUpdate((p) => { if (!event.sender.isDestroyed()) event.sender.send('update:progress', p); }));
 
 ipcMain.handle('app:openPath', async (_e, which) => {
   const dir = which === 'logs' ? path.join(app.getPath('userData'), 'logs') : which === 'data' ? app.getPath('userData') : null;

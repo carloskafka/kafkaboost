@@ -179,3 +179,16 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 @media (max-width: 1000px) { .hero { flex-wrap: wrap; } .tiles { grid-template-columns: 1fr; } .specs { grid-template-columns: 1fr; } }
 @media (max-width: 860px) { .app { grid-template-columns: 1fr; } .side { display: none; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---- update banner + changelog dialog ---- */
+.banner.info { background: rgba(108,140,255,.12); border-color: rgba(108,140,255,.5); color: var(--accent); margin-bottom: 12px; }
+.dialog { width: min(640px, calc(100vw - 32px)); max-height: 82vh; padding: 22px 24px; border-radius: var(--radius); border: 1px solid var(--line-strong); background: var(--panel); color: var(--text); }
+.dialog::backdrop { background: rgba(0,0,0,.55); }
+.dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.cl-body { max-height: 52vh; overflow: auto; padding-right: 6px; }
+.cl-release + .cl-release { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.cl-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+.cl-ver { font-weight: 700; } .cl-date { color: var(--muted); font-size: 12.5px; }
+.cl-body h4 { margin: 10px 0 4px; font-size: 13.5px; color: var(--text-soft); }
+.cl-body ul { margin: 4px 0 4px; padding-left: 20px; color: var(--text-soft); font-size: 14px; }
+.cl-body p { margin: 4px 0; color: var(--text-soft); font-size: 14px; }
