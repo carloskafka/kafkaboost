@@ -5,43 +5,40 @@ const fs = require('fs');
 const path = require('path');
 
 const BUILD = path.join(__dirname, '..', 'build');
-const LABEL = {
-  unknown: 'Checking…',
-  ok: 'Your PC is optimized',
-  warn: 'Almost there – one thing needs a look',
-  fail: 'The optimization is not fully in place'
-};
+const VERDICTS = ['unknown', 'ok', 'warn', 'fail'];
 
 function iconFor(verdict) {
-  const file = path.join(BUILD, `tray-${LABEL[verdict] ? verdict : 'unknown'}.png`);
+  const file = path.join(BUILD, `tray-${VERDICTS.includes(verdict) ? verdict : 'unknown'}.png`);
   const fallback = path.join(BUILD, 'icon.png');
   const img = nativeImage.createFromPath(fs.existsSync(file) ? file : fallback);
   return img.resize({ width: 16, height: 16, quality: 'best' });
 }
 
-// handlers: { onOpen, onCheck, onQuit, onToggleAutostart }
-function createTray(handlers) {
+// opts: { t(key, vars), onOpen, onCheck, onQuit, onToggleAutostart }
+function createTray(opts) {
+  const { t } = opts;
   const tray = new Tray(iconFor('unknown'));
   let verdict = 'unknown';
   let detail = '';
   let autostart = false;
 
   const rebuild = () => {
-    tray.setToolTip(`Legion Tuning – ${LABEL[verdict]}${detail ? '\n' + detail : ''}`);
+    const label = t(`tray.verdict.${verdict}`);
+    tray.setToolTip(`KafkaBoost – ${label}${detail ? '\n' + detail : ''}`);
     tray.setImage(iconFor(verdict));
     tray.setContextMenu(Menu.buildFromTemplate([
-      { label: LABEL[verdict], enabled: false },
+      { label, enabled: false },
       { type: 'separator' },
-      { label: 'Open Legion Tuning', click: handlers.onOpen },
-      { label: 'Check now', click: handlers.onCheck },
-      { label: 'Start with Windows', type: 'checkbox', checked: autostart, click: (item) => handlers.onToggleAutostart(item.checked) },
+      { label: t('tray.open'), click: opts.onOpen },
+      { label: t('tray.check'), click: opts.onCheck },
+      { label: t('tray.autostart'), type: 'checkbox', checked: autostart, click: (item) => opts.onToggleAutostart(item.checked) },
       { type: 'separator' },
-      { label: 'Quit', click: handlers.onQuit }
+      { label: t('tray.quit'), click: opts.onQuit }
     ]));
   };
 
-  tray.on('click', handlers.onOpen);
-  tray.on('double-click', handlers.onOpen);
+  tray.on('click', opts.onOpen);
+  tray.on('double-click', opts.onOpen);
   rebuild();
 
   return {
@@ -49,10 +46,11 @@ function createTray(handlers) {
     setStatus(next, nextDetail) {
       const rank = { unknown: 0, ok: 1, warn: 2, fail: 3 };
       const worse = verdict === 'ok' && (rank[next] || 0) > rank.ok;
-      verdict = LABEL[next] ? next : 'unknown'; detail = nextDetail || ''; rebuild();
+      verdict = VERDICTS.includes(next) ? next : 'unknown'; detail = nextDetail || ''; rebuild();
       return worse;
     },
     setAutostart(on) { autostart = !!on; rebuild(); },
+    refreshLanguage: rebuild,
     notify(title, body, onClick) {
       if (!Notification.isSupported()) return;
       const n = new Notification({ title, body, icon: path.join(BUILD, 'icon.png') });
@@ -65,4 +63,4 @@ function createTray(handlers) {
   };
 }
 
-module.exports = { createTray, LABEL };
+module.exports = { createTray };

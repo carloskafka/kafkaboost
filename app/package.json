@@ -1,6 +1,6 @@
-﻿{
+{
     "name":  "legion-tuning-wizard",
-    "productName":  "Legion Tuning Wizard",
+    "productName":  "KafkaBoost",
     "version":  "0.1.0",
     "description":  "Step-by-step wizard that applies the ThrottleStop undervolt/boost/power tuning for the Lenovo Legion 83DE (i9-14900HX).",
     "main":  "src/main.js",
@@ -12,11 +12,12 @@
                     "demo":  "node -e \"process.env.WIZARD_DEMO=1;require(\u0027child_process\u0027).spawn(require(\u0027electron\u0027),[\u0027.\u0027],{stdio:\u0027inherit\u0027,env:process.env})\"",
                     "icons":  "electron ../tools/make-icons.js",
                     "shortcut":  "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/Create-Shortcut.ps1",
-                    "dist":  "electron-builder --win"
+                    "dist":  "electron-builder --win",
+                    "test":  "node --test \"test/*.test.js\""
                 },
     "build":  {
                   "appId":  "dev.carloskafka.legion-tuning-wizard",
-                  "productName":  "Legion Tuning Wizard",
+                  "productName":  "KafkaBoost",
                   "files":  [
                                 "src/**/*",
                                 "renderer/**/*",

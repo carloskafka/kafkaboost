@@ -1,34 +1,55 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, nativeTheme, shell, session, net } = require('electron');
 const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { createTray, LABEL } = require('./tray');
+
+const DEMO = process.env.WIZARD_DEMO === '1';
+// Test helpers (WIZARD_SCREENSHOT / WIZARD_SHOTS / WIZARD_TRAYTEST) use a throw-away profile so they never touch the
+// user's real settings and never clash with a running copy of the app.
+const TEST_MODE = !!(process.env.WIZARD_SCREENSHOT || process.env.WIZARD_SHOTS || process.env.WIZARD_UITEST);
+if (DEMO || TEST_MODE || process.env.WIZARD_TRAYTEST) app.setPath('userData', path.join(os.tmpdir(), 'kafkaboost-test-profile'));
+
+const { createStore } = require('./settings');
+const { createI18n, resolveLanguage } = require('./i18n');
+const { createTray } = require('./tray');
+const { linuxAutostartPath, linuxDesktopEntry } = require('./autostart');
+const demo = DEMO ? require('./demo') : null;
 
 const repoRoot = path.join(__dirname, '..', '..');
 const scriptsDir = app.isPackaged ? path.join(process.resourcesPath, 'scripts') : path.join(repoRoot, 'scripts');
 const configDir = app.isPackaged ? path.join(process.resourcesPath, 'config') : path.join(repoRoot, 'config');
 // Single source of truth shared with the PowerShell scripts: config/defaults.json
 const DEFAULTS = JSON.parse(fs.readFileSync(path.join(configDir, 'defaults.json'), 'utf8'));
-const DEFAULT_INSTALL_DIR = DEFAULTS.installDir;
-const DEMO = process.env.WIZARD_DEMO === '1';
-const demo = DEMO ? require('./demo') : null;
 const ICON = path.join(__dirname, '..', 'build', 'icon.png');
-const BACKGROUND_CHECK_MS = 30 * 60 * 1000;      // health check while the app sits in the tray
+const REPO = 'carloskafka/legion-14900hx-throttlestop';
 const FIRST_CHECK_DELAY_MS = 20 * 1000;
-// Test helpers (WIZARD_SCREENSHOT / WIZARD_SHOTS / WIZARD_TRAYTEST) must not leave a tray app behind or show toasts.
-const TEST_MODE = !!(process.env.WIZARD_SCREENSHOT || process.env.WIZARD_SHOTS);
-const START_HIDDEN = process.argv.includes('--hidden');
+const START_HIDDEN_ARG = process.argv.includes('--hidden');
+
+const PLATFORM = process.env.WIZARD_FAKE_PLATFORM || process.platform;      // win32 | linux | darwin (override is for UI tests only)
+const IS_WIN = PLATFORM === 'win32';
+const OS_NAME = PLATFORM === 'darwin' ? 'macOS' : PLATFORM === 'linux' ? 'Linux' : 'Windows';
+
+// Which sections exist on this OS. Windows has everything; elsewhere the Windows-only ones show an explanation.
+const FEATURES = {
+  dashboard: true, analysis: true, optimizations: IS_WIN, cleanup: IS_WIN, restore: IS_WIN, apps: true, settings: true, help: true
+};
 
 app.setAppUserModelId('dev.carloskafka.legion-tuning-wizard');
-
-// One instance only: a second launch (shortcut, startup task) just brings the first one forward.
 if (!app.requestSingleInstanceLock() && !TEST_MODE) { app.quit(); }
+
+const settings = createStore(path.join(app.getPath('userData'), 'settings.json'));
+const i18n = createI18n(path.join(__dirname, '..', 'renderer', 'i18n'));
+const applyLanguage = () => i18n.setLang(resolveLanguage(settings.get().language, app.getLocale()));
+applyLanguage();
+nativeTheme.themeSource = settings.get().theme;
 
 let mainWindow = null;
 let tray = null;
 let quitting = false;
 let lastChecks = null;
+let backgroundTimer = null;
+let updateTimer = null;
 
 function isAdmin() {
   if (DEMO) return true;
@@ -38,14 +59,15 @@ function isAdmin() {
 
 function createWindow({ show = true } = {}) {
   const win = new BrowserWindow({
-    width: 1080, height: 740, minWidth: 900, minHeight: 640, show,
-    backgroundColor: '#0d1017', title: 'Legion Tuning', icon: fs.existsSync(ICON) ? ICON : undefined,
+    width: 1120, height: 780, minWidth: 920, minHeight: 640, show,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0d1017' : '#f4f6fb', title: 'KafkaBoost', icon: fs.existsSync(ICON) ? ICON : undefined,
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  // Closing the window keeps the app running in the system tray; "Quit" in the tray menu really exits.
-  win.on('close', (e) => { if (!quitting && tray && tray.exists) { e.preventDefault(); win.hide(); } });
+  // Closing the window keeps the app running in the system tray when the setting allows it; "Quit" in the tray menu really exits.
+  win.on('close', (e) => { if (!quitting && tray && tray.exists && settings.get().closeToTray) { e.preventDefault(); win.hide(); } });
+  win.on('closed', () => { if (win === mainWindow) mainWindow = null; });
   return win;
 }
 
@@ -55,18 +77,21 @@ function showWindow() {
   mainWindow.show(); mainWindow.focus();
 }
 
+const broadcast = (channel, payload) => BrowserWindow.getAllWindows().forEach((w) => { if (!w.isDestroyed()) w.webContents.send(channel, payload); });
+
 // ---- Steps.ps1 runner ---------------------------------------------------------------------------------------
 // Runs scripts\Steps.ps1 -Step <id>. Calls onLog for each "LOG:" line and resolves with the parsed "RESULT:" json.
 function runStep(step, opts = {}, onLog = () => {}) {
   return new Promise((resolve) => {
     if (DEMO) {
-      const d = demo.demoStep(step);
+      const d = demo.demoStep(step, opts);
       d.logs.forEach((l) => onLog(l));
       return setTimeout(() => resolve(d.res), 350);
     }
-    if (process.platform !== 'win32') return resolve({ ok: false, message: 'Tuning steps are only available on Windows.' });
-    const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(scriptsDir, 'Steps.ps1'), '-Step', step,
-                  '-InstallDir', opts.installDir || DEFAULT_INSTALL_DIR];
+    if (process.platform !== 'win32') return resolve({ ok: false, message: 'This step is only available on Windows.' });
+    const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(scriptsDir, 'Steps.ps1'), '-Step', step];
+    const installDir = opts.installDir || settings.get().installDir;
+    if (installDir) args.push('-InstallDir', installDir);
     if (opts.zipPath) args.push('-ZipPath', opts.zipPath);
     if (opts.disableVbs) args.push('-DisableVBS');
     if (opts.restoreVbs) args.push('-RestoreVbs');
@@ -89,52 +114,113 @@ function runStep(step, opts = {}, onLog = () => {}) {
 }
 
 // ---- tray status from any health/fix result ------------------------------------------------------------------
+function notify(titleKey, bodyKey, onClick) {
+  if (!tray || !settings.get().notifications) return;
+  tray.notify(i18n.t(titleKey), i18n.t(bodyKey), onClick);
+}
+
 function applyHealthToTray(res) {
   const h = res && res.data;
   if (!tray || !h || !h.checks) return;
   const bad = h.checks.filter((c) => !c.ok && c.severity !== 'info');
-  const worse = tray.setStatus(h.verdict, bad.length ? bad.map((c) => c.name).join(', ') : '');
+  const worse = tray.setStatus(h.verdict, bad.length ? bad.map((c) => i18n.t(`check.${c.id}.name`)).join(', ') : '');
   const updated = h.checks.find((c) => c.id === 'windows' && !c.ok);
   const windowsJustChanged = updated && lastChecks && lastChecks.windowsOk !== false;
   lastChecks = { windowsOk: !updated };
   if (worse) {
-    tray.notify('Legion Tuning: optimization needs attention',
-      updated ? 'Windows was updated and the tuning is no longer fully in place. Click to review and fix it.' : (bad.map((c) => c.name).join(', ') || LABEL[h.verdict]), showWindow);
+    if (updated) notify('notify.worse.title', 'notify.worse.windows', showWindow);
+    else if (tray && settings.get().notifications) tray.notify(i18n.t('notify.worse.title'), bad.map((c) => i18n.t(`check.${c.id}.name`)).join(', ') || i18n.t(`tray.verdict.${h.verdict}`), showWindow);
   } else if (windowsJustChanged && h.verdict === 'ok') {
-    tray.notify('Legion Tuning', 'Windows was updated. Your optimization is still in place.', showWindow);
+    notify('notify.windowsOk.title', 'notify.windowsOk.body', showWindow);
   }
 }
 
 async function backgroundCheck() {
-  const res = await runStep('health', { installDir: DEFAULT_INSTALL_DIR });
+  if (!IS_WIN) return null;
+  const res = await runStep('health', {});
   applyHealthToTray(res);
   return res;
 }
 
-// ---- start with Windows (scheduled task that opens the app hidden in the tray) -------------------------------
-const appLaunch = () => ({ appExe: process.execPath, appArgs: app.isPackaged ? '--hidden' : `"${app.getAppPath()}" --hidden` });
-async function queryAutostart() {
-  const res = await runStep('autostart', { mode: 'status' });
-  return !!(res.data && res.data.enabled);
+function scheduleBackground() {
+  if (backgroundTimer) clearInterval(backgroundTimer);
+  if (!tray || !IS_WIN) return;
+  backgroundTimer = setInterval(backgroundCheck, settings.get().checkIntervalMin * 60 * 1000);
+}
+
+// ---- updates (GitHub releases) -----------------------------------------------------------------------------
+const parseVer = (v) => String(v).replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
+function isNewer(latest, current) {
+  const a = parseVer(latest), b = parseVer(current);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); }
+  return false;
+}
+async function checkUpdate() {
+  const current = app.getVersion();
+  try {
+    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 10000);
+    const r = await net.fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'KafkaBoost', Accept: 'application/vnd.github+json' }, signal: ctl.signal });
+    clearTimeout(timer);
+    if (r.status === 404) return { ok: true, current, latest: current, newer: false, url: `https://github.com/${REPO}/releases` };
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+    const j = await r.json();
+    return { ok: true, current, latest: String(j.tag_name || current).replace(/^v/i, ''), newer: isNewer(j.tag_name || current, current), url: j.html_url || `https://github.com/${REPO}/releases` };
+  } catch (e) { return { ok: false, error: e.name === 'AbortError' ? 'timeout' : e.message }; }
+}
+function scheduleUpdateCheck() {
+  if (updateTimer) clearInterval(updateTimer);
+  if (!settings.get().checkForUpdates || TEST_MODE || DEMO) return;
+  const run = async () => { const r = await checkUpdate(); if (r.ok && r.newer && tray && settings.get().notifications) tray.notify('KafkaBoost', i18n.t('settings.newer', { latest: r.latest, current: r.current }), showWindow); };
+  setTimeout(run, 60 * 1000); updateTimer = setInterval(run, 24 * 3600 * 1000);
+}
+
+// ---- start with the system ----------------------------------------------------------------------------------
+const hiddenArg = () => (settings.get().startHidden ? ' --hidden' : '');
+const appLaunch = () => ({ appExe: process.execPath, appArgs: (app.isPackaged ? '' : `"${app.getAppPath()}"`) + hiddenArg() });
+
+async function getAutostart() {
+  if (IS_WIN) { const res = await runStep('autostart', { mode: 'status' }); return !!(res.data && res.data.enabled); }
+  if (PLATFORM === 'darwin') return app.getLoginItemSettings().openAtLogin;
+  return fs.existsSync(linuxAutostartPath());
 }
 async function setAutostart(on) {
-  const res = await runStep('autostart', { mode: on ? 'on' : 'off', ...appLaunch() });
-  const enabled = !!(res.data && res.data.enabled);
+  let enabled = on, message = '', ok = true, code = null;
+  if (IS_WIN) {
+    const res = await runStep('autostart', { mode: on ? 'on' : 'off', ...appLaunch() });
+    ok = res.ok; enabled = !!(res.data && res.data.enabled); message = res.message; code = res.code;
+  } else if (PLATFORM === 'darwin') {
+    app.setLoginItemSettings({ openAtLogin: on, args: settings.get().startHidden ? ['--hidden'] : [] });
+  } else {
+    const file = linuxAutostartPath();
+    try {
+      if (on) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, linuxDesktopEntry(process.execPath, [...(app.isPackaged ? [] : [app.getAppPath()]), ...(settings.get().startHidden ? ['--hidden'] : [])])); }
+      else if (fs.existsSync(file)) fs.unlinkSync(file);
+    } catch (e) { ok = false; message = e.message; enabled = fs.existsSync(file); }
+  }
   if (tray) tray.setAutostart(enabled);
-  return { ok: res.ok, enabled, message: res.message };
+  return { ok, enabled, message, code };
 }
 
 // ---- IPC ----------------------------------------------------------------------------------------------------
 ipcMain.handle('app:info', () => ({
-  platform: process.env.WIZARD_FAKE_PLATFORM || process.platform,   // win32 | linux | darwin (override is for UI tests only)
+  platform: PLATFORM,
+  osName: OS_NAME,
   arch: process.arch,
   isAdmin: isAdmin(),
   demo: DEMO,
   version: app.getVersion(),
   cpu: (os.cpus()[0] || {}).model || 'unknown',
-  defaultInstallDir: DEFAULT_INSTALL_DIR,
-  tray: !!(tray && tray.exists)
+  cores: os.cpus().length,
+  ramGB: Math.round(os.totalmem() / 1024 ** 3),
+  osRelease: `${os.type()} ${os.release()}`,
+  tray: !!(tray && tray.exists),
+  features: FEATURES
 }));
+
+ipcMain.handle('settings:get', () => settings.get());
+ipcMain.handle('settings:set', (_e, patch) => settings.set(patch));
+ipcMain.handle('settings:reset', () => settings.reset());
+ipcMain.handle('i18n:get', () => i18n.payload());
 
 ipcMain.handle('step:run', async (event, step, opts = {}) => {
   const res = await runStep(step, opts, (line) => event.sender.send('step:log', step, line));
@@ -142,10 +228,30 @@ ipcMain.handle('step:run', async (event, step, opts = {}) => {
   return res;
 });
 
-ipcMain.handle('app:autostart', async (_e, mode) => (mode === 'status' ? { enabled: await queryAutostart() } : setAutostart(mode === 'on')));
+ipcMain.handle('app:autostart', async (_e, mode) => (mode === 'status' ? { enabled: await getAutostart() } : setAutostart(mode === 'on')));
+ipcMain.handle('app:checkUpdate', () => checkUpdate());
+
+ipcMain.handle('app:openPath', async (_e, which) => {
+  const dir = which === 'logs' ? path.join(app.getPath('userData'), 'logs') : which === 'data' ? app.getPath('userData') : null;
+  if (!dir) return { ok: false };
+  fs.mkdirSync(dir, { recursive: true });
+  return { ok: !(await shell.openPath(dir)) };
+});
+ipcMain.handle('app:openInstallDir', async () => {
+  const res = await runStep('paths', {});
+  const dir = res.data && res.data.installDir;
+  if (!dir || !fs.existsSync(dir)) return { ok: false };
+  return { ok: !(await shell.openPath(dir)) };
+});
+ipcMain.handle('app:clearCache', async () => { await session.defaultSession.clearCache(); await session.defaultSession.clearStorageData({ storages: ['cachestorage', 'serviceworkers'] }); return { ok: true }; });
 
 ipcMain.handle('dialog:zip', async () => {
-  const r = await dialog.showOpenDialog({ title: 'Select the ThrottleStop zip', properties: ['openFile'], filters: [{ name: 'Zip', extensions: ['zip'] }] });
+  const r = await dialog.showOpenDialog({ title: 'ThrottleStop zip', properties: ['openFile'], filters: [{ name: 'Zip', extensions: ['zip'] }] });
+  return r.canceled ? null : r.filePaths[0];
+});
+
+ipcMain.handle('dialog:folder', async () => {
+  const r = await dialog.showOpenDialog({ properties: ['openDirectory'] });
   return r.canceled ? null : r.filePaths[0];
 });
 
@@ -157,13 +263,22 @@ ipcMain.handle('app:relaunchAdmin', () => {
   return true;
 });
 
-ipcMain.handle('app:openExternal', (e, url) => { if (/^https:\/\/(www\.techpowerup\.com\/|carloskafka\.github\.io\/legion-14900hx-throttlestop|github\.com\/carloskafka\/legion-14900hx-throttlestop)/.test(url)) return require('electron').shell.openExternal(url); });
+const EXTERNAL_OK = /^https:\/\/(www\.techpowerup\.com\/|carloskafka\.github\.io\/legion-14900hx-throttlestop|github\.com\/carloskafka\/legion-14900hx-throttlestop)/;
+ipcMain.handle('app:openExternal', (_e, url) => { if (EXTERNAL_OK.test(url)) return shell.openExternal(url); });
+
+// Settings side effects: theme, language (tray + renderer), tray timers, autostart arguments.
+settings.onChange((s) => {
+  nativeTheme.themeSource = s.theme;
+  const before = i18n.lang; applyLanguage();
+  if (i18n.lang !== before && tray) tray.refreshLanguage();
+  scheduleBackground(); scheduleUpdateCheck();
+  broadcast('settings:changed', { settings: s, i18n: i18n.payload() });
+});
 
 // ---- Test helpers (not used in normal runs) -------------------------------------------------------------------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function shot(win, file) { fs.writeFileSync(file, (await win.webContents.capturePage()).toPNG()); }
 const js = (win, code) => win.webContents.executeJavaScript(code);
-const waitIdle = async (win) => { for (let i = 0; i < 80; i++) { if (await js(win, "!document.getElementById('run').disabled && !document.getElementById('check').disabled")) return; await sleep(100); } };
 
 app.on('second-instance', () => showWindow());
 app.on('before-quit', () => { quitting = true; });
@@ -172,22 +287,24 @@ app.on('window-all-closed', () => { if (TEST_MODE || !tray) app.quit(); });
 
 app.whenReady().then(async () => {
   if (!app.requestSingleInstanceLock() && !TEST_MODE) return;
-  const supported = (process.env.WIZARD_FAKE_PLATFORM || process.platform) === 'win32';
-  mainWindow = createWindow({ show: !START_HIDDEN || TEST_MODE });
+  mainWindow = createWindow({ show: !(START_HIDDEN_ARG || (process.argv.includes('--hidden'))) || TEST_MODE });
 
-  if (!TEST_MODE && supported) {
-    tray = createTray({
-      onOpen: showWindow,
-      onCheck: async () => { showWindow(); await backgroundCheck(); },
-      onQuit: () => { quitting = true; app.quit(); },
-      onToggleAutostart: (on) => setAutostart(on)
-    });
-    queryAutostart().then((on) => tray && tray.setAutostart(on));
-    setTimeout(backgroundCheck, FIRST_CHECK_DELAY_MS);
-    setInterval(backgroundCheck, BACKGROUND_CHECK_MS);
+  if (!TEST_MODE) {
+    try {
+      tray = createTray({
+        t: i18n.t,
+        onOpen: showWindow,
+        onCheck: async () => { showWindow(); await backgroundCheck(); },
+        onQuit: () => { quitting = true; app.quit(); },
+        onToggleAutostart: (on) => setAutostart(on)
+      });
+      getAutostart().then((on) => tray && tray.setAutostart(on));
+      if (IS_WIN) setTimeout(backgroundCheck, FIRST_CHECK_DELAY_MS);
+      scheduleBackground(); scheduleUpdateCheck();
+    } catch (e) { tray = null; console.error('tray unavailable:', e.message); }   // e.g. Linux without an appindicator
   }
 
-  // WIZARD_TRAYTEST=<file.json>: closes the window and records that the process and the tray survive it.
+  // WIZARD_TRAYTEST=<file.json>: closes the window, then records that the process and the tray survive it and the window can be reopened.
   if (process.env.WIZARD_TRAYTEST) {
     const file = process.env.WIZARD_TRAYTEST;
     mainWindow.webContents.once('did-finish-load', async () => {
@@ -196,8 +313,7 @@ app.whenReady().then(async () => {
       mainWindow.close(); await sleep(1500);
       const after = { windowVisible: mainWindow.isDestroyed() ? false : mainWindow.isVisible(), windowDestroyed: mainWindow.isDestroyed(), trayExists: !!(tray && tray.exists), verdict: tray ? tray.verdict : null };
       showWindow(); await sleep(500);
-      const reopened = { windowVisible: mainWindow.isVisible() };
-      fs.writeFileSync(file, JSON.stringify({ before, afterClose: after, afterOpenFromTray: reopened }, null, 2));
+      fs.writeFileSync(file, JSON.stringify({ before, afterClose: after, afterOpenFromTray: { windowVisible: mainWindow.isVisible() } }, null, 2));
       quitting = true; app.quit();
     });
   }
@@ -206,33 +322,24 @@ app.whenReady().then(async () => {
   if (process.env.WIZARD_SCREENSHOT) {
     mainWindow.webContents.once('did-finish-load', () => setTimeout(async () => { await shot(mainWindow, process.env.WIZARD_SCREENSHOT); app.quit(); }, 6000));
   }
-  // WIZARD_SHOTS=<dir>: walks the whole UI in demo mode and saves one PNG per state (used for docs/assets).
+
+  // WIZARD_UITEST=<result.json>: clicks through Settings and the Optimizations flow in demo mode and records pass/fail (tools/uitest.js).
+  if (process.env.WIZARD_UITEST) {
+    mainWindow.webContents.once('did-finish-load', async () => {
+      await sleep(1800);
+      try { await require('../../tools/uitest').run({ win: mainWindow, js, sleep, settings, outFile: process.env.WIZARD_UITEST, platform: PLATFORM }); }
+      catch (e) { fs.writeFileSync(process.env.WIZARD_UITEST, JSON.stringify({ passed: 0, failed: 1, results: [{ name: 'harness', ok: false, detail: String(e) }] })); }
+      settings.reset(); quitting = true; app.quit();
+    });
+  }
+
+  // WIZARD_SHOTS=<dir>: walks the whole UI in demo mode and saves one PNG per state (see tools/shots.js; used for docs/assets).
   if (process.env.WIZARD_SHOTS) {
     const win = mainWindow;
-    const dir = process.env.WIZARD_SHOTS; fs.mkdirSync(dir, { recursive: true });
     win.webContents.once('did-finish-load', async () => {
       await sleep(1500);
-      if (!supported) { await shot(win, path.join(dir, 'unsupported.png')); return app.quit(); }
-      const click = (sel) => js(win, `document.querySelector(${JSON.stringify(sel)}).click()`);
-      await shot(win, path.join(dir, 'health-ok.png'));
-      if (DEMO) {
-        demo.state.scenario = 'updated'; demo.state.fixed = false;
-        await click('#check'); await sleep(700); await shot(win, path.join(dir, 'health-attention.png'));
-        await click('#fix'); await sleep(1200); await shot(win, path.join(dir, 'health-fixed.png'));
-      }
-      await click('[data-view=analysis]'); await sleep(1200); await shot(win, path.join(dir, 'analysis.png'));
-      await click('[data-view=optimizations]'); await sleep(600); await shot(win, path.join(dir, 'optimizations.png'));
-      await click('#openThrottle'); await sleep(800);
-      const ids = ['detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify'];
-      for (let i = 0; i < ids.length; i++) {
-        if (i > 0) await click('#run');
-        await waitIdle(win); await sleep(300);
-        await shot(win, path.join(dir, `step-${i}-${ids[i]}.png`));
-        await click('#next'); await sleep(400);
-      }
-      await shot(win, path.join(dir, 'finish.png'));
-      await click('[data-view=restore]'); await sleep(500); await shot(win, path.join(dir, 'restore.png'));
-      await click('[data-view=help]'); await sleep(500); await js(win, "document.querySelector('.faq details').open = true"); await shot(win, path.join(dir, 'help.png'));
+      try { await require('../../tools/shots').run({ win, dir: process.env.WIZARD_SHOTS, shot, js, sleep, demo, settings, PLATFORM }); }
+      catch (e) { console.error('shots failed:', e); }
       app.quit();
     });
   }
