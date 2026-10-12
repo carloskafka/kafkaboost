@@ -21,6 +21,29 @@ Notes
 How to repeat: start HWiNFO (sensors only, `SensorsSM=1`), run `scripts/monitoring/hwinfo_logger.ps1 -Minutes 20`, play the
 same route, then compare the CSV in `logs/`.
 
+## Latency (LatencyMon)
+
+Secondary to heat, but recorded so a later run can be compared. All reports are from the same laptop (BIOS N2CN32WW, Windows 11 build
+26300, NVIDIA driver 617.42). Values are the worst single event of each run, so a longer run naturally shows higher peaks.
+
+| Report | Duration | Interrupt to process | Worst ISR | Worst DPC | Hard page faults |
+|---|---|---|---|---|---|
+| Before the tuning | 3:54:33 | 6261 us | 651 us (ACPI.sys) | 2153 us (storport.sys) | 72,778 |
+| Report 4 (after) | 1:39 | 3603 us | 260 us (ACPI.sys) | 863 us (ACPI.sys) | 2,340 |
+| Report 8 (after) | 8:18:43 | 6432 us | 705 us (Wdf01000.sys) | 1583 us (ntoskrnl.exe) | 275,768 |
+| Report 10 (after) | 0:13:35 | 3782 us | 468 us (ACPI.sys) | 1509 us (nvlddmkm.sys) | 57,019 |
+
+- **Verdict:** LatencyMon says "trouble handling real-time audio" in every report, including the one before the tuning. That text is
+  generic and aimed at audio work; it does not measure game stutter or temperature.
+- **Report 10 in detail:** 99.97 % of the 1.1 million DPCs ran under 250 us; 336 ran 0.5 ms or longer, 13 of them 1-2 ms; only 3 of
+  about 191,000 ISRs ran 0.5 ms or longer. The longest DPC belongs to the NVIDIA driver (1.5 ms), the longest ISR to `ACPI.sys`
+  (laptop firmware / embedded controller), and Windows Defender (`msmpeng.exe`, 7,075) was hit by the most page faults.
+- **Reading it:** the peaks are lower than before the tuning, but the runs differ in length, so this is not a matched comparison.
+  Nothing here shows a latency problem worth chasing; the game was judged smooth. If it ever matters, check for a newer NVIDIA driver
+  and a Lenovo BIOS update. Do not follow LatencyMon's "disable CPU throttling in BIOS" hint (the throttling here is deliberate) and do
+  not disable Defender.
+- Several saved reports were byte-identical copies (reports 4-7); compare file hashes before trusting a "new" capture.
+
 ## Reference machine
 
 | Item | Value |
