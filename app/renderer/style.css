@@ -192,3 +192,24 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 .cl-body h4 { margin: 10px 0 4px; font-size: 13.5px; color: var(--text-soft); }
 .cl-body ul { margin: 4px 0 4px; padding-left: 20px; color: var(--text-soft); font-size: 14px; }
 .cl-body p { margin: 4px 0; color: var(--text-soft); font-size: 14px; }
+
+/* ---- tweak catalog ---- */
+.tweaks-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 26px 0 10px; }
+.tweaks-head .h2 { margin: 0; }
+.tweaks-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tweaks-tools .field { width: 240px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.chip-btn { padding: 5px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text-soft); font-size: 13px; cursor: pointer; }
+.chip-btn:hover { background: var(--hover); color: var(--text); }
+.chip-btn.active { color: var(--accent); border-color: rgba(108,140,255,.5); background: rgba(108,140,255,.12); }
+.tweak-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
+.tweak { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); }
+.tweak.unavailable { opacity: .55; }
+.tweak-top { display: flex; align-items: center; gap: 8px; }
+.tweak-top .grow { flex: 1; }
+.tweak h3 { margin: 0; font-size: 15px; }
+.tweak p { margin: 0; color: var(--text-soft); font-size: 13.5px; }
+.tweak .note { font-size: 12.5px; color: var(--muted); }
+.chip.risk-safe { color: var(--ok); } .chip.risk-advanced { color: var(--warn); } .chip.risk-risky { color: var(--bad); }
+.cf-body p { margin: 6px 0; color: var(--text-soft); font-size: 14px; }
+.btn.danger-fill.primary, .btn.danger-fill { background: rgba(255,107,129,.14); }

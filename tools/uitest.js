@@ -67,6 +67,36 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
   await setVal('langSel', 'en'); await sleep(600);
   await click('[data-view=optimizations]'); await sleep(500);
   check('Optimizations shows the CPU tuning card', await visible('optimizations') && (await q('#optThrottle h3')) === 'CPU thermal tuning');
+  // tweak catalog (demo data = the real catalog)
+  const count = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
+  const isOn = (id) => js(win, `document.querySelector('.tweak[data-id="${id}"] input').checked`);
+  const input = (id, v) => js(win, `(()=>{const e=document.getElementById(${JSON.stringify(id)});e.value=${JSON.stringify(v)};e.dispatchEvent(new Event('input',{bubbles:true}))})()`);
+  check('tweak catalog shows all 30 cards', (await count('.tweak')) === 30, await count('.tweak'));
+  check('category chips exist (all + 7)', (await count('#tweakChips .chip-btn')) === 8, await count('#tweakChips .chip-btn'));
+  await click('#tweakChips [data-cat=privacy]'); await sleep(200);
+  check('a category chip filters the cards', (await count('.tweak')) === 6, await count('.tweak'));
+  await click('#tweakChips [data-cat=all]'); await input('tweakSearch', 'mouse'); await sleep(200);
+  check('search filters by title or description', (await count('.tweak')) >= 1 && (await count('.tweak')) < 5, await count('.tweak'));
+  await input('tweakSearch', 'zzzz-nothing'); await sleep(200);
+  check('search with no match shows the empty message', (await count('.tweak')) === 0 && (await q('#tweakSummary')).length > 0);
+  await input('tweakSearch', ''); await sleep(200);
+  const before = await isOn('transparency-off');
+  await js(win, "document.querySelector('.tweak[data-id=\"transparency-off\"] input').click(); 0"); await sleep(900);
+  check('a safe tweak toggles at once (no confirmation)', (await isOn('transparency-off')) === !before && !(await js(win, 'document.getElementById("confirmDlg").open')));
+  await js(win, "document.querySelector('.tweak[data-id=\"sysmain-off\"] input').click(); 0"); await sleep(300);
+  check('an advanced tweak asks first', await js(win, 'document.getElementById("confirmDlg").open'));
+  await click('#cfCancel'); await sleep(300);
+  check('cancelling leaves the advanced tweak off', (await isOn('sysmain-off')) === false);
+  await js(win, "document.querySelector('.tweak[data-id=\"defender-realtime-off\"] input').click(); 0"); await sleep(300);
+  await click('#cfOk'); await sleep(300);
+  check('a risky tweak asks a second, final time', (await js(win, 'document.getElementById("confirmDlg").open')) && (await q('#cfTitle')).length > 0 && (await js(win, 'document.getElementById("cfTitle").textContent')) === 'Final confirmation', await q('#cfTitle'));
+  await click('#cfCancel'); await sleep(300);
+  check('stopping at the second risky confirmation changes nothing', (await isOn('defender-realtime-off')) === false);
+  await click('#tweakRecommended'); await sleep(300);
+  const recoOpen = await js(win, 'document.getElementById("confirmDlg").open');
+  if (recoOpen) { await click('#cfOk'); await sleep(900); }
+  check('after Apply recommended the safe recommended ones are on', await js(win, "['fast-startup-off','background-apps-off','game-dvr-off','mouse-accel-off','advertising-id-off'].every(id => document.querySelector('.tweak[data-id=' + id + '] input').checked)"));
+
   await click('#openThrottle'); await sleep(900);
   check('wizard opens on step 0', await visible('wizard') && (await q('#title')) === 'Detect your hardware', await q('#title'));
   check('Optimizations stays highlighted in the sidebar while in the wizard', (await js(win, "document.querySelector('.nav-btn.active').dataset.view")) === 'optimizations');

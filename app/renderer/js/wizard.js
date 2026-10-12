@@ -98,7 +98,6 @@
 
   KB.resetWizard = () => { state.status = STEPS.map(() => 'idle'); state.index = 0; state.started = false; };
   KB.registerView('wizard', { onShow() { renderStep(); if (!state.started) { state.started = true; runStep(true); } } });
-  KB.registerView('optimizations', { onShow() { KB.renderOptStatus(); } });
 
   document.addEventListener('DOMContentLoaded', () => {
     $('run').addEventListener('click', () => runStep(false));

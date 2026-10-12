@@ -54,7 +54,34 @@ const STEP = {
 };
 
 // Returns { logs, res } for a step.
-function demoStep(step) {
+// Tweaks in demo mode: the real catalog, with a believable starting state (most recommended ones already on).
+const tweakState = {};
+function catalog(configDir) { return JSON.parse(require('fs').readFileSync(require('path').join(configDir, 'tweaks.json'), 'utf8')).tweaks; }
+function tweakList(configDir) {
+  const cat = catalog(configDir);
+  return cat.map((t) => {
+    if (!(t.id in tweakState)) tweakState[t.id] = (t.recommended && t.id.length % 3 !== 0) || t.id === 'file-extensions-on';
+    const unavailable = t.minBuild && t.minBuild > 26300;
+    return { id: t.id, category: t.category, risk: t.risk, recommended: !!t.recommended, needsReboot: !!t.needsReboot,
+      needsAdmin: t.actions.some((a) => a.path ? a.path.startsWith('HKLM') : a.type !== 'powerplan' && a.type !== 'regkey'),
+      status: unavailable ? 'unavailable' : (tweakState[t.id] ? 'active' : 'inactive') };
+  });
+}
+
+function demoStep(step, opts = {}, configDir) {
+  if (step === 'tweaks-list') { const l = tweakList(configDir); return { logs: [], res: { ok: true, code: 'msg.tweaks.listed', args: { count: l.length }, message: l.length + ' tweaks.', data: { tweaks: l, admin: true, build: 26300 } } }; }
+  if (step === 'tweak-set') {
+    const t = catalog(configDir).find((x) => x.id === opts.tweakId);
+    if (!t) return { logs: [], res: { ok: false, code: 'tweak.error.unknown', args: { id: opts.tweakId }, message: 'Unknown tweak' } };
+    if (opts.tweakMode !== 'off' && t.risk === 'risky' && !opts.allowRisky) return { logs: [], res: { ok: false, code: 'tweak.error.riskyNeedsConsent', args: {}, message: 'needs consent' } };
+    tweakList(configDir); tweakState[t.id] = opts.tweakMode !== 'off';
+    return { logs: [t.id + ' -> ' + (opts.tweakMode || 'on')], res: { ok: true, code: tweakState[t.id] ? 'tweak.msg.applied' : 'tweak.msg.reverted', args: { id: t.id }, message: 'ok', data: { id: t.id, enabled: tweakState[t.id], needsReboot: !!t.needsReboot } } };
+  }
+  if (step === 'tweaks-recommended') {
+    const todo = tweakList(configDir).filter((t) => t.risk === 'safe' && t.recommended && t.status === 'inactive');
+    todo.forEach((t) => { tweakState[t.id] = true; });
+    return { logs: todo.map((t) => t.id + ': applied'), res: { ok: true, code: 'msg.tweaks.recommendedOk', args: { ok: todo.length, failed: 0 }, message: 'ok', data: { results: todo.map((t) => ({ ok: true, id: t.id })) } } };
+  }
   if (step === 'health') {
     const h = healthReport();
     return { logs: h.checks.map((c) => `${c.name}: ${c.ok ? 'OK' : 'ATTENTION'} - ${c.detail}`),

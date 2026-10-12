@@ -82,6 +82,7 @@
           <label id="vbsAllow" class="check" hidden><input type="checkbox" id="vbsAllowBox"><span data-i18n="dashboard.vbsAllow"></span></label>
           <pre id="healthLog" class="log" hidden></pre>
         </div>
+
       </section>
 
       <!-- ===== System analysis ===== -->
@@ -115,15 +116,18 @@
             <ul class="opt-facts"><li data-i18n="opt.cpu.fact1"></li><li data-i18n="opt.cpu.fact2"></li><li data-i18n="opt.cpu.fact3"></li></ul>
             <div class="actions"><button id="openThrottle" class="btn primary" type="button" data-i18n="opt.cpu.open">Open setup</button></div>
           </article>
-          <article class="opt planned"><div class="opt-top"><span class="chip level" data-i18n="opt.level.safe">Safe</span><span class="chip" data-i18n="opt.planned">Planned</span></div>
-            <h3 data-i18n="opt.planned.power.title"></h3><p class="muted" data-i18n="opt.planned.power.desc"></p></article>
-          <article class="opt planned"><div class="opt-top"><span class="chip level" data-i18n="opt.level.safe">Safe</span><span class="chip" data-i18n="opt.planned">Planned</span></div>
-            <h3 data-i18n="opt.planned.services.title"></h3><p class="muted" data-i18n="opt.planned.services.desc"></p></article>
-          <article class="opt planned"><div class="opt-top"><span class="chip level" data-i18n="opt.level.safe">Safe</span><span class="chip" data-i18n="opt.planned">Planned</span></div>
-            <h3 data-i18n="opt.planned.network.title"></h3><p class="muted" data-i18n="opt.planned.network.desc"></p></article>
-          <article class="opt planned"><div class="opt-top"><span class="chip level" data-i18n="opt.level.advanced">Advanced</span><span class="chip" data-i18n="opt.planned">Planned</span></div>
-            <h3 data-i18n="opt.planned.games.title"></h3><p class="muted" data-i18n="opt.planned.games.desc"></p></article>
         </div>
+              <div class="tweaks-head">
+          <h2 class="h2" data-i18n="tweaks.title"></h2>
+          <div class="tweaks-tools">
+            <input id="tweakSearch" class="field" type="search" data-i18n-placeholder="tweaks.search" autocomplete="off">
+            <button id="tweakRecommended" class="btn small primary" type="button" data-i18n="tweaks.recommended"></button>
+          </div>
+        </div>
+        <div id="tweakChips" class="chips" role="tablist"></div>
+        <div id="tweakSummary" class="muted"></div>
+        <div id="tweakResult" class="result" hidden></div>
+        <div id="tweakGrid" class="tweak-grid"></div>
       </section>
 
       <!-- ===== CPU thermal tuning wizard (opened from Optimizations) ===== -->
@@ -289,7 +293,15 @@
     </main>
   </div>
 
-  <dialog id="changelog" class="dialog" aria-labelledby="clTitle">
+  <dialog id="confirmDlg" class="dialog" aria-labelledby="cfTitle">
+<h2 class="h2" id="cfTitle"></h2>
+<div id="cfBody" class="cf-body"></div>
+<div class="actions">
+<button id="cfCancel" class="btn small" type="button" data-i18n="common.cancel"></button>
+<button id="cfOk" class="btn small primary" type="button"></button>
+</div>
+</dialog>
+<dialog id="changelog" class="dialog" aria-labelledby="clTitle">
 <h2 class="h2" id="clTitle"></h2>
 <div id="clBody" class="cl-body"></div>
 <div id="clProgress" class="result" hidden></div>
@@ -304,7 +316,8 @@
   <script src="js/analysis.js"></script>
   <script src="js/wizard.js"></script>
   <script src="js/restore.js"></script>
-  <script src="js/settings.js"></script>
+  <script src="js/optimizations.js"></script>
+<script src="js/settings.js"></script>
 <script src="js/updates.js"></script>
   <script src="js/boot.js"></script>
 </body>

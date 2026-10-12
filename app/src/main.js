@@ -84,7 +84,7 @@ const broadcast = (channel, payload) => BrowserWindow.getAllWindows().forEach((w
 function runStep(step, opts = {}, onLog = () => {}) {
   return new Promise((resolve) => {
     if (DEMO) {
-      const d = demo.demoStep(step, opts);
+      const d = demo.demoStep(step, opts, configDir);
       d.logs.forEach((l) => onLog(l));
       return setTimeout(() => resolve(d.res), 350);
     }
@@ -94,6 +94,8 @@ function runStep(step, opts = {}, onLog = () => {}) {
     if (installDir) args.push('-InstallDir', installDir);
     if (opts.zipPath) args.push('-ZipPath', opts.zipPath);
     if (opts.download && !opts.zipPath) args.push('-Download');
+    if (opts.tweakId) args.push('-TweakId', String(opts.tweakId), '-TweakMode', opts.tweakMode === 'off' ? 'off' : 'on');
+    if (opts.allowRisky) args.push('-AllowRisky');
     if (opts.disableVbs) args.push('-DisableVBS');
     if (opts.restoreVbs) args.push('-RestoreVbs');
     if (opts.mode) args.push('-Mode', opts.mode);
