@@ -3,16 +3,19 @@
 .SYNOPSIS  Runs ONE wizard step and reports it as machine-readable lines for the Electron app.
 .DESCRIPTION
   Output protocol (stdout, one per line):  LOG: <text>   and a final   RESULT: <json {ok, message, data}>
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | rollback
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'rollback')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
     [string]$TaskName,
     [switch]$DisableVBS,
-    [switch]$RestoreVbs
+    [switch]$RestoreVbs,
+    [ValidateSet('status', 'on', 'off')][string]$Mode = 'status',   # autostart step
+    [string]$AppExe,
+    [string]$AppArgs
 )
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -23,11 +26,12 @@ if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleSto
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
+$InstallDir = Resolve-InstallDir $InstallDir $TaskName   # ThrottleStop may live elsewhere than the default folder
 function Log($m) { Write-Output "LOG: $m" }
 function Done($ok, $msg, $data = $null) { Write-Output ("RESULT: " + (@{ ok = [bool]$ok; message = $msg; data = $data } | ConvertTo-Json -Depth 6 -Compress)) }
 
 try {
-    if ($Step -ne 'detect' -and $Step -ne 'verify' -and $Step -ne 'health' -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
+    if ($Step -ne 'detect' -and $Step -ne 'verify' -and $Step -ne 'health' -and -not ($Step -eq 'autostart' -and $Mode -eq 'status') -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
     switch ($Step) {
         'detect' {
@@ -81,6 +85,13 @@ try {
             $l | ForEach-Object { Log $_ }
             $h = Get-HealthReport $InstallDir $SettingsFile $TaskName
             Done ($h.verdict -ne 'fail') $(if ($h.verdict -eq 'ok') { 'Fixed. Your PC is optimized again.' } else { 'Applied what was possible; some items still need attention (see the list).' }) $h
+        }        'autostart' {
+            $appTask = $defaults.appTaskName
+            switch ($Mode) {
+                'on'  { $uu = Register-AppAutostart $appTask $AppExe $AppArgs; Log "task $appTask registered for $uu"; Done $true 'The app now starts hidden in the system tray at logon.' @{ enabled = $true } }
+                'off' { Unregister-AppAutostart $appTask; Log "task $appTask removed"; Done $true 'The app no longer starts with Windows.' @{ enabled = $false } }
+                default { $e = Get-AppAutostart $appTask; Done $true $(if ($e) { 'Starts with Windows.' } else { 'Does not start with Windows.' }) @{ enabled = $e } }
+            }
         }        'rollback' {
             $l = Invoke-Rollback $InstallDir $TaskName -RestoreVbs:$RestoreVbs
             $l | ForEach-Object { Log $_ }

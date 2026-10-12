@@ -158,3 +158,42 @@ function Invoke-Rollback([string]$InstallDir, [string]$TaskName, [switch]$Restor
     if ($RestoreVbs) { Restore-Vbs; $log += 'VBS/hypervisor re-enabled (reboot required)' }
     return $log
 }
+
+# ---- app autostart: opens the Electron app hidden in the system tray at logon (elevated, because the app asks for admin rights)
+function Get-AppAutostart([string]$TaskName) { [bool](Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) }
+
+function Register-AppAutostart([string]$TaskName, [string]$AppExe, [string]$AppArgs) {
+    if (-not (Test-Path -LiteralPath $AppExe)) { throw "App executable not found: $AppExe" }
+    $user      = "$env:USERDOMAIN\$env:USERNAME"
+    $action    = New-ScheduledTaskAction -Execute $AppExe -Argument $AppArgs
+    $trigger   = New-ScheduledTaskTrigger -AtLogOn -User $user
+    $settings  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
+                   -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
+    $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Highest
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
+    return $user
+}
+
+function Unregister-AppAutostart([string]$TaskName) {
+    if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false }
+}
+
+# Extracts the ThrottleStop.exe path from the watchdog task's arguments (pure, unit tested).
+function Get-ExeFromTaskArguments([string]$Arguments) {
+    if ($Arguments -match "-FilePath '([^']+ThrottleStop\.exe)'") { return $Matches[1] }
+    return $null
+}
+
+# The folder the user asked for if ThrottleStop is there; otherwise the folder the existing watchdog task starts it from
+# (people keep ThrottleStop in Downloads, not in the default folder); otherwise the requested folder unchanged.
+function Resolve-InstallDir([string]$Requested, [string]$TaskName) {
+    if ($Requested -and (Test-Path -LiteralPath (Join-Path $Requested 'ThrottleStop.exe'))) { return $Requested }
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if ($task) {
+        foreach ($a in $task.Actions) {
+            $exe = Get-ExeFromTaskArguments ([string]$a.Arguments)
+            if ($exe -and (Test-Path -LiteralPath $exe)) { return (Split-Path -Parent $exe) }
+        }
+    }
+    return $Requested
+}

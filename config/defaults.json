@@ -1,4 +1,5 @@
 {
   "installDir": "C:\\Tools\\ThrottleStop",
-  "taskName": "ThrottleStop_Autostart"
+  "taskName": "ThrottleStop_Autostart",
+  "appTaskName": "LegionTuning_App"
 }

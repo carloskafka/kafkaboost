@@ -159,3 +159,20 @@ Describe 'Entry scripts started with powershell -File (how install.cmd and the a
         if ($out -notmatch 'RESULT: ') { throw "no RESULT line:`n$out" }
     }
 }
+
+Describe 'Resolve-InstallDir' {
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
+    It 'reads the exe path out of the watchdog task arguments' {
+        $a = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command "if (-not (Get-Process ThrottleStop -ErrorAction SilentlyContinue)) { Start-Process -FilePath ''C:\Users\me\Downloads\ThrottleStop_9.7.3\ThrottleStop.exe'' -WorkingDirectory ''C:\Users\me\Downloads\ThrottleStop_9.7.3'' }"'
+        Assert-Equal (Get-ExeFromTaskArguments $a) 'C:\Users\me\Downloads\ThrottleStop_9.7.3\ThrottleStop.exe' 'exe path'
+        if ($null -ne (Get-ExeFromTaskArguments '-NoProfile -Command "Get-Date"')) { throw 'unrelated arguments must give $null' }
+    }
+    It 'keeps the requested folder when ThrottleStop is there' {
+        $dir = New-Sandbox
+        try { Assert-Equal (Resolve-InstallDir $dir 'No_Such_Task_For_Tests') $dir 'requested folder' } finally { Remove-Item $dir -Recurse -Force }
+    }
+    It 'falls back to the requested folder when nothing is installed and there is no task' {
+        $nowhere = Join-Path ([IO.Path]::GetTempPath()) 'no_throttlestop_here'
+        Assert-Equal (Resolve-InstallDir $nowhere 'No_Such_Task_For_Tests') $nowhere 'fallback'
+    }
+}
