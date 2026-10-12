@@ -16,10 +16,11 @@ It lowers the CPU's heat (voltage, boost ratios, power limits) and makes sure th
 | Result on the reference laptop (19-min CS2 sessions) | Before | After |
 |---|---|---|
 | Peak CPU temperature | 99–100 °C | **90 °C**, no thermal throttling |
+| Average CPU temperature | not measured | about 79 °C (flat for the whole session) |
 | Peak package power | 139 W | 73 W |
 | Peak P-core clock | 5.39 GHz | 4.69 GHz (47x) |
 
-Measured with HWiNFO shared memory; the "before" figures are maxima from screenshots, not a controlled A/B test. FPS was not
+Measured with HWiNFO shared memory. The "before" figures are maxima from screenshots, not a controlled A/B test: **no average was recorded before the tuning**, so the table does not claim an average improvement (the 10 °C lower peak and the end of thermal throttling are what was measured). To measure it, roll everything back, log a 19-minute session with `scripts\monitoring\hwinfo_logger.ps1`, then re-apply. FPS was not
 measured (the game felt as smooth). See [`docs/RESULTS.md`](docs/RESULTS.md).
 
 ## The problem it solves
