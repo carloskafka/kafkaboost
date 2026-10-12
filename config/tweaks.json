@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "categories": ["performance", "gpu", "gaming", "network", "privacy", "appearance", "general"],
+  "tweaks": [
+    {
+      "id": "power-plan-performance", "category": "performance", "risk": "advanced", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "powerplan" } ]
+    },
+    {
+      "id": "fast-startup-off", "category": "performance", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power", "name": "HiberbootEnabled", "kind": "DWord", "on": 0, "off": 1 } ]
+    },
+    {
+      "id": "background-apps-off", "category": "performance", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy", "name": "LetAppsRunInBackground", "kind": "DWord", "on": 2, "off": null } ]
+    },
+    {
+      "id": "delivery-optimization-off", "category": "performance", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization", "name": "DODownloadMode", "kind": "DWord", "on": 0, "off": null } ]
+    },
+    {
+      "id": "startup-delay-off", "category": "performance", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize", "name": "StartupDelayInMSec", "kind": "DWord", "on": 0, "off": null } ]
+    },
+    {
+      "id": "sysmain-off", "category": "performance", "risk": "advanced", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "service", "name": "SysMain", "on": "Disabled", "off": "Auto" } ]
+    },
+    {
+      "id": "hags-on", "category": "gpu", "risk": "advanced", "recommended": false, "needsReboot": true, "minBuild": 19041,
+      "actions": [ { "type": "registry", "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers", "name": "HwSchMode", "kind": "DWord", "on": 2, "off": null } ]
+    },
+    {
+      "id": "game-mode-on", "category": "gaming", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\GameBar", "name": "AllowAutoGameMode", "kind": "DWord", "on": 1, "off": null },
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\GameBar", "name": "AutoGameModeEnabled", "kind": "DWord", "on": 1, "off": null }
+      ]
+    },
+    {
+      "id": "game-dvr-off", "category": "gaming", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [
+        { "type": "registry", "path": "HKCU:\\System\\GameConfigStore", "name": "GameDVR_Enabled", "kind": "DWord", "on": 0, "off": 1 },
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR", "name": "AppCaptureEnabled", "kind": "DWord", "on": 0, "off": 1 }
+      ]
+    },
+    {
+      "id": "mouse-accel-off", "category": "gaming", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [
+        { "type": "registry", "path": "HKCU:\\Control Panel\\Mouse", "name": "MouseSpeed", "kind": "String", "on": "0", "off": "1" },
+        { "type": "registry", "path": "HKCU:\\Control Panel\\Mouse", "name": "MouseThreshold1", "kind": "String", "on": "0", "off": "6" },
+        { "type": "registry", "path": "HKCU:\\Control Panel\\Mouse", "name": "MouseThreshold2", "kind": "String", "on": "0", "off": "10" }
+      ]
+    },
+    {
+      "id": "sticky-keys-off", "category": "gaming", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [
+        { "type": "registry", "path": "HKCU:\\Control Panel\\Accessibility\\StickyKeys", "name": "Flags", "kind": "String", "on": "506", "off": "510" },
+        { "type": "registry", "path": "HKCU:\\Control Panel\\Accessibility\\ToggleKeys", "name": "Flags", "kind": "String", "on": "58", "off": "62" },
+        { "type": "registry", "path": "HKCU:\\Control Panel\\Accessibility\\Keyboard Response", "name": "Flags", "kind": "String", "on": "122", "off": "126" }
+      ]
+    },
+    {
+      "id": "dns-cloudflare", "category": "network", "risk": "advanced", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "dns", "servers": ["1.1.1.1", "1.0.0.1"] } ]
+    },
+    {
+      "id": "network-throttling-off", "category": "network", "risk": "advanced", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile", "name": "NetworkThrottlingIndex", "kind": "DWord", "on": 4294967295, "off": 10 } ]
+    },
+    {
+      "id": "advertising-id-off", "category": "privacy", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo", "name": "Enabled", "kind": "DWord", "on": 0, "off": 1 } ]
+    },
+    {
+      "id": "activity-history-off", "category": "privacy", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [
+        { "type": "registry", "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "EnableActivityFeed", "kind": "DWord", "on": 0, "off": null },
+        { "type": "registry", "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "PublishUserActivities", "kind": "DWord", "on": 0, "off": null },
+        { "type": "registry", "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "UploadUserActivities", "kind": "DWord", "on": 0, "off": null }
+      ]
+    },
+    {
+      "id": "bing-search-off", "category": "privacy", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer", "name": "DisableSearchBoxSuggestions", "kind": "DWord", "on": 1, "off": null } ]
+    },
+    {
+      "id": "tips-suggestions-off", "category": "privacy", "risk": "safe", "recommended": true, "needsReboot": false,
+      "actions": [
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-338388Enabled", "kind": "DWord", "on": 0, "off": 1 },
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-338389Enabled", "kind": "DWord", "on": 0, "off": 1 },
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-353698Enabled", "kind": "DWord", "on": 0, "off": 1 },
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SystemPaneSuggestionsEnabled", "kind": "DWord", "on": 0, "off": 1 },
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SoftLandingEnabled", "kind": "DWord", "on": 0, "off": 1 }
+      ]
+    },
+    {
+      "id": "telemetry-min", "category": "privacy", "risk": "advanced", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection", "name": "AllowTelemetry", "kind": "DWord", "on": 0, "off": null } ]
+    },
+    {
+      "id": "copilot-off", "category": "privacy", "risk": "advanced", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\WindowsCopilot", "name": "TurnOffWindowsCopilot", "kind": "DWord", "on": 1, "off": null } ]
+    },
+    {
+      "id": "transparency-off", "category": "appearance", "risk": "safe", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "name": "EnableTransparency", "kind": "DWord", "on": 0, "off": 1 } ]
+    },
+    {
+      "id": "taskbar-left", "category": "appearance", "risk": "safe", "recommended": false, "needsReboot": false, "minBuild": 22000,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "TaskbarAl", "kind": "DWord", "on": 0, "off": 1 } ]
+    },
+    {
+      "id": "widgets-off", "category": "appearance", "risk": "safe", "recommended": false, "needsReboot": false, "minBuild": 22000,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "TaskbarDa", "kind": "DWord", "on": 0, "off": 1 } ]
+    },
+    {
+      "id": "classic-context-menu", "category": "appearance", "risk": "safe", "recommended": false, "needsReboot": false, "minBuild": 22000,
+      "actions": [ { "type": "regkey", "path": "HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32" } ]
+    },
+    {
+      "id": "end-task-taskbar", "category": "appearance", "risk": "safe", "recommended": false, "needsReboot": false, "minBuild": 22621,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings", "name": "TaskbarEndTask", "kind": "DWord", "on": 1, "off": null } ]
+    },
+    {
+      "id": "menu-delay-off", "category": "appearance", "risk": "safe", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Control Panel\\Desktop", "name": "MenuShowDelay", "kind": "String", "on": "0", "off": "400" } ]
+    },
+    {
+      "id": "file-extensions-on", "category": "general", "risk": "safe", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "HideFileExt", "kind": "DWord", "on": 0, "off": 1 } ]
+    },
+    {
+      "id": "show-hidden-files", "category": "general", "risk": "safe", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "Hidden", "kind": "DWord", "on": 1, "off": 2 } ]
+    },
+    {
+      "id": "detailed-bsod", "category": "general", "risk": "safe", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "registry", "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\CrashControl", "name": "DisplayParameters", "kind": "DWord", "on": 1, "off": 0 } ]
+    },
+    {
+      "id": "defender-realtime-off", "category": "general", "risk": "risky", "recommended": false, "needsReboot": false,
+      "actions": [ { "type": "defender" } ]
+    },
+    {
+      "id": "core-isolation-off", "category": "general", "risk": "risky", "recommended": false, "needsReboot": true,
+      "actions": [ { "type": "vbs" } ]
+    }
+  ]
+}

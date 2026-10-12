@@ -3,6 +3,7 @@
 $root = Join-Path $PSScriptRoot '..'
 . (Join-Path $root 'scripts\lib\Tuning.ps1')
 . (Join-Path $root 'scripts\lib\Health.ps1')
+. (Join-Path $root 'scripts\lib\Tweaks.ps1')
 function Assert-Equal($actual, $expected, $what) {
     if ($actual -ne $expected) { throw "$what : expected '$expected' but got '$actual'" }
 }

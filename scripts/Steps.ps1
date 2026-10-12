@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -17,7 +17,10 @@ param(
     [switch]$RestoreVbs,
     [ValidateSet('status', 'on', 'off')][string]$Mode = 'status',   # autostart step
     [string]$AppExe,
-    [string]$AppArgs
+    [string]$AppArgs,
+    [string]$TweakId,
+    [ValidateSet('on', 'off')][string]$TweakMode = 'on',   # tweak-set step
+    [switch]$AllowRisky
 )
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -25,6 +28,7 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleStop.settings.ini' }
 . (Join-Path $root 'lib\Tuning.ps1')
 . (Join-Path $root 'lib\Health.ps1')
+. (Join-Path $root 'lib\Tweaks.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -36,7 +40,7 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
     switch ($Step) {
@@ -113,7 +117,24 @@ try {
             $n = Remove-OldBackups $InstallDir 3
             Log "removed $n old backup(s) in $InstallDir"
             Done $true "Deleted $n old backup(s); the newest 3 were kept." @{ count = $n } 'msg.backups.deleted' @{ count = $n }
-        }        'rollback' {
+        }
+        'tweaks-list' {
+            $list = @(Get-TweakStatuses)
+            Done $true "$($list.Count) tweaks." @{ tweaks = $list; admin = (Test-Admin); build = (Get-WindowsBuild) } 'msg.tweaks.listed' @{ count = $list.Count }
+        }
+        'tweak-set' {
+            if (-not $TweakId) { throw 'tweak-set needs -TweakId.' }
+            $r = Set-Tweak $TweakId ($TweakMode -eq 'on') -AllowRisky:$AllowRisky
+            Log "$TweakId -> $TweakMode : $(if ($r.ok) { 'ok' } else { $r.error })"
+            Done $r.ok $(if ($r.ok) { "Tweak $TweakId $(if ($TweakMode -eq 'on') { 'applied' } else { 'reverted' })." } else { $r.error }) $r $r.code @{ id = $TweakId }
+        }
+        'tweaks-recommended' {
+            $rs = @(Set-RecommendedTweaks)
+            $bad = @($rs | Where-Object { -not $_.ok }).Count
+            $rs | ForEach-Object { Log "$($_.id): $(if ($_.ok) { 'applied' } else { $_.error })" }
+            Done ($bad -eq 0) "$($rs.Count - $bad) applied, $bad failed." @{ results = $rs } $(if ($bad) { 'msg.tweaks.recommendedPartial' } else { 'msg.tweaks.recommendedOk' }) @{ ok = ($rs.Count - $bad); failed = $bad }
+        }
+        'rollback' {
             $l = Invoke-Rollback $InstallDir $TaskName -RestoreVbs:$RestoreVbs
             $l | ForEach-Object { Log $_ }
             Done $true 'Rolled back.' $l 'msg.rollback.done' @{}
