@@ -25,7 +25,7 @@
 param(
     [string]$InstallDir,             # default: config\defaults.json
     [string]$ZipPath,
-    [string]$SettingsFile = (Join-Path $PSScriptRoot '..\config\ThrottleStop.settings.ini'),
+    [string]$SettingsFile,           # default: ..\config\ThrottleStop.settings.ini (resolved below: $PSScriptRoot is empty in a param() default under -File)
     [string]$HWiNFODir,
     [switch]$DisableVBS,
     [switch]$SkipVBS,
@@ -35,8 +35,10 @@ param(
     [string]$TaskName               # default: config\defaults.json
 )
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'lib\Tuning.ps1')
-. (Join-Path $PSScriptRoot 'lib\Health.ps1')
+$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleStop.settings.ini' }
+. (Join-Path $root 'lib\Tuning.ps1')
+. (Join-Path $root 'lib\Health.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -84,7 +86,7 @@ if ($HWiNFODir) {
     Step "HWiNFO shared-memory config in $HWiNFODir"
     $hwIni = Join-Path $HWiNFODir 'HWiNFO64.INI'
     if (Test-Path -LiteralPath $hwIni) { Copy-Item -LiteralPath $hwIni "$hwIni.bak" -Force }
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\config\HWiNFO64.INI') $hwIni -Force
+    Copy-Item -LiteralPath (Join-Path $root '..\config\HWiNFO64.INI') $hwIni -Force
     Ok 'HWiNFO64.INI written (restart HWiNFO; do NOT pass command-line args to it - free version errors)'
 }
 
