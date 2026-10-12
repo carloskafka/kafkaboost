@@ -8,7 +8,7 @@ const STEPS = [
     desc: 'Saves a timestamped copy of ThrottleStop.ini so you can always return to where you started.',
     changes: ['Creates ThrottleStop.ini.bak_<date> next to the ini (skipped on a fresh install).'] },
   { id: 'get', title: 'Get ThrottleStop', kicker: 'Step 2',
-    desc: 'Unpacks ThrottleStop (tested with 9.7.3) into the install folder. Download the zip from TechPowerUp first and keep it in Downloads, or pick it manually.',
+    desc: 'Uses the ThrottleStop you already have (the folder of your startup task, or one extracted in Downloads, Desktop or Documents). Otherwise it unpacks the zip (tested with 9.7.3) into the install folder: download it from TechPowerUp first and keep it in Downloads, or pick it manually.',
     changes: ['Extracts the zip to C:\\Tools\\ThrottleStop (or the folder you chose).'], options: ['zip'] },
   { id: 'vbs', title: 'Turn off VBS / hypervisor', kicker: 'Step 3',
     desc: 'ThrottleStop can only change CPU voltages while Windows virtualization-based security is off. This is a security setting, so it is your choice.',

@@ -40,8 +40,7 @@ This project gives you a **guided and reversible** setup, an **always-on** watch
 
 ### 1. Prerequisites
 - Windows 11 on a Lenovo Legion 83DE with an i9-14900HX (other systems are refused), administrator rights, laptop plugged in.
-- The ThrottleStop zip (tested with **9.7.3**) from [TechPowerUp](https://www.techpowerup.com/download/techpowerup-throttlestop/),
-  left in `Downloads`.
+- ThrottleStop (tested with **9.7.3**) from [TechPowerUp](https://www.techpowerup.com/download/techpowerup-throttlestop/): keep the zip in `Downloads`, or just keep it extracted anywhere in `Downloads`, `Desktop` or `Documents` (the installer finds and uses an existing copy, or the folder your startup task already uses).
 - Optional: Node.js 20+ to run the app from a clone.
 
 ### 2. Install

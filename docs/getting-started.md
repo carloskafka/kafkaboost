@@ -5,7 +5,7 @@ supported: the app and the scripts refuse to apply the tuning to them.
 
 ## 1. What you need
 - Windows 11, administrator rights, the laptop **plugged in**.
-- The ThrottleStop zip (tested with 9.7.3) from <https://www.techpowerup.com/download/techpowerup-throttlestop/>, left in `Downloads`.
+- ThrottleStop (tested with 9.7.3) from <https://www.techpowerup.com/download/techpowerup-throttlestop/>: the zip in `Downloads`, or an already extracted copy in `Downloads`, `Desktop` or `Documents` (it is found and used in place; nothing is copied).
 - Optional: [Node.js](https://nodejs.org) 20+ to run the app from a clone (`npm install` runs once, from `app/`).
 - Optional: HWiNFO64 (sensors only) to watch temperatures while you play.
 
