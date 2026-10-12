@@ -37,6 +37,7 @@ const STEP = {
   task: { logs: ['ThrottleStop started', 'baseline saved (Windows build at setup time)'], res: { ok: true, message: 'Autostart + 5-minute watchdog registered for KAFKA\\carlo.' } },
   verify: { logs: ['ThrottleStop.ini settings: OK (17/17 keys match)', 'ThrottleStop running: OK (PID 9176)', 'Autostart + watchdog task: OK (state Ready)', 'Hypervisor/VBS off (needed for undervolt): OK (off)'],
     res: { ok: true, message: 'Everything checks out.' } },
+  autostart: { logs: [], res: { ok: true, message: 'Does not start with Windows.', data: { enabled: false } } },
   rollback: { logs: ['task removed', 'ThrottleStop.ini restored from ThrottleStop.ini.bak_20261010_223012'], res: { ok: true, message: 'Rolled back.', data: ['task removed', 'ThrottleStop.ini restored'] } }
 };
 

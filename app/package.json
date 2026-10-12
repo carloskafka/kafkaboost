@@ -20,7 +20,7 @@
                   "files":  [
                                 "src/**/*",
                                 "renderer/**/*",
-                                "build/icon.png"
+                                "build/*.png"
                             ],
                   "extraResources":  [
                                          {

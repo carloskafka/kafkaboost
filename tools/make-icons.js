@@ -26,6 +26,9 @@ function render512(svg) {
 
 const write = (file, img, size) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, (size ? img.resize({ width: size, height: size, quality: 'best' }) : img).toPNG()); };
 
+// Several windows are rendered one after another: do not let Electron quit when the first one closes.
+app.on('window-all-closed', () => {});
+
 app.whenReady().then(async () => {
   try {
     fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
@@ -45,6 +48,12 @@ app.whenReady().then(async () => {
     fs.writeFileSync(path.join(root, 'app', 'build', 'icon.ico'), Buffer.concat([head, png256]));
     write(path.join(root, 'docs', 'favicon-32.png'), img, 32);
     write(path.join(root, 'docs', 'apple-touch-icon.png'), img, 180);
+    // Tray icons: the app icon with a status dot in the corner (green = optimized, amber = needs a look, red = broken, grey = unknown).
+    const dots = { ok: '#2fd39a', warn: '#f5b93e', fail: '#ff6b81', unknown: '#8d98b3' };
+    for (const [name, color] of Object.entries(dots)) {
+      const svg = srcSvg.replace('</svg>', `<circle cx="194" cy="194" r="58" fill="${color}" stroke="#ffffff" stroke-width="12"/></svg>`);
+      write(path.join(root, 'app', 'build', `tray-${name}.png`), await render512(svg), 64);
+    }
     console.log('icons written');
   } catch (e) { console.error(e); process.exitCode = 1; }
   app.quit();

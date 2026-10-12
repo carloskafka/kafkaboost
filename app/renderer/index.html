@@ -181,6 +181,14 @@
           <details><summary>Will it work on my laptop?</summary><p>The values are specific to the Lenovo Legion 83DE with an i9-14900HX. On another CPU the app explains why it will not apply them.</p></details>
         </div>
         <div class="card">
+          <h2 class="h2">Background</h2>
+          <p class="muted">When you close this window the app keeps running in the system tray (the icon next to the clock). Its colour is the verdict:
+            green optimized, amber needs a look, red not fully in place. It re-checks every 30 minutes and shows a notification if something breaks,
+            for example after a Windows update.</p>
+          <label class="check"><input type="checkbox" id="autostart"><span>Start with Windows (hidden in the tray)</span></label>
+          <div id="autostartResult" class="result" hidden></div>
+        </div>
+        <div class="card">
           <h2 class="h2">Documentation</h2>
           <div class="actions left">
             <button class="btn small" type="button" data-link="https://carloskafka.github.io/legion-14900hx-throttlestop/">Documentation site</button>
