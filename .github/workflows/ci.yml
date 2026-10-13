@@ -1,8 +1,14 @@
 name: Check
 
-# The gate: the PowerShell library tests, a syntax check of every script and the app's JavaScript.
-# Runs on a Windows runner because the scripts use Windows-only APIs (CIM, scheduled tasks, WScript).
-# It never changes the machine: tests use a temporary sandbox and the demo mode.
+# The gate. Three jobs:
+#   check  (Windows only): every PowerShell script parses and the Pester tests pass. The scripts use Windows-only APIs
+#          (CIM, scheduled tasks, the registry, WScript), so they cannot run anywhere else. The Electron UI checks
+#          (tools/uitest.js, the tray test) need a real window and are run by hand, not here.
+#   node   (Windows, Linux, macOS): the app's Node tests and a syntax check of its JavaScript. These tests are plain Node
+#          with fake command runners, so they are meant to behave the same everywhere; the Apps manager has Linux and
+#          macOS code that this is the only automated check of.
+#   site   (Linux): the documentation site's link, anchor, EN/PT parity and fact checks; no OS dependence, so once is enough.
+# Nothing here changes the machine: tests use a temporary sandbox and fake runners.
 
 on:
   push:
@@ -45,18 +51,47 @@ jobs:
           Import-Module Pester
           Invoke-Pester -Path tests -CI -Output Detailed
 
+  node:
+    name: node (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
       - name: Set up Node
         uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
 
-      - name: Check the app's JavaScript
+      # npm ci also downloads Electron's binary, which the tests do not need but npm ci cannot skip selectively.
+      - name: Install the app's dependencies
         working-directory: app
-        run: |
-          node --check src/main.js
-          node --check src/preload.js
-          node --check src/demo.js
-          node --check renderer/app.js
+        run: npm ci
+
+      - name: Unit tests (Node)
+        working-directory: app
+        run: node --test "test/*.test.js"
+
+      - name: Syntax check of the JavaScript (app/src, app/renderer/js, tools)
+        shell: bash
+        run: find app/src app/renderer/js tools -name '*.js' -print0 | xargs -0 -n1 node --check
+
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
 
       - name: Check the site (links, anchors, EN/PT parity, facts)
         run: |
