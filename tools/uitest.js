@@ -19,6 +19,12 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
     await click('[data-view=settings]'); await sleep(400);
     check('Settings still works on this OS', await visible('settings'));
     check('Windows-only settings are hidden', !(await visible('thermalCard')));
+    await click('[data-view=apps]'); await sleep(1500);
+    const cnt = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
+    check('Apps works on this OS (no Windows-only panel)', await visible('apps') && !(await visible('windowsOnly')));
+    check('Apps names the active package manager', (await q('#appsManager')).includes('Flatpak'), await q('#appsManager'));
+    check('Apps offers only the apps with a verified Flatpak id', (await cnt('.app-card')) === 15, await cnt('.app-card'));
+    check('the Windows bloatware remover is hidden on Linux', !(await visible('bloatCard')));
     await click('[data-view=health]'); await sleep(400);
     check('Dashboard shows basic system info', (await q('#heroTitle')).length > 0, await q('#heroTitle'));
     return finish();
@@ -123,6 +129,42 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
   check('cleaning reports what was freed', (await q('#cleanResult')).startsWith('Freed'), await q('#cleanResult'));
   check('last cleanup time is saved', !!settings.get().lastCleanup);
   check('sizes read zero after cleaning', (await js(win, "document.querySelector('.clean-row[data-id=user-temp] .clean-size').textContent")).startsWith('0'));
+
+  // apps manager (demo: a fake winget with 7 installed apps, 9 removable Store apps)
+  const cardBtn = (id) => `document.querySelector('.app-card[data-id="${id}"] .btn')`;
+  const cardChip = (id) => js(win, `document.querySelector('.app-card[data-id="${id}"] .chip').textContent`);
+  await click('[data-view=apps]'); await sleep(1800);
+  check('Apps lists the 21 catalog apps and names winget', (await js(win, "document.querySelectorAll('.app-card').length")) === 21 && (await q('#appsManager')).includes('winget'), await q('#appsManager'));
+  check('Apps marks installed ones', (await cardChip('chrome')) === 'Installed' && (await cardChip('obs')) !== 'Installed');
+  await click('#appsChips [data-cat=browsers]'); await sleep(200);
+  check('an Apps category chip filters the cards', (await js(win, "document.querySelectorAll('.app-card').length")) === 3);
+  await click('#appsChips [data-cat=all]'); await sleep(200);
+  await js(win, `${cardBtn('obs')}.click(); 0`); await sleep(1800);
+  check('installing an app updates its card and says so', (await cardChip('obs')) === 'Installed' && (await q('#appsResult')).includes('installed'), await q('#appsResult'));
+  await js(win, `${cardBtn('vlc')}.click(); 0`); await sleep(300);
+  check('removing an app asks for confirmation first', await js(win, 'document.getElementById("confirmDlg").open'));
+  await click('#cfCancel'); await sleep(300);
+  check('cancelling removes nothing', (await cardChip('vlc')) === 'Installed');
+  await js(win, `${cardBtn('vlc')}.click(); 0`); await sleep(300); await click('#cfOk'); await sleep(1800);
+  check('confirming removes the app', (await cardChip('vlc')) !== 'Installed');
+  await js(win, "(()=>{const e=document.getElementById('appsSearch');e.value='obsid';document.getElementById('appsSearchBtn').click()})()"); await sleep(900);
+  check('search shows results from the package manager', (await js(win, "document.querySelectorAll('#appsSearchOut .clean-row').length")) === 1);
+  await js(win, "(()=>{const e=document.getElementById('appsSearch');e.value='';document.getElementById('appsSearchBtn').click()})()"); await sleep(300);
+  await click('#appsImport'); await sleep(900);
+  check('importing shows the list to confirm, without the malicious entry', (await js(win, 'document.getElementById("confirmDlg").open')) && (await js(win, 'document.getElementById("cfBody").textContent')).includes('Spotify') && !(await js(win, 'document.getElementById("cfBody").textContent')).includes('calc'), await q('#cfTitle'));
+  await click('#cfCancel'); await sleep(300);
+  check('cancelling the import installs nothing', (await cardChip('spotify')) !== 'Installed');
+  await click('#appsImport'); await sleep(900); await click('#cfOk'); await sleep(3500);
+  check('confirming the import installs the listed apps', (await cardChip('spotify')) === 'Installed' && (await cardChip('audacity')) === 'Installed', await q('#appsResult'));
+  await click('#appsExport'); await sleep(600);
+  check('export reports how many apps were saved', (await q('#appsResult')).startsWith('Saved'), await q('#appsResult'));
+  check('Windows shows the bloatware list', await visible('bloatCard') && (await js(win, "document.querySelectorAll('#bloatList .clean-row').length")) === 9);
+  await js(win, "document.querySelector('#bloatList .clean-row .btn').click(); 0"); await sleep(300);
+  check('removing a Store app asks first', await js(win, 'document.getElementById("confirmDlg").open'));
+  await click('#cfCancel'); await sleep(300);
+  check('cancelling keeps all 9', (await js(win, "document.querySelectorAll('#bloatList .clean-row').length")) === 9);
+  await js(win, "document.querySelector('#bloatList .clean-row .btn').click(); 0"); await sleep(300); await click('#cfOk'); await sleep(1800);
+  check('confirming removes that one app only', (await js(win, "document.querySelectorAll('#bloatList .clean-row').length")) === 8);
 
   await click('#openThrottle'); await sleep(900);
   check('wizard opens on step 0', await visible('wizard') && (await q('#title')) === 'Detect your hardware', await q('#title'));
