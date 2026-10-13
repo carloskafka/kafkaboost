@@ -166,8 +166,9 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
   const tempNow = () => js(win, "document.querySelector('.srow[data-type=Temperature] .sval').textContent");
   const t0 = await tempNow();
   check('temperatures show degrees and the min/max columns are filled', t0.includes('°C') && (await js(win, "document.querySelector('.srow[data-type=Temperature] .smin').textContent")).includes('°C'), t0);
-  await sleep(4200);
-  check('the values refresh by themselves', (await tempNow()) !== t0, t0 + ' -> ' + (await tempNow()));
+  let t1 = t0;
+  for (let i = 0; i < 25 && t1 === t0; i++) { await sleep(400); t1 = await tempNow(); }   // demo values jitter; wait up to 10 s for any change
+  check('the values refresh by themselves', t1 !== t0, t0 + ' -> ' + t1);
   check('a warm or hot temperature carries a word, not only a color', (await js(win, "[...document.querySelectorAll('.srow.t-warm .sval, .srow.t-hot .sval')].every((e) => /warm|hot/.test(e.textContent))")) === true);
   await click('#sensorsPause'); await sleep(300);
   const paused = await reads(); await sleep(3500);
