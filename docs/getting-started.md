@@ -25,7 +25,11 @@ The steps: detect hardware, back up `ThrottleStop.ini`, get ThrottleStop, VBS ch
 
 ## 3. Check it
 Open the app: **Dashboard** runs a read-only health check and should say *Your PC is optimized*. It also works without
-administrator rights; only *Fix it* and the wizard need them.
+administrator rights; only *Fix it* and the wizard need them. Below the verdict you get live CPU temperature, clock and power (read from
+HWiNFO about every 2 s while the screen is open, with the time of the last read), cards for your processor, graphics, memory, disks and
+system, an optimization level with its formula, and **Apply recommended**. The live values need HWiNFO's shared memory, and HWiNFO runs
+with administrator rights, so if the tiles are empty the app tells you why: restart KafkaBoost as administrator, or start HWiNFO from the
+card on the same screen.
 
 Make a shortcut with the app icon:
 

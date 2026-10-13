@@ -90,8 +90,14 @@ The side menu has nine sections: **Dashboard**, **System analysis**, **Optimizat
 The app is being renamed **KafkaBoost** (launchers and window already; the repo, package ids and task names keep their old names).
 Light and dark theme, English and Brazilian Portuguese.
 
-- **Dashboard** compares the settings, the startup task, VBS and the Windows build with the moment you set it up, shows live
-  temperature, clock and power (when HWiNFO sensors are available) and offers **Fix it**, which re-applies only what drifted.
+- **Dashboard** compares the settings, the startup task, VBS and the Windows build with the moment you set it up, offers **Fix it**, which re-applies only what drifted, and adds: **live tiles** (CPU package temperature, highest P-core clock, package
+  power) read from HWiNFO shared memory about every 2 s while the Dashboard and the window are visible, each labelled with the time it was read
+  and never faked; when they cannot be read the app says why (not elevated: *Run KafkaBoost as administrator*, with a restart button, because
+  HWiNFO runs elevated and a normal app cannot open its sensors; elevated: start HWiNFO from the card below or turn on Shared Memory Support);
+  **hardware cards** (processor, graphics, memory with speed, each disk by model, size and type, system; never a serial number); an
+  **optimization level** computed only from real data, `(active safe recommended tweaks + 1 if the CPU tuning is in place) / (safe recommended
+  tweaks available + 1 when the CPU tuning applies)`, with the formula shown; and **Apply recommended** (same confirmation as in
+  Optimizations: restore point first, safe tweaks only).
   Under the tiles, the **Live telemetry source (HWiNFO)** card gets HWiNFO for you: *Check what will be downloaded* reads the official
   [download page](https://www.hwinfo.com/download/) and shows the version, the source address and the expected signer; after you tick
   the consent box, *Download and install* fetches the portable zip, requires `HWiNFO64.exe` inside it and a **valid digital signature
@@ -197,7 +203,7 @@ KafkaBoost.cmd/.command/.lnk  launchers for the app
 app/                   Electron app: src/ (main, preload, settings, updates, i18n, tray, demo), renderer/, build/ (icons), test/ (node tests)
 config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog), sensors.json (pinned sensor library), hwinfo.json (official HWiNFO page, signer)
 scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore, Sensors, Hwinfo), monitoring/, maintenance/
-tests/                 Pester tests for the library (70)
+tests/                 Pester tests for the library (101)
 tools/                 make-icons.js, make-shots.ps1, run-uitest.ps1 (UI checks)
 docs/                  GitHub Pages site (index.html landing, about-app.html docs hub, compare/download/faq/privacy/terms, pt-br/ mirror, site.css, site.js, assets/) and the reference documents
 local/                 git-ignored: backups, evidence, experiments
