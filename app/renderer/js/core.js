@@ -53,13 +53,15 @@
   // ---- navigation -----------------------------------------------------------------------------------------------
   // The wizard and the finish screen belong to the Optimizations section of the sidebar.
   const NAV_OF = { wizard: 'optimizations', finish: 'optimizations' };
-  const WINDOWS_ONLY = ['optimizations', 'cleanup', 'restore', 'wizard', 'finish'];
-  const ALL_VIEWS = ['health', 'analysis', 'optimizations', 'cleanup', 'wizard', 'finish', 'restore', 'apps', 'settings', 'help'];
+  const WINDOWS_ONLY = ['optimizations', 'cleanup', 'restore', 'sensors', 'wizard', 'finish'];
+  const ALL_VIEWS = ['health', 'analysis', 'optimizations', 'cleanup', 'wizard', 'finish', 'restore', 'sensors', 'apps', 'settings', 'help'];
 
   KB.registerView = (name, def) => { KB.views[name] = def || {}; };
   KB.featureOn = (view) => { const f = KB.state.info && KB.state.info.features; if (!f) return true; return f[NAV_OF[view] || view] !== false; };
 
   KB.showView = (name) => {
+    const prev = KB.state.view;
+    if (prev !== name && KB.views[prev] && KB.views[prev].onHide) KB.views[prev].onHide();   // lets a live screen stop its timer
     KB.state.view = name;
     const section = NAV_OF[name] || name;
     document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === section));

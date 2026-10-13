@@ -192,7 +192,7 @@ try {
         }
         'sensors-read' {
             $r = Get-SensorSnapshot
-            Done $r.ok $r.message $r.data $r.code @{}
+            Done $r.ok $r.message $r.data $r.code @{ detail = $r.message }
         }
         'rollback' {
             $l = Invoke-Rollback $InstallDir $TaskName -RestoreVbs:$RestoreVbs

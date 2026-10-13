@@ -234,3 +234,23 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 .app-card .app-actions { display: flex; gap: 8px; align-items: center; margin-top: auto; }
 .app-card.busy { opacity: .6; }
 .apps-bloat-hint { font-size: 12.5px; color: var(--muted); }
+
+/* ---- sensors ---- */
+.sensors-legend { margin: 6px 0 0; font-size: 12.5px; }
+.sensors-group { margin: 22px 0 10px; }
+.sensor-card { margin-bottom: 14px; }
+.sensor-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.sensor-head h3 { margin: 0; font-size: 15px; }
+.sensor-type { margin: 12px 0 4px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.srow { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(110px, 150px) 96px 96px; gap: 10px; padding: 5px 8px; border-radius: 8px; font-size: 13.5px; align-items: baseline; }
+.srow:nth-child(even) { background: var(--hover); }
+.srow .sval { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.srow .smin, .srow .smax { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12.5px; text-align: right; }
+.srow.shead { font-size: 12px; color: var(--muted); background: none; }
+.srow.shead .sval { font-weight: 500; }
+.srow.t-warm .sval { color: var(--warn); }
+.srow.t-hot .sval { color: var(--bad); }
+.srow.t-hot { background: rgba(255,107,129,.08); }
+.sensor-card .btn { margin-top: 10px; }
+#sensorsNotices .result { margin: 10px 0 0; }
+@media (max-width: 760px) { .srow { grid-template-columns: 1fr 120px; } .srow .smin, .srow .smax { display: none; } }

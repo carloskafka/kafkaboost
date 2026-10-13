@@ -53,6 +53,48 @@ const STEP = {
   rollback: { logs: ['task removed', 'ThrottleStop.ini restored from ThrottleStop.ini.bak_20261010_223012'], res: ok('msg.rollback.done', {}, 'Rolled back.', ['task removed', 'ThrottleStop.ini restored']) }
 };
 
+
+// Sensors (demo): canned readings that wobble a little on every read. Marked demo:true so the page says they are not from this PC.
+// sensorsInstalled starts false so the consent card can be exercised; shots.js sets it true.
+state.sensorsInstalled = false;
+const SENSORS_CFG = { name: 'LibreHardwareMonitor', version: '0.9.6', license: 'MPL-2.0', sizeBytes: 6632626, url: 'https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/download/v0.9.6/LibreHardwareMonitor.zip' };
+let sensorTick = 0;
+function sensorGroups() {
+  sensorTick++;
+  const w = (base, amp) => Math.round((base + Math.sin(sensorTick / 2 + base) * amp) * 10) / 10;
+  const S = (name, type, unit, value, min, max) => ({ name, type, unit, value, min, max });
+  const cores = [];
+  for (let i = 1; i <= 8; i++) cores.push(S('CPU Core #' + i, 'Temperature', 'C', w(60 + i, 2.5), 48, 79));
+  return [
+    { id: 'cpu', hardware: [{ name: 'Intel Core i9-14900HX', type: 'Cpu', sensors: [
+      S('CPU Package', 'Temperature', 'C', w(68, 3), 45, 84), ...cores,
+      S('CPU Package', 'Power', 'W', w(31.5, 2), 12, 85), S('CPU Cores', 'Power', 'W', w(26, 2), 9, 78),
+      S('CPU Core #1 P', 'Clock', 'MHz', w(4600, 60), 800, 4700), S('CPU Core #9 E', 'Clock', 'MHz', w(3500, 50), 800, 3600),
+      S('CPU Total', 'Load', 'pct', w(14, 6), 2, 61), S('CPU Core Max', 'Load', 'pct', w(41, 10), 5, 96),
+      S('CPU Core', 'Voltage', 'V', w(1.05, 0.02), 0.65, 1.2)] }] },
+    { id: 'gpu', hardware: [{ name: 'NVIDIA GeForce RTX 4090 Laptop GPU', type: 'GpuNvidia', sensors: [
+      S('GPU Core', 'Temperature', 'C', w(55, 2), 42, 71), S('GPU Hot Spot', 'Temperature', 'C', w(63, 2), 47, 79),
+      S('GPU Package', 'Power', 'W', w(46, 5), 9, 150), S('GPU Core', 'Clock', 'MHz', w(1980, 40), 210, 2400),
+      S('GPU Memory', 'Clock', 'MHz', 9000, 810, 9000), S('GPU Core', 'Load', 'pct', w(38, 8), 0, 99),
+      S('GPU Memory Used', 'SmallData', 'MB', w(2100, 30), 1500, 6800)] }] },
+    { id: 'motherboard', hardware: [{ name: 'LENOVO 83DE', type: 'Motherboard', sensors: [
+      S('CPU Fan', 'Fan', 'RPM', w(2650, 120), 0, 5200), S('GPU Fan', 'Fan', 'RPM', w(2400, 100), 0, 5100),
+      S('System', 'Temperature', 'C', w(41, 1), 33, 52)] }] },
+    { id: 'memory', hardware: [{ name: 'Total Memory', type: 'Memory', sensors: [
+      S('Memory Used', 'Data', 'GB', w(19.2, 0.3), 14, 27), S('Memory Available', 'Data', 'GB', w(12.4, 0.3), 5, 18), S('Memory', 'Load', 'pct', w(60, 1), 44, 85)] }] },
+    { id: 'storage', hardware: [{ name: 'Samsung SSD 990 PRO 2TB', type: 'Storage', sensors: [
+      S('Temperature', 'Temperature', 'C', w(44, 1.5), 36, 58), S('Used Space', 'Load', 'pct', 47.3, 47.3, 47.3)] }] }
+  ];
+}
+function sensorStep(step) {
+  const ok = (code, args, message, data) => ({ logs: [], res: { ok: true, code, args: args || {}, message, data } });
+  if (step === 'sensors-state') return ok(state.sensorsInstalled ? 'msg.sensors.installed' : 'msg.sensors.missing', { version: SENSORS_CFG.version }, 'demo', { ...SENSORS_CFG, installed: state.sensorsInstalled, homepage: 'https://github.com/LibreHardwareMonitor/LibreHardwareMonitor' });
+  if (step === 'sensors-get') { state.sensorsInstalled = true; return { logs: ['downloading LibreHardwareMonitor 0.9.6 (demo: nothing is downloaded)'], res: ok('msg.sensors.installed', { version: SENSORS_CFG.version }, 'demo').res }; }
+  if (!state.sensorsInstalled) return { logs: [], res: { ok: false, code: 'msg.sensors.missing', args: {}, message: 'not installed', data: { installed: false, admin: true } } };
+  const groups = sensorGroups(); let count = 0; groups.forEach((g) => g.hardware.forEach((h) => { count += h.sensors.length; }));
+  return ok('msg.sensors.ok', {}, 'demo', { installed: true, admin: true, pawnio: true, cpuTemperature: true, count, source: 'Demo data', takenAt: new Date().toISOString().slice(0, 19), demo: true, groups });
+}
+
 // Returns { logs, res } for a step.
 // Tweaks in demo mode: the real catalog, with a believable starting state (most recommended ones already on).
 const tweakState = {};
@@ -77,6 +119,7 @@ const restorePoints = [
 ];
 
 function demoStep(step, opts = {}, configDir) {
+  if (step.startsWith('sensors-')) return sensorStep(step);
   if (step === 'restore-list') return { logs: [], res: { ok: true, code: 'msg.restore.listed', args: { count: restorePoints.length }, message: 'ok', data: { admin: true, points: restorePoints.slice() } } };
   if (step === 'restore-create') {
     const id = restorePoints[0].id + 1; restorePoints.unshift({ id, description: String(opts.restoreName || 'KafkaBoost'), created: new Date().toISOString().slice(0, 19), type: 'settings' });

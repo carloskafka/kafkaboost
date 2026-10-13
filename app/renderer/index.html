@@ -25,6 +25,7 @@
         <button class="nav-btn" type="button" data-view="optimizations"><span class="nav-ic" aria-hidden="true">✦</span><span data-i18n="nav.optimizations">Optimizations</span></button>
         <button class="nav-btn" type="button" data-view="cleanup"><span class="nav-ic" aria-hidden="true">♻</span><span data-i18n="nav.cleanup">Cleanup</span></button>
         <button class="nav-btn" type="button" data-view="restore"><span class="nav-ic" aria-hidden="true">↺</span><span data-i18n="nav.restore">Restore</span></button>
+        <button class="nav-btn" type="button" data-view="sensors"><span class="nav-ic" aria-hidden="true">≈</span><span data-i18n="nav.sensors">Sensors</span></button>
         <button class="nav-btn" type="button" data-view="apps"><span class="nav-ic" aria-hidden="true">▦</span><span data-i18n="nav.apps">Apps</span></button>
         <button class="nav-btn" type="button" data-view="settings"><span class="nav-ic" aria-hidden="true">⚙</span><span data-i18n="nav.settings">Settings</span></button>
         <button class="nav-btn" type="button" data-view="help"><span class="nav-ic" aria-hidden="true">?</span><span data-i18n="nav.help">Help</span></button>
@@ -171,6 +172,48 @@
           <div class="clean-foot"><span id="cleanSelected" class="muted"></span>
             <button id="cleanRun" class="btn primary" type="button" data-i18n="cleanup.run" disabled></button></div>
           <div id="cleanResult" class="result" hidden></div>
+        </div>
+      </section>
+
+      <!-- ===== Sensors ===== -->
+      <section id="sensors" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <div class="kicker" data-i18n="sensors.kicker"></div>
+            <h1 data-i18n="sensors.title"></h1>
+            <p class="muted" data-i18n="sensors.intro"></p>
+          </div>
+        </div>
+        <div id="sensorsGet" class="card" hidden>
+          <h2 class="h2" data-i18n="sensors.get.title"></h2>
+          <p id="sensorsGetWhat"></p>
+          <p id="sensorsGetDetails" class="muted"></p>
+          <p class="muted" data-i18n="sensors.get.unsigned"></p>
+          <p><button class="btn small" type="button" data-link="https://github.com/LibreHardwareMonitor/LibreHardwareMonitor" data-i18n="sensors.get.project"></button></p>
+          <label class="check"><input id="sensorsConsent" type="checkbox"> <span id="sensorsConsentText"></span></label>
+          <div class="clean-foot"><span id="sensorsGetNote" class="muted"></span>
+            <button id="sensorsGetBtn" class="btn primary" type="button" data-i18n="sensors.get.button" disabled></button></div>
+        </div>
+        <div id="sensorsResult" class="result" hidden></div>
+        <div id="sensorsMain" hidden>
+          <div class="card">
+            <div class="clean-top"><span id="sensorsStatus" class="muted"></span>
+              <span class="tweaks-tools">
+                <span id="sensorsDemo" class="chip risk-advanced" hidden data-i18n="sensors.demo"></span>
+                <button id="sensorsPause" class="btn small" type="button" data-i18n="sensors.pause"></button>
+                <button id="sensorsResetMinMax" class="btn small" type="button" data-i18n="sensors.resetMinMax"></button>
+                <button id="sensorsCopy" class="btn small" type="button" data-i18n="sensors.copy"></button>
+                <button id="sensorsSave" class="btn small" type="button" data-i18n="sensors.save"></button>
+              </span></div>
+            <div id="sensorsNotices"></div>
+            <p id="sensorsLegend" class="muted sensors-legend"></p>
+          </div>
+          <div id="sensorsGroups"></div>
+        </div>
+        <div id="sensorsDriver" class="card" hidden>
+          <h2 class="h2" data-i18n="sensors.driver.title"></h2>
+          <p class="muted" data-i18n="sensors.driver.body"></p>
+          <p class="muted" data-i18n="sensors.driver.license"></p>
         </div>
       </section>
 
@@ -389,6 +432,8 @@
   <script src="js/optimizations.js"></script>
 <script src="js/cleanup.js"></script>
   <script src="js/apps.js"></script>
+<script src="js/sensorlogic.js"></script>
+<script src="js/sensors.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/updates.js"></script>
   <script src="js/boot.js"></script>

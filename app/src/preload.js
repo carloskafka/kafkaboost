@@ -34,6 +34,10 @@ contextBridge.exposeInMainWorld('kb', {
     bloatList: () => ipcRenderer.invoke('apps:bloatList'),
     bloatRemove: (id) => ipcRenderer.invoke('apps:bloatRemove', id)
   },
+  sensors: {
+    copy: (snapshot) => ipcRenderer.invoke('sensors:copy', snapshot),
+    save: (snapshot) => ipcRenderer.invoke('sensors:save', snapshot)
+  },
   pickFolder: () => ipcRenderer.invoke('dialog:folder'),
   relaunchAdmin: () => ipcRenderer.invoke('app:relaunchAdmin'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url)
