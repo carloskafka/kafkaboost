@@ -47,6 +47,18 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     await click('[data-view=optimizations]'); await sleep(1200); await shot(win, out('optimizations'));
     await js(win, "document.getElementById('tweakSearch').scrollIntoView({ block: 'start' }); document.querySelector('main, .main, body').scrollTop = 0; window.scrollTo(0,0); 0");
     await js(win, "document.querySelector('.tweaks-head').scrollIntoView({ block: 'start' }); 0"); await sleep(300); await shot(win, out('tweaks'));
+    // Counter-Strike 2 preset: wait until the view is visible AND filled in (location read, both option lists drawn) before shooting
+    demo.resetCs2();
+    await click('[data-view=optimizations]'); await sleep(500);
+    await click('#openCs2');
+    await until("!document.getElementById('cs2').hidden && !document.getElementById('cs2Cfg').hidden && document.querySelectorAll('#cs2CfgList .clean-row').length === 2 && document.querySelectorAll('#cs2LaunchList .clean-row').length > 0"); await sleep(600);
+    await js(win, "document.querySelector('.main').scrollTop = 0; 0"); await sleep(300); await shot(win, out('cs2'));
+    await click('#cs2CfgList [data-id=showfps] input'); await click('#cs2CfgList [data-id=fpsmax] input');
+    await js(win, "(()=>{const e=document.getElementById('cs2Fps');e.value='144';e.dispatchEvent(new Event('input',{bubbles:true}))})()");
+    await click('#cs2LaunchList [data-id=console] input'); await sleep(300);
+    await js(win, "document.getElementById('cs2Cfg').scrollIntoView({ block: 'start' }); 0"); await sleep(500); await shot(win, out('cs2-options'));
+    await js(win, "document.getElementById('cs2Launch').scrollIntoView({ block: 'start' }); 0"); await sleep(500); await shot(win, out('cs2-launch'));
+    demo.resetCs2();
     await click('[data-view=cleanup]'); await sleep(1500); await shot(win, out('cleanup'));
     await click('[data-view=apps]'); for (let i = 0; i < 50 && (await js(win, "document.getElementById('apps').hidden")); i++) await sleep(100); await sleep(2200); await shot(win, out('apps'));
     demo.state.sensorsInstalled = true;          // the consent card is covered by the UI test; the shot shows the live cards
@@ -63,7 +75,7 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     await shot(win, out('finish'));
     await click('[data-view=restore]'); await sleep(1500); await shot(win, out('restore'));
     await click('[data-view=settings]'); await sleep(900); await shot(win, out('settings'));
-    await click('[data-view=help]'); await sleep(600); await js(win, "document.querySelector('.faq details').open = true"); await shot(win, out('help'));
+    await click('[data-view=help]'); await sleep(600); await js(win, "document.querySelector('.faq details').open = true"); await sleep(300); await shot(win, out('help'));
     // back to the first screen for the next variant
     await click('[data-view=health]'); await sleep(300);
     if (v !== wanted[wanted.length - 1]) { await js(win, 'KB.resetWizard()'); }

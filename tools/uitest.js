@@ -18,6 +18,8 @@ async function run({ win, js, sleep, settings, demo, outFile, platform }) {
     check('windows-only panel names the OS', (await q('#windowsOnlyText')).includes('Linux') || (await q('#windowsOnlyText')).includes('macOS'), await q('#windowsOnlyText'));
     await click('[data-view=sensors]'); await sleep(400);
     check('windows-only panel replaces Sensors', await visible('windowsOnly') && !(await visible('sensors')));
+    await js(win, "KB.showView('cs2')"); await sleep(300);
+    check('the Counter-Strike 2 page is Windows only too', await visible('windowsOnly') && !(await visible('cs2')));
     await click('[data-view=settings]'); await sleep(400);
     check('Settings still works on this OS', await visible('settings'));
     check('Windows-only settings are hidden', !(await visible('thermalCard')));
@@ -173,6 +175,60 @@ async function run({ win, js, sleep, settings, demo, outFile, platform }) {
   check('cleaning reports what was freed', (await q('#cleanResult')).startsWith('Freed'), await q('#cleanResult'));
   check('last cleanup time is saved', !!settings.get().lastCleanup);
   check('sizes read zero after cleaning', (await js(win, "document.querySelector('.clean-row[data-id=user-temp] .clean-size').textContent")).startsWith('0'));
+
+  // Counter-Strike 2 preset (demo: nothing is read from Steam and nothing is written; the same codes as scripts/lib/Cs2.ps1)
+  const ckey = require('electron').clipboard;
+  const num = (id, v) => js(win, `(()=>{const e=document.getElementById(${JSON.stringify(id)});e.value=${JSON.stringify(v)};e.dispatchEvent(new Event('input',{bubbles:true}))})()`);
+  const dis = (id) => js(win, `document.getElementById(${JSON.stringify(id)}).disabled`);
+  const ccount = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
+  demo.resetCs2(); await click('[data-view=optimizations]'); await sleep(400);
+  check('Optimizations has the Counter-Strike 2 card next to the CPU tuning', (await q('#optCs2 h3')) === 'Counter-Strike 2' && (await q('#optCs2 .muted')).includes('No promises'), await q('#optCs2 .muted'));
+  await click('#openCs2'); await sleep(900);
+  check('the card opens the Counter-Strike 2 page, and Optimizations stays the active menu item', await visible('cs2') && !(await visible('optimizations')) && (await js(win, "document.querySelector('.nav-btn.active').dataset.view")) === 'optimizations');
+  check('the page says in plain words what it does not promise (FPS, anti-cheat not tested, Steam files untouched)', (await q('#cs2 .changes')).includes('Nothing here promises more FPS') && (await q('#cs2 .changes')).includes('did not test how VAC') && (await q('#cs2 .changes')).includes('never edits Steam'), await q('#cs2 .changes'));
+  check('the game is found through Steam and its exe path is shown', (await q('#cs2Loc')).includes('Found through Steam') && (await q('#cs2Exe')).endsWith('cs2.exe') && !(await visible('cs2Forget')), await q('#cs2Loc'));
+  check('GPU: not set yet, apply is offered and revert is not', (await q('#cs2GpuStatus')) === 'Not set' && !(await dis('cs2GpuApply')) && (await dis('cs2GpuRevert')), await q('#cs2GpuStatus'));
+  await click('#cs2GpuApply'); await sleep(1300);
+  check('GPU: applying shows it as set by KafkaBoost and flips the buttons', (await q('#cs2GpuStatus')).includes('set by KafkaBoost') && (await dis('cs2GpuApply')) && !(await dis('cs2GpuRevert')) && (await visible('cs2GpuResult')), await q('#cs2GpuStatus'));
+  await click('#cs2GpuRevert'); await sleep(1300);
+  check('GPU: reverting puts the status back to Not set', (await q('#cs2GpuStatus')) === 'Not set' && !(await dis('cs2GpuApply')) && (await dis('cs2GpuRevert')), await q('#cs2GpuStatus'));
+  check('autoexec: an existing user file is recognised, nothing is ticked, writing and restoring are off', (await q('#cs2CfgStatus')) === 'Your own file is there' && (await dis('cs2CfgWrite')) && (await dis('cs2CfgRestore')) && (await ccount('#cs2CfgList .clean-row')) === 2, await q('#cs2CfgStatus'));
+  await click('#cs2CfgList [data-id=showfps] input'); await sleep(150);
+  check('autoexec: ticking a line enables Write', !(await dis('cs2CfgWrite')));
+  await click('#cs2CfgList [data-id=fpsmax] input'); await sleep(150);
+  check('autoexec: the frame limit needs a valid number first', (await dis('cs2CfgWrite')));
+  await num('cs2Fps', '5'); await sleep(100);
+  check('autoexec: a number outside the allowed range keeps Write off', (await dis('cs2CfgWrite')));
+  await num('cs2Fps', '144'); await sleep(100);
+  check('autoexec: a valid number enables Write and shows in the line', !(await dis('cs2CfgWrite')) && (await q('#cs2CfgList [data-id=fpsmax] code')) === 'fps_max 144', await q('#cs2CfgList [data-id=fpsmax] code'));
+  await click('#cs2CfgWrite'); await sleep(400);
+  check('autoexec: Write asks first, lists the lines and says the old file is backed up', (await js(win, 'document.getElementById("confirmDlg").open')) && (await q('#cfBody')).includes('cl_showfps 1') && (await q('#cfBody')).includes('fps_max 144') && (await q('#cfBody')).includes('copied to autoexec.cfg.bak_') && (await q('#cfBody')).includes('exec autoexec'), await q('#cfBody'));
+  await click('#cfCancel'); await sleep(300);
+  check('autoexec: cancelling writes nothing', (await q('#cs2CfgStatus')) === 'Your own file is there' && !demo.state.cs2.ours);
+  await click('#cs2CfgWrite'); await sleep(300); await click('#cfOk'); await sleep(1500);
+  check('autoexec: confirming writes it, names the backup and flips to "Written by KafkaBoost"', (await q('#cs2CfgResult')).includes('autoexec.cfg.bak_') && (await q('#cs2CfgStatus')) === 'Written by KafkaBoost' && !(await dis('cs2CfgRestore')), await q('#cs2CfgResult'));
+  await click('#cs2CfgRestore'); await sleep(300);
+  check('autoexec: Restore asks first and explains that an edited file is never touched', (await js(win, 'document.getElementById("confirmDlg").open')) && (await q('#cfBody')).includes('is never touched'), await q('#cfBody'));
+  await click('#cfOk'); await sleep(1500);
+  check('autoexec: restoring puts the user file back (status Your own file, restore off)', (await q('#cs2CfgResult')).includes('previous autoexec.cfg was put back') && (await q('#cs2CfgStatus')) === 'Your own file is there' && (await dis('cs2CfgRestore')), await q('#cs2CfgResult'));
+  check('launch options: only +exec autoexec is ticked at first, and that is the whole string', (await js(win, "document.getElementById('cs2LaunchStr').value")) === '+exec autoexec' && (await ccount('#cs2LaunchList .clean-row')) === 6);
+  check('launch options: the disputed and placebo ones say so', (await js(win, "[...document.querySelectorAll('#cs2LaunchList .chip')].map(c => c.textContent).join(',')")) === 'Suggested,Suggested,Disputed,Disputed,Placebo,Placebo');
+  await click('#cs2LaunchList [data-id=console] input'); await sleep(150);
+  check('launch options: ticking adds the option to the string', (await js(win, "document.getElementById('cs2LaunchStr').value")) === '+exec autoexec -console');
+  await click('#cs2Copy'); await sleep(700);
+  check('launch options: Copy reports success and the clipboard holds the string', (await visible('cs2CopyResult')) && (await q('#cs2CopyResult')).startsWith('Copied') && (await ckey.readText()) === '+exec autoexec -console', (await q('#cs2CopyResult')) + ' | ' + (await ckey.readText()));
+  await click('#cs2LaunchList [data-id=exec] input'); await click('#cs2LaunchList [data-id=console] input'); await sleep(150);
+  check('launch options: with nothing ticked the string is empty and Copy is off', (await js(win, "document.getElementById('cs2LaunchStr').value")) === '' && (await dis('cs2Copy')));
+  // Steam did not reveal the game: the page says so, hides the two parts that need it, keeps the launch options, and lets the user pick cs2.exe
+  demo.state.cs2.found = false; await click('#cs2Rescan'); await sleep(900);
+  check('not found: says so, GPU and autoexec are hidden, launch options stay', (await q('#cs2Loc')).includes('not found through Steam') && !(await visible('cs2Gpu')) && !(await visible('cs2Cfg')) && (await visible('cs2Launch')), await q('#cs2Loc'));
+  await click('#cs2Pick'); await sleep(1500);
+  check('picking cs2.exe saves it and shows the parts again, marked as chosen by the user', settings.get().cs2Exe === demo.CS2_DEMO_EXE && (await visible('cs2Gpu')) && (await q('#cs2Loc')).includes('you chose') && (await visible('cs2Forget')), settings.get().cs2Exe);
+  await click('#cs2Forget'); await sleep(1000);
+  check('"Use the location from Steam" forgets the pick', settings.get().cs2Exe === '' && !(await visible('cs2Gpu')));
+  demo.resetCs2();
+  await click('#backFromCs2'); await sleep(400);
+  check('Back returns to Optimizations', await visible('optimizations') && !(await visible('cs2')));
 
   // HWiNFO on demand (Dashboard card; demo: nothing is downloaded or started)
   await click('[data-view=health]'); await sleep(1500);
