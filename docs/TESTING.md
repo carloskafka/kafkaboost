@@ -4,16 +4,33 @@
 ```powershell
 Invoke-Pester tests        # Pester 3.4 (ships with Windows) or Pester 5 (CI)
 ```
-They cover the FIVR/V-F encoding table, the INI merge (replace, append, idempotent, no duplicates, only its own process), the
-drift check, the turbo-cap parser, the verdict rules and the config template. They run in a temporary sandbox and never touch your
-ThrottleStop. Tests use plain `throw` assertions and a shared `tests/Setup.ps1`, so the same file runs on both Pester versions.
+51 tests. `Tuning.Tests.ps1` covers the FIVR/V-F encoding table, the INI merge (replace, append, idempotent, no duplicates, only its
+own process), the drift check, the turbo-cap parser, the verdict rules, the config template and the ThrottleStop download helpers
+(form parsing, zip validation). `Tweaks.Tests.ps1` runs the tweak engine against a **sandbox registry map and state file**
+(apply, revert to the recorded value, all-or-nothing rollback, risk gate, `minBuild`, catalog validation: unique ids, valid
+categories and risks). `Cleanup.Tests.ps1` works in temporary folders (dry run deletes nothing, only the asked ids, file filter,
+locked file skipped, junction not followed, only the Recycle Bin is dangerous). Nothing touches your ThrottleStop, real registry
+keys or real temp folders. Tests use plain `throw` assertions and a shared `tests/Setup.ps1`, so the same file runs on Pester 3.4 and 5.
+
+## Node tests
+```powershell
+cd app; node --test "test/*.test.js"      # 25 tests: settings store, i18n key parity, autostart, update logic
+```
+`updates.test.js` covers release comparison, picking the right asset per OS, changelog parsing and the self-update gate, with no network.
 
 ## Syntax checks
 ```powershell
 Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object { [void][Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$null,[ref]$e) }
-cd app; node --check src/main.js; node --check src/demo.js; node --check renderer/app.js
+cd app; Get-ChildItem -Recurse src,renderer -Filter *.js | ForEach-Object { node --check $_.FullName }
 ```
 The CI workflow (`.github/workflows/ci.yml`) runs the same on a Windows runner.
+
+## UI checks
+```powershell
+powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 46 checks on Windows, 5 on a faked Linux
+```
+It covers navigation, settings, the changelog dialog, the tweak catalog (search, filters, toggles, the double confirmation for risky
+tweaks) and Cleanup. `tools\run-traytest.ps1` covers the tray.
 
 ## Read-only checks on the real machine
 ```powershell
@@ -37,3 +54,6 @@ package power, throttle flags and the WHEA counter, and keep the change only if 
 ## Not covered yet
 - The installer on a fresh Windows install; the changing wizard steps through the UI (they are covered through
   `Install-Tuning.ps1` and the library tests); FPS (never measured, only judged by feel).
+- An elevated apply and revert of the safe tweaks on a real PC with a registry diff, and real (non-sandbox) cleanup deletion.
+- A real self-update: it needs a published GitHub release with an installer and `latest.yml` (no release workflow yet).
+- macOS and Linux: the code paths exist but were never run.

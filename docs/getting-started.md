@@ -5,7 +5,9 @@ supported: the app and the scripts refuse to apply the tuning to them.
 
 ## 1. What you need
 - Windows 11, administrator rights, the laptop **plugged in**.
-- ThrottleStop (tested with 9.7.3) from <https://www.techpowerup.com/download/techpowerup-throttlestop/>: the zip in `Downloads`, or an already extracted copy in `Downloads`, `Desktop` or `Documents` (it is found and used in place; nothing is copied).
+- ThrottleStop (tested with 9.7.3). Nothing to download by hand: in the wizard's *Get ThrottleStop* step, tick the box and the app
+  fetches it from <https://www.techpowerup.com/download/techpowerup-throttlestop/> (only after you agree). If you already have it, the
+  zip in `Downloads` or an extracted copy in `Downloads`, `Desktop` or `Documents` is found and used in place.
 - Optional: [Node.js](https://nodejs.org) 20+ to run the app from a clone (`npm install` runs once, from `app/`).
 - Optional: HWiNFO64 (sensors only) to watch temperatures while you play.
 
@@ -15,7 +17,7 @@ Pick one way; both call the same code (`scripts/lib/Tuning.ps1`).
 | Way | How |
 |---|---|
 | One click | Double-click `install.cmd`, accept the administrator prompt, answer the VBS question. |
-| The app | Double-click `app\Launch-Wizard.cmd` (installs Electron on first run) then **Optimizations > CPU thermal tuning**, step 0 to 6. |
+| The app | Double-click `KafkaBoost.lnk` (made by `scripts\Create-Shortcut.ps1`) or `KafkaBoost.cmd` in the repo root (both ask for administrator rights; Electron installs on first run, Node.js needed), then **Optimizations > CPU thermal tuning**, step 0 to 6. On macOS/Linux use `KafkaBoost.command` (untested). |
 
 The steps: detect hardware, back up `ThrottleStop.ini`, get ThrottleStop, VBS choice, apply the tuning, always-on startup, verify.
 **VBS:** the undervolt only works with virtualization-based security off, which breaks WSL2/Docker until you run
@@ -33,7 +35,18 @@ powershell -File scripts\Create-Shortcut.ps1        # Desktop + Start Menu, "run
 
 ## 3b. Keep it in the tray
 Close the window: the app keeps running next to the clock and re-checks every 30 minutes (notification if something breaks).
-Tick **Help > Background > Start with Windows** to have it start hidden at every logon.
+Tick **Settings > Start with Windows** to have it start hidden at every logon. Theme (system, dark, light), language
+(English, Português), notifications and the check interval are in **Settings** too.
+
+## 3c. More optimizations, cleanup and updates
+- **Optimizations** lists 30 tweaks (performance, GPU, gaming, network, privacy, appearance). Each shows what it changes and its
+  risk. *Apply recommended* applies only the safe ones; *advanced* ones ask for confirmation; the two *risky* ones (Defender
+  real-time protection, core isolation) need two confirmations and are never part of "recommended". Switching a tweak off restores
+  the value it had before.
+- **Cleanup** measures temp files, Prefetch, Windows Update downloads, the thumbnail cache and the Recycle Bin first, and deletes
+  only what you tick. Emptying the Recycle Bin cannot be undone and asks twice.
+- **Updates:** the app checks GitHub Releases (a lookup only) and shows a banner with the changelog when a newer version exists.
+  Turn it off in Settings.
 ## 4. After a Windows update
 Open **Dashboard** again. If it is amber or red, read the list (a Windows update can reset settings or switch VBS back on) and
 press **Fix it**. VBS is only turned off again if you tick the box.

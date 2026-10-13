@@ -102,3 +102,25 @@ Sources: TechPowerUp (unclewebb) "Undervolting i9-14900HX" and "Throttlestop Set
 Legion 5/7 14900HX threads, Intel Community, Lenovo Gaming and MSI forums. Data points: Legion 7i -137 mV core/P-cache
 with boost caps ran 85-92 C; another Legion at -140 mV still hit 100 C; at -160 mV some chips crash in long tests;
 MSI calls -80 mV a safe daily value; lowering boost clocks lets you go lower on volts.
+
+
+## Tweak catalog (`config/tweaks.json`)
+30 tweaks in seven categories (performance, gpu, gaming, network, privacy, appearance, general). Each entry:
+
+| Field | Meaning |
+|---|---|
+| `id`, `category` | unique id (also the i18n key `tweak.<id>.title/desc`) and its category |
+| `risk` | `safe` (one click), `advanced` (explanation + confirm), `risky` (two confirmations, never in "Apply recommended") |
+| `recommended` | part of *Apply recommended* (only meaningful for `safe`; no risky tweak is recommended) |
+| `needsReboot` | the UI says a restart is needed |
+| `minBuild` | optional minimum Windows build; hidden below it |
+| `actions[]` | declarative actions: `registry`, `regkey`, `service`, `powerplan`, `dns`, `defender`, `vbs` |
+
+Before changing anything the engine stores the previous value in `%ProgramData%\LegionTuning\state.json`; turning the tweak off
+writes it back (a value that did not exist is deleted again). A tweak is applied all-or-nothing. Risky ones: `defender-realtime-off`
+(uses `Set-MpPreference`; if Tamper Protection blocks it the app says so and does not work around it) and `core-isolation-off`.
+No tweak promises an FPS gain: they change settings, and nothing here was benchmarked.
+
+## App settings (`userData/settings.json`)
+`theme` (system|dark|light), `language` (auto|en|pt-BR), `closeToTray`, `startHidden`, `notifications`, `checkIntervalMin` (5-1440),
+`installDir` (ThrottleStop folder, empty = automatic), `checkForUpdates` (default on), `lastSeenVersion`, `lastCleanup`. Invalid values are rejected.

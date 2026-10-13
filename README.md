@@ -40,12 +40,12 @@ This project gives you a **guided and reversible** setup, an **always-on** watch
 
 ### 1. Prerequisites
 - Windows 11 on a Lenovo Legion 83DE with an i9-14900HX (other systems are refused), administrator rights, laptop plugged in.
-- ThrottleStop (tested with **9.7.3**) from [TechPowerUp](https://www.techpowerup.com/download/techpowerup-throttlestop/): keep the zip in `Downloads`, or just keep it extracted anywhere in `Downloads`, `Desktop` or `Documents` (the installer finds and uses an existing copy, or the folder your startup task already uses).
+- ThrottleStop (tested with **9.7.3**). The app can download it from [TechPowerUp](https://www.techpowerup.com/download/techpowerup-throttlestop/) for you, only after you tick the box in the wizard. An existing copy is found and used as is: the zip in `Downloads`, an extracted folder in `Downloads`, `Desktop` or `Documents`, or the folder your startup task already uses.
 - Optional: Node.js 20+ to run the app from a clone.
 
 ### 2. Install
 Double-click **`install.cmd`** (asks for administrator rights), answer **y** to the VBS question (needed for the undervolt; breaks
-WSL2/Docker until restored), then **reboot**. Or open the app with **`app\Launch-Wizard.cmd`** and open **Optimizations**, then **CPU thermal tuning**, and follow the steps.
+WSL2/Docker until restored), then **reboot**. Or open the app with **`KafkaBoost.lnk`** / **`KafkaBoost.cmd`** (repo root) and open **Optimizations**, then **CPU thermal tuning**, and follow the steps.
 
 ```
 install.cmd -DisableVBS                      # no prompt
@@ -60,6 +60,11 @@ Open the app: **Dashboard** should say *Your PC is optimized*. Create a desktop 
 ```powershell
 powershell -File scripts\Create-Shortcut.ps1
 ```
+The repo root already has `KafkaBoost.cmd` (all systems with Node.js), `KafkaBoost.command` (macOS) and a generated `KafkaBoost.lnk`
+(icon, runs as administrator). macOS and Linux were never run.
+
+Run from a terminal: `cd app; npm install; npm start` (administrator needed to apply anything). Look around without changing the PC:
+`cd app; $env:WIZARD_DEMO='1'; npx electron .`.
 
 ## The app (`app/`)
 
@@ -67,15 +72,27 @@ powershell -File scripts\Create-Shortcut.ps1
 |---|---|
 | <img src="docs/assets/health-ok.png" alt="Dashboard: your PC is optimized"> | <img src="docs/assets/health-attention.png" alt="Dashboard: settings drifted after a Windows update, Fix it button"> |
 
-The side menu has five sections: **Dashboard**, **System analysis**, **Optimizations**, **Restore** and **Help**.
+The side menu has seven sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Settings** and **Help**.
+The app is being renamed **KafkaBoost** (launchers and window already; the repo, package ids and task names keep their old names).
+Light and dark theme, English and Brazilian Portuguese.
 
 - **Dashboard** compares the settings, the startup task, VBS and the Windows build with the moment you set it up, shows live
   temperature, clock and power (when HWiNFO sensors are available) and offers **Fix it**, which re-applies only what drifted.
 - **System analysis** is a read-only look at the PC (model, CPU, GPU, RAM, Windows, power plan, VBS) and whether the tuning can be applied.
-- **Optimizations** lists what can be optimized. The first item, **CPU thermal tuning**, is the ThrottleStop setup: a step-by-step
-  wizard from step 0 (hardware check) to step 6 (verify). Power plan, background services, network latency and in-game settings
-  are listed as *planned* and disabled.
-- **Restore** undoes everything (startup task, INI backup, optionally VBS). **Help** has short answers and the documentation links.
+- **Optimizations** is a catalog of 30 tweaks (performance, GPU, gaming, network, privacy, appearance) with search, category
+  filters and a risk badge on each (`safe`, `advanced`, `risky`). Toggle one on and the previous value is saved, so toggling it
+  off restores exactly what was there. *Apply recommended* applies only the safe ones; advanced ones ask first; the two risky
+  ones (Defender real-time protection, core isolation) need two confirmations. No FPS gain is promised: nothing here was
+  benchmarked. **CPU thermal tuning** is the ThrottleStop setup: a step-by-step wizard from step 0 (hardware check) to step 6
+  (verify).
+- **Cleanup** measures first (temp files, Prefetch, Windows Update downloads, thumbnail cache, Recycle Bin) and deletes only what
+  you tick; locked files are skipped, junctions are never followed, and the Recycle Bin (permanent) asks twice.
+- **Restore** undoes the CPU tuning (startup task, INI backup, optionally VBS). **Settings** has theme, language, tray options,
+  start with Windows, check interval, ThrottleStop folder and the update check. **Help** has short answers and the documentation links.
+- **Updates:** the app looks at this repo's GitHub Releases and shows the changelog when a newer version exists; the installed
+  Windows build can update in place. It needs a published release with an installer (no release workflow yet).
+
+Not built yet: System Restore point management, an Apps installer/uninstaller, CS2 preset, the new landing site.
 
 Every screen is in the [live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/#/walkthrough). Screenshots come from
 demo mode (`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
@@ -121,8 +138,9 @@ while it is on; the boost and power caps are separate and may still apply.
 
 - **Not tested on a fresh Windows install.** Tested: unpacking from a zip, creating/merging the INI, registering the task, the
   watchdog (no duplicates, restarts when closed), the health check and the demo UI. Not tested: the changing wizard steps through
-  the UI, the Windows installer package (`npm run dist` is configured, not built).
-- ThrottleStop and HWiNFO are not redistributed here; download them yourself.
+  the UI, the Windows installer package (`npm run dist` is configured, not built), a real in-app update, an elevated apply/revert of the tweaks on a real PC (they are tested against a sandbox registry), macOS and Linux.
+- Tweaks change Windows settings; the risky ones lower security. Use at your own risk.
+- ThrottleStop is not redistributed here: the app downloads it from TechPowerUp when you agree. HWiNFO is optional and yours to download.
 - Model-specific: Lenovo Legion type 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"). Other models need their own limits.
 - Changing CPU voltages can cause instability. Use at your own risk.
 
@@ -142,11 +160,12 @@ while it is on; the boost and power caps are separate and may still apply.
 
 ```
 install.cmd            one-click installer (self-elevates)
-app/                   Electron app: src/ (main, preload, demo), renderer/, build/ (icons), Launch-Wizard.cmd
-config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json
-scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/, monitoring/, maintenance/
-tests/                 Pester tests for the library
-tools/                 make-icons.js, make-shots.ps1
+KafkaBoost.cmd/.command/.lnk  launchers for the app
+app/                   Electron app: src/ (main, preload, settings, updates, i18n, tray, demo), renderer/, build/ (icons), test/ (node tests)
+config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog)
+scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup), monitoring/, maintenance/
+tests/                 Pester tests for the library (51)
+tools/                 make-icons.js, make-shots.ps1, run-uitest.ps1 (UI checks)
 docs/                  GitHub Pages site (index.html, assets/, favicons) and the reference documents
 local/                 git-ignored: backups, evidence, experiments
 ```

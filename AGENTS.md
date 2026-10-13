@@ -5,7 +5,7 @@ reasoning and history live in `docs/` and in git (the old plan files were folded
 
 ## What this repository is
 A guided, reversible ThrottleStop tuning for a Lenovo Legion 83DE (i9-14900HX, RTX 4090 Laptop, Windows 11), the scripts that apply
-and verify it, and an Electron app on top (side menu: **Dashboard** health check, **System analysis**, **Optimizations** with CPU thermal tuning as the first item, **Restore**, **Help**). **Done and verified (2026-10-10):** peak 90 C,
+and verify it, and an Electron app on top (called **KafkaBoost** in the UI; side menu: **Dashboard** health check, **System analysis**, **Optimizations** = 30-tweak catalog + CPU thermal tuning wizard, **Cleanup**, **Restore**, **Settings**, **Help**; English + pt-BR, light/dark theme, update check with changelog). **Done and verified (2026-10-10):** peak 90 C,
 no thermal throttling in a 19-minute CS2 session, game smooth, 0 WHEA errors (`docs/RESULTS.md`).
 
 Live tuning (profile 0, saved in `ThrottleStop.ini`, applied at every logon by the scheduled task `ThrottleStop_Autostart`):
@@ -30,27 +30,33 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 6. Installer and library code must stop only its **own** ThrottleStop copy (filter by `Path`), never every `ThrottleStop.exe`.
 7. Do not commit anything from `local/` (backups, screenshots, raw reports, `HWMonitor.txt` with disk serials) or `logs/`.
 8. Closing the window hides it to the tray; only the tray menu "Quit" exits. The app is a thin UI: logic belongs in `scripts/lib/`, behind `scripts/Steps.ps1`, with a unit test.
+9. Tweaks: the previous value is recorded before every change and restored on revert; all-or-nothing; risky tweaks need `-AllowRisky` plus two confirmations and are never "recommended". Cleanup deletes only the fixed allow-list, never follows reparse points, and the Recycle Bin asks twice. Never claim an FPS gain.
+10. UI text lives in `app/renderer/i18n/{en,pt-BR}.json` (keys must match; a test checks). PowerShell results carry `code` + `args`, not translated text. Render remote text (release notes) with `textContent` only.
 
 ## Layout
 | Path | What |
 |---|---|
 | `install.cmd` | one-click installer (self-elevates) -> `scripts/Install-Tuning.ps1` |
-| `app/` | Electron app. `src/main.js` (IPC, spawns `Steps.ps1`), `src/preload.js`, `src/tray.js` (system tray + notifications), `src/demo.js` (demo mode), `renderer/` (the five sections + the CPU-thermal-tuning wizard, `icon.svg`), `build/` (generated icons), `Launch-Wizard.cmd` |
-| `config/` | `ThrottleStop.settings.ini` (the tuning), `HWiNFO64.INI` (shared memory on), `defaults.json` (install dir + task name, read by PowerShell **and** Node) |
+| `KafkaBoost.cmd/.command/.lnk` | root launchers (the `.lnk` is generated per machine and git-ignored) |
+| `app/` | Electron app. `src/main.js` (IPC, spawns `Steps.ps1`, update check), `src/preload.js`, `src/settings.js` (validated store), `src/i18n.js`, `src/updates.js` (GitHub Releases logic), `src/autostart.js`, `src/tray.js`, `src/demo.js` (demo mode), `renderer/` (`js/` one file per screen on `window.KB`, `i18n/`, the CPU-thermal-tuning wizard, `icon.svg`), `build/` (generated icons), `test/` (node tests), `Launch-Wizard.cmd` |
+| `config/` | `ThrottleStop.settings.ini` (the tuning), `HWiNFO64.INI` (shared memory on), `defaults.json` (install dir + task name, read by PowerShell **and** Node), `tweaks.json` (tweak catalog, 30 entries) |
 | `scripts/lib/Tuning.ps1` | merge INI, register task, unpack ThrottleStop, VBS, verify, rollback, FIVR/V-F encoders, `Get-Defaults` |
 | `scripts/lib/Health.ps1` | health check (`Get-HealthReport`, `Compare-IniSettings`, `Get-Verdict`), Windows-build baseline, live telemetry, `Invoke-Fix` |
-| `scripts/Steps.ps1` | runs ONE step (detect, backup, get, vbs, apply, task, verify, health, fix, rollback), prints `LOG:` / `RESULT:` lines |
+| `scripts/lib/Tweaks.ps1`, `Cleanup.ps1` | tweak engine (declarative actions, state in `%ProgramData%\LegionTuning\state.json`, sandboxable in tests) and disk cleanup (allow-list, dry run first) |
+| `scripts/Steps.ps1` | runs ONE step (detect, backup, get [-Download], vbs, apply, task, verify, health, fix, autostart, rollback, paths, cleanbackups, tweaks-list, tweak-set, tweaks-recommended, cleanup-scan, cleanup-run), prints `LOG:` / `RESULT:` lines |
 | `scripts/Create-Shortcut.ps1` | desktop + Start Menu shortcut with the icon and the run-as-administrator flag |
 | `scripts/monitoring/`, `scripts/maintenance/` | loggers (output to `logs/`), `restore_vbs.ps1` |
-| `tests/` | Pester tests (`Setup.ps1` shared, plain `throw` assertions: runs on Pester 3.4 and 5) |
-| `tools/` | `make-icons.js` (all icon sizes from `app/renderer/icon.svg`), `make-shots.ps1` (docs screenshots from demo mode) |
+| `tests/` | Pester tests (51; `Setup.ps1` shared, plain `throw` assertions: runs on Pester 3.4 and 5) |
+| `tools/` | `make-icons.js` (all icon sizes from `app/renderer/icon.svg`), `make-shots.ps1` (docs screenshots from demo mode; not yet regenerated for the new screens), `run-uitest.ps1` + `uitest.js` (UI checks in demo mode), `run-traytest.ps1` |
 | `docs/` | GitHub Pages site (`index.html`, `assets/`, favicons) + `getting-started`, `ARCHITECTURE`, `CONFIGURATION`, `TESTING`, `TROUBLESHOOTING`, `RESULTS` |
 | `.github/workflows/` | `ci.yml` (tests + syntax on Windows), `pages.yml` (publishes `docs/`) |
 | `local/` | git-ignored: backups, evidence, experiments |
 
 ## Commands
 ```powershell
-Invoke-Pester tests                                                   # unit tests
+Invoke-Pester tests                                                   # unit tests (51)
+cd app; node --test "test/*.test.js"                                  # node tests (25)
+powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (46 + 5)
 powershell -File scripts\Steps.ps1 -Step health -InstallDir "<dir>"   # read-only verdict + live telemetry (no admin needed)
 powershell -File scripts\Create-Shortcut.ps1                          # shortcut with the app icon
 cd app; npm install; npm start                                        # the app (needs admin for changes)
@@ -69,13 +75,14 @@ cd app; npx electron ..\tools\make-icons.js                           # regenera
 - Test installer changes in a throwaway directory (`-InstallDir <temp> -NoTask -NoStart`), never against the live ThrottleStop.
 
 ## Roadmap and open items
+- **Built since the first version:** Settings + theme + pt-BR, tweak engine and catalog UI, Cleanup, update check with changelog, ThrottleStop on-click download, root launchers.
+  **Planned, not built** (approved plan in `~/.claude/plans/`): Restore points (a System Restore point before the first tweak), Apps manager (winget/brew/flatpak...), Dashboard hardware cards + optimization level, CS2 preset, the full rename to KafkaBoost (repo, package ids and task names stay), a landing site on GitHub Pages (today's docs hub moves to `about-app.html`), a release workflow (installer + `latest.yml`, required for in-app updates to work), CI on 3 OSes. The `docs/` screenshots predate the new screens.
 - **Menu names are provisional.** The sections follow the flow the TogsBoost site describes for a typical optimizer (system analysis,
   preparation, optimizations, restore). The reference video could not be analyzed (YouTube blocks automated access), so adjust the
-  labels in `app/renderer/index.html` once the exact tab names are known. Planned cards in *Optimizations* (power plan, background
-  services, network latency, in-game settings) are disabled placeholders: do not present them as working.- **Presets with a recommendation score** (not built): named tunings per CPU family; each with requirements (CPU generation, hybrid
+  labels in `app/renderer/index.html` once the exact tab names are known. The old disabled placeholder cards were replaced by the tweak catalog.- **Presets with a recommendation score** (not built): named tunings per CPU family; each with requirements (CPU generation, hybrid
   or not, VBS, laptop vs desktop), risk and source, scored against the detected system. Only the current profile is validated;
   anything from forums must be labelled unverified. The current ini is the "Default preset" for the 83DE only.
 - **Guided test session** (not built): the app starts a sensor logger while the user plays and reports before/after. HWiNFO is
   proprietary (user downloads it); LibreHardwareMonitor (MPL-2.0) could be bundled.
-- Not tested on a fresh Windows install; `npm run dist` (Windows installer) configured but not built; Linux/macOS unsupported.
+- Not tested on a fresh Windows install; `npm run dist` (Windows installer) configured but not built; the macOS/Linux code (launchers, autostart) was never run.
 - FPS was never measured, only judged by feel.
