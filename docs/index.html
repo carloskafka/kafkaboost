@@ -3,284 +3,63 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Legion Tuning — keep a gaming laptop under 100 °C</title>
-<meta name="description" content="A guided, reversible ThrottleStop tuning for the Lenovo Legion 83DE (i9-14900HX): undervolt, boost caps and power limits, a one-click installer, an always-on watchdog and a 'Dashboard' health check that notices when a Windows update undoes it.">
-<meta name="theme-color" content="#5b7cff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d1017" media="(prefers-color-scheme: dark)">
+<title>KafkaBoost: a free PC optimizer you can check</title>
+<meta name="description" content="KafkaBoost is a free Windows PC optimizer with public source code: 30 reversible tweaks, a restore point first, cleanup and a health check. No account, no telemetry.">
+<link rel="canonical" href="https://carloskafka.github.io/legion-14900hx-throttlestop/index.html">
+<link rel="alternate" hreflang="en" href="https://carloskafka.github.io/legion-14900hx-throttlestop/index.html">
+<link rel="alternate" hreflang="pt-BR" href="https://carloskafka.github.io/legion-14900hx-throttlestop/pt-br/index.html">
+<link rel="alternate" hreflang="x-default" href="https://carloskafka.github.io/legion-14900hx-throttlestop/index.html">
+<meta property="og:title" content="KafkaBoost: a free PC optimizer you can check"><meta property="og:description" content="KafkaBoost is a free Windows PC optimizer with public source code: 30 reversible tweaks, a restore point first, cleanup and a health check. No account, no telemetry."><meta property="og:type" content="website"><meta property="og:url" content="https://carloskafka.github.io/legion-14900hx-throttlestop/index.html">
+<meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/svg+xml" href="favicon-dark.svg" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<style>
-/* Material Design 3 style tokens, inlined on purpose: the page must render with no build step and no network. */
-:root {
-  color-scheme: light dark;
-  --primary: #3f5fe0; --on-primary: #ffffff; --primary-container: #dde3ff; --on-primary-container: #0a1a5c;
-  --tertiary: #146c2e; --tertiary-container: #c4eecb; --warn: #8a5a00; --warn-container: #ffe9b8; --error: #b3261e; --error-container: #f9dedc;
-  --surface: #f8f9fc; --on-surface: #1b1b1f; --surface-low: #f1f2f8; --surface-container: #e9ebf3; --surface-high: #e2e4ee;
-  --on-surface-variant: #45464f; --outline: #75777f; --outline-variant: #c5c6d0;
-  --shape-sm: 8px; --shape-md: 12px; --shape-lg: 20px; --shape-full: 999px;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary: #b6c4ff; --on-primary: #0a1a5c; --primary-container: #26397f; --on-primary-container: #dde3ff;
-    --tertiary: #8fd7a0; --tertiary-container: #0b3a1a; --warn: #f5c451; --warn-container: #4a3500; --error: #f2b8b5; --error-container: #601410;
-    --surface: #0d1017; --on-surface: #e4e5ee; --surface-low: #131825; --surface-container: #181e2e; --surface-high: #1f2638;
-    --on-surface-variant: #c5c6d0; --outline: #8f909a; --outline-variant: #2c3348;
-  }
-}
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--surface); color: var(--on-surface); font: 16px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
-a { color: var(--primary); }
-code { font-family: var(--mono); font-size: .92em; background: var(--surface-container); padding: 1px 6px; border-radius: 6px; }
-pre { background: var(--surface-container); padding: 14px 16px; border-radius: var(--shape-md); overflow: auto; font: 13.5px/1.55 var(--mono); }
-pre code { background: none; padding: 0; }
-h1, h2, h3 { line-height: 1.25; letter-spacing: -.01em; }
-h1 { font-size: 2.1rem; margin: 0 0 .4em; } h2 { font-size: 1.5rem; margin: 1.6em 0 .5em; } h3 { font-size: 1.1rem; margin: 1.4em 0 .4em; }
-.muted { color: var(--on-surface-variant); }
-
-/* layout: top app bar + navigation drawer */
-.bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; height: 64px; padding: 0 16px; background: var(--surface-low); border-bottom: 1px solid var(--outline-variant); }
-.bar img { width: 34px; height: 34px; border-radius: 9px; }
-.bar .title { font-weight: 700; font-size: 1.05rem; }
-.bar .sp { flex: 1; }
-.bar a.gh { text-decoration: none; padding: 8px 16px; border-radius: var(--shape-full); border: 1px solid var(--outline); color: var(--on-surface); font-weight: 600; font-size: .9rem; }
-.menu { display: none; appearance: none; border: 0; background: none; color: var(--on-surface); font-size: 24px; cursor: pointer; padding: 6px 10px; border-radius: var(--shape-full); }
-.shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); max-width: 1240px; margin: 0 auto; }
-nav.drawer { position: sticky; top: 64px; align-self: start; height: calc(100vh - 64px); padding: 16px 12px; overflow: auto; }
-nav.drawer a { display: block; padding: 10px 16px; margin-bottom: 4px; border-radius: var(--shape-full); color: var(--on-surface-variant); text-decoration: none; font-weight: 500; }
-nav.drawer a:hover { background: var(--surface-container); }
-nav.drawer a.active { background: var(--primary-container); color: var(--on-primary-container); font-weight: 700; }
-main { padding: 28px 32px 80px; min-width: 0; }
-.view { display: none; max-width: 880px; } .view.active { display: block; animation: in .18s ease-out; }
-@keyframes in { from { opacity: 0; transform: translateY(6px); } }
-
-/* components */
-.hero { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; padding: 28px; border-radius: var(--shape-lg); background: linear-gradient(135deg, var(--primary-container), var(--surface-container)); border: 1px solid var(--outline-variant); }
-.hero img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 10px 30px rgba(63,95,224,.3); }
-.hero h1 { margin-top: 0; } .hero p { margin: 0 0 14px; }
-.btn { display: inline-block; text-decoration: none; padding: 10px 22px; border-radius: var(--shape-full); font-weight: 600; margin: 0 8px 8px 0; border: 1px solid var(--outline); color: var(--on-surface); }
-.btn.fill { background: var(--primary); color: var(--on-primary); border-color: transparent; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 18px 0; }
-.card { background: var(--surface-low); border: 1px solid var(--outline-variant); border-radius: var(--shape-lg); padding: 18px 20px; }
-.card h3 { margin-top: 0; }
-.stat { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; }
-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .95rem; display: block; overflow-x: auto; }
-th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--outline-variant); white-space: nowrap; }
-td:last-child, th:last-child { white-space: normal; } th { color: var(--on-surface-variant); font-weight: 600; }
-.note { padding: 14px 18px; border-radius: var(--shape-md); background: var(--warn-container); color: var(--on-surface); border-left: 4px solid var(--warn); margin: 16px 0; }
-.note.ok { background: var(--tertiary-container); border-color: var(--tertiary); }
-figure { margin: 22px 0; } figure img { width: 100%; height: auto; border-radius: var(--shape-md); border: 1px solid var(--outline-variant); display: block; background: #0d1017; }
-figcaption { color: var(--on-surface-variant); font-size: .92rem; margin-top: 8px; }
-.steps { counter-reset: s; list-style: none; padding: 0; } .steps li { counter-increment: s; position: relative; padding: 4px 0 14px 46px; }
-.steps li::before { content: counter(s); position: absolute; left: 0; top: 2px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); font-weight: 700; font-size: .9rem; }
-footer { color: var(--on-surface-variant); font-size: .9rem; border-top: 1px solid var(--outline-variant); margin-top: 48px; padding-top: 16px; }
-@media (max-width: 860px) {
-  .menu { display: block; } .shell { grid-template-columns: 1fr; } main { padding: 20px 16px 60px; }
-  nav.drawer { position: fixed; inset: 64px 0 0 0; height: auto; z-index: 4; background: var(--surface); transform: translateX(-100%); transition: transform .2s; }
-  body.open nav.drawer { transform: none; }
-}
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
-</style>
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
-<header class="bar">
-  <button class="menu" id="menu" aria-label="Open navigation" aria-expanded="false">☰</button>
-  <img src="favicon-32.png" alt="" width="34" height="34">
-  <span class="title">Legion Tuning</span>
-  <span class="sp"></span>
-  <a class="gh" href="https://github.com/carloskafka/legion-14900hx-throttlestop">GitHub</a>
-</header>
-
-<div class="shell">
-<nav class="drawer" id="drawer" aria-label="Sections">
-  <a href="#/overview">Overview</a>
-  <a href="#/problem">The problem it solves</a>
-  <a href="#/quickstart">Quick start</a>
-  <a href="#/walkthrough">App walkthrough</a>
-  <a href="#/configuration">What gets applied</a>
-  <a href="#/troubleshooting">Troubleshooting</a>
-  <a href="#/roadmap">Roadmap</a>
-  <a href="#/docs">Documentation</a>
-</nav>
-
-<main>
-
-<!-- ============================ OVERVIEW ============================ -->
-<section class="view" id="overview">
-  <div class="hero">
-    <img src="apple-touch-icon.png" alt="Legion Tuning icon: a CPU chip with a gauge whose needle rests in the green zone">
-    <div>
-      <h1>Keep a gaming laptop under 100&nbsp;°C</h1>
-      <p class="muted">A guided, reversible ThrottleStop tuning for the Lenovo Legion 83DE (Intel Core i9-14900HX) — plus an app that applies it, keeps it running, and tells you when a Windows update has undone it.</p>
-      <a class="btn fill" href="#/quickstart">Quick start</a><a class="btn" href="#/walkthrough">See the app</a>
-    </div>
-  </div>
-
-  <h2>What this project does</h2>
-  <p>It cuts the CPU's heat by lowering voltage (undervolt), capping boost clocks and limiting power, then makes sure that tuning is <strong>applied at every logon and stays applied</strong>. The result on the reference laptop, in CS2:</p>
-  <div class="cards">
-    <div class="card"><div class="stat">99–100 → 90 °C</div><div class="muted">peak CPU temperature</div></div>
-    <div class="card"><div class="stat">139 → 73 W</div><div class="muted">peak package power</div></div>
-    <div class="card"><div class="stat">0</div><div class="muted">thermal-throttle samples in a 19-minute session (was frequent)</div></div>
-  </div>
-  <p class="muted">Measured with HWiNFO shared memory, one sample every 2 seconds; the “before” figures are maxima from screenshots, not a controlled A/B test. FPS was not measured — the game felt as smooth as before. Details in <a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/RESULTS.md">RESULTS.md</a>.</p>
-  <div class="note">The undervolt is silicon-specific. This chip logged a corrected WHEA “Internal parity error” at −100&nbsp;mV, so the values here are <strong>not</strong> a recipe for another CPU.</div>
-</section>
-
-<!-- ============================ PROBLEM ============================ -->
-<section class="view" id="problem">
-  <h1>The problem it solves</h1>
-  <p>Gaming laptops with a 14900HX are built to boost hard, then run out of cooling. The symptoms are familiar:</p>
-  <ul>
-    <li><strong>Stutter that grows with session length.</strong> The CPU reaches 100&nbsp;°C, throttles, and frame times spike — in CS2 and in every other game.</li>
-    <li><strong>The fix is scattered across forums.</strong> Undervolt values, boost-ratio bytes, power-limit encodings and hidden checkboxes are copied between threads, rarely explained, and often wrong for your chip. One of them (“Disable Controls”) silently blocked every power limit we set for hours.</li>
-    <li><strong>It does not survive.</strong> ThrottleStop is not a service: close it, reboot without starting it, or take a Windows update, and the laptop quietly returns to stock heat. Windows updates can switch virtualization-based security back on, which locks the voltage controls altogether.</li>
-    <li><strong>It is easy to go too far.</strong> Aggressive undervolts on 13th/14th-gen chips cause silent errors or long-term degradation. Without a baseline, backups and a way to check, you cannot tell.</li>
-  </ul>
-  <h2>How this project helps</h2>
-  <div class="cards">
-    <div class="card"><h3>Guided and reversible</h3><p class="muted">A step-by-step wizard backs up your settings first, explains each change, and has a one-click rollback.</p></div>
-    <div class="card"><h3>Always on</h3><p class="muted">A logon task plus a 5-minute watchdog starts ThrottleStop and keeps it running — never a second copy.</p></div>
-    <div class="card"><h3>“Dashboard” health check</h3><p class="muted">Open the app after a Windows update: it compares the settings, the task, VBS and the Windows build with when you set it up, and a <em>Fix it</em> button re-applies only what drifted.</p></div>
-    <div class="card"><h3>Lives in the tray</h3><p class="muted">Close the window and the app keeps watching from the system tray. The icon colour is the verdict, it re-checks every 30 minutes and notifies you when something breaks, for example after a Windows update.</p></div>
-    <div class="card"><h3>Safe by default</h3><p class="muted">It refuses to run on a CPU other than the i9-14900HX, tests every claim against the real machine, and records what went wrong so you do not repeat it.</p></div>
-  </div>
-</section>
-
-<!-- ============================ QUICK START ============================ -->
-<section class="view" id="quickstart">
-  <h1>Quick start</h1>
-  <p class="muted">Windows 11 on a Lenovo Legion 83DE with an i9-14900HX. Other systems are not supported yet.</p>
-  <ol class="steps">
-    <li><strong>Get ThrottleStop.</strong> Download it (tested with 9.7.3) from <a href="https://www.techpowerup.com/download/techpowerup-throttlestop/">TechPowerUp</a> and leave the <code>.zip</code> in <code>Downloads</code>.</li>
-    <li><strong>Get this repo</strong> (clone or download the ZIP).</li>
-    <li><strong>Run the installer:</strong> double-click <code>install.cmd</code> (asks for administrator rights) <em>or</em> open the app with <code>app\Launch-Wizard.cmd</code> and follow the wizard.</li>
-    <li><strong>Choose about VBS.</strong> Answer <em>yes</em> to turn it off (needed for the undervolt; breaks WSL2/Docker until you restore it with <code>scripts\maintenance\restore_vbs.ps1</code>).</li>
-    <li><strong>Reboot.</strong> ThrottleStop now starts at every logon with the tuning applied.</li>
-    <li><strong>Check.</strong> Open the app: <em>Dashboard</em> should say “Your PC is optimized”. Run <code>scripts\Create-Shortcut.ps1</code> for a desktop and Start Menu shortcut with the app icon.</li>
-  </ol>
-<pre><code>install.cmd -DisableVBS                 # no prompt
-install.cmd -InstallDir "D:\ThrottleStop" -SkipVBS
-powershell -File scripts\Create-Shortcut.ps1</code></pre>
-  <div class="note">Not tested on a fresh Windows install yet. The installer was tested from a zip into a throwaway folder, and the pieces (merge, task, watchdog, health check) on the real machine.</div>
-</section>
-
-<!-- ============================ WALKTHROUGH ============================ -->
-<section class="view" id="walkthrough">
-  <h1>App walkthrough</h1>
-  <p class="muted">Screenshots come from the app's demo mode (sample data; nothing on the PC is touched) and are regenerated with <code>tools\make-shots.ps1</code>.</p>
-
-  <h2>The side menu</h2>
-  <p>Five sections: <strong>Dashboard</strong> (health check), <strong>System analysis</strong>, <strong>Optimizations</strong> (our ThrottleStop tuning is the first item, with more planned), <strong>Restore</strong> and <strong>Help</strong>. The names follow the flow of a typical optimizer (analyze, prepare, optimize, restore) and are easy to change.</p>
-  <figure><img loading="lazy" src="assets/analysis.png" alt="System analysis screen listing the computer, processor, graphics, memory, Windows, power plan, VBS state, ThrottleStop and the startup task"><figcaption><strong>System analysis.</strong> A read-only look at the PC and whether the tuning can be applied.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/optimizations.png" alt="Optimizations screen with CPU thermal tuning marked Optimized and planned cards for power plan, background services, network latency and in-game settings"><figcaption><strong>Optimizations.</strong> CPU thermal tuning is the ThrottleStop setup; its status chip shows Optimized, Needs a look or Not set up. The other cards are planned and disabled.</figcaption></figure>
-  <h2>Dashboard — the health check</h2>
-  <p>This is the home screen once the tuning is set up. Run it any time, for example after a Windows update.</p>
-  <figure><img loading="lazy" src="assets/health-ok.png" alt="Dashboard screen with a green check: Your PC is optimized, live temperature, clock and power, and a list of passed checks"><figcaption>Everything in place: settings, ThrottleStop running, startup task, VBS off, Windows build unchanged, boost cap active.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/health-attention.png" alt="Dashboard screen in red after a Windows update: the settings drifted, VBS is back on, and a Fix it button is shown"><figcaption>After a Windows update: the build changed, the boost cap is no longer applied and VBS came back. <em>Fix it</em> re-applies only what drifted.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/health-fixed.png" alt="Dashboard screen green again after Fix it, with the fix log"><figcaption>Fixed. VBS is a security setting, so it is only turned off if you tick the box.</figcaption></figure>
-
-  <h2>CPU thermal tuning wizard — step 0 to the last step</h2>
-  <figure><img loading="lazy" src="assets/step-0-detect.png" alt="Wizard step 0: detect your hardware, supported Lenovo 83DE with i9-14900HX"><figcaption><strong>Step 0 · Detect your hardware.</strong> Refuses to continue on any CPU other than the i9-14900HX.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/step-1-backup.png" alt="Wizard step 1: back up current settings"><figcaption><strong>Step 1 · Back up.</strong> A timestamped copy of ThrottleStop.ini.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/step-2-get.png" alt="Wizard step 2: get ThrottleStop from a zip"><figcaption><strong>Step 2 · Get ThrottleStop.</strong> Uses the newest zip in Downloads or one you pick; opens the download page.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/step-3-vbs.png" alt="Wizard step 3: turn off VBS and hypervisor, with a checkbox"><figcaption><strong>Step 3 · VBS / hypervisor.</strong> Your choice; the consequences are listed.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/step-4-apply.png" alt="Wizard step 4: apply the tuning, listing undervolt, boost caps and power limits"><figcaption><strong>Step 4 · Apply the tuning.</strong> Undervolt, boost caps, power limits.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/step-5-task.png" alt="Wizard step 5: always-on startup task"><figcaption><strong>Step 5 · Always-on startup.</strong> Logon task plus watchdog; remembers the Windows build.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/step-6-verify.png" alt="Wizard step 6: verify, all checks pass"><figcaption><strong>Step 6 · Verify.</strong> Read-only final check.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/finish.png" alt="Finish screen: all steps finished"><figcaption><strong>Done.</strong> Reboot if VBS was changed, then open <em>Dashboard</em>.</figcaption></figure>
-  <h2>Restore and Help</h2>
-  <figure><img loading="lazy" src="assets/restore.png" alt="Restore screen explaining what Roll everything back does, with a checkbox to re-enable VBS"><figcaption><strong>Restore.</strong> One click undoes the tuning; VBS is only re-enabled if you tick the box.</figcaption></figure>
-  <figure><img loading="lazy" src="assets/help.png" alt="Help screen with short questions and answers and documentation links"><figcaption><strong>Help.</strong> Short answers and links to the documentation.</figcaption></figure>
-</section>
-
-<!-- ============================ CONFIGURATION ============================ -->
-<section class="view" id="configuration">
-  <h1>What gets applied</h1>
-  <p>Profile 0 of ThrottleStop, from <code>config/ThrottleStop.settings.ini</code> (17 keys):</p>
-  <table>
-    <tr><th>Setting</th><th>Value</th><th>Why</th></tr>
-    <tr><td>Core / P-cache undervolt</td><td>−100 mV / −100 mV</td><td>Less voltage, less heat at the same clock.</td></tr>
-    <tr><td>E-cache undervolt</td><td>−90 mV</td><td>Same, for the efficiency cores.</td></tr>
-    <tr><td>V/F point 1 (800 MHz)</td><td>+100 mV</td><td>“mV Boost”: keeps idle stable with an undervolt.</td></tr>
-    <tr><td>P-core turbo cap</td><td>47x (4.7 GHz)</td><td>The main heat lever; was 54x.</td></tr>
-    <tr><td>E-core turbo cap</td><td>36x (3.6 GHz)</td><td>Was 41x.</td></tr>
-    <tr><td>PL1 / PL2</td><td>65 W / 85 W</td><td>Lenovo's limits were 80/119 W (static 140/190 W).</td></tr>
-    <tr><td>IccMax (core)</td><td>511.75 A (max)</td><td>Stability, as recommended by the ThrottleStop author.</td></tr>
-  </table>
-  <p>Every key, the voltage encoding and the community comparison are in <a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/CONFIGURATION.md">CONFIGURATION.md</a>.</p>
-</section>
-
-<!-- ============================ TROUBLESHOOTING ============================ -->
-<section class="view" id="troubleshooting">
-  <h1>Troubleshooting</h1>
-  <h3>The temperature is back to 100 °C</h3>
-  <p>Open <em>Dashboard</em>. Typical causes: ThrottleStop is not running, a Windows update turned VBS back on or reset the settings. <em>Fix it</em> handles the first two; VBS needs your consent.</p>
-  <h3>Power limits do not apply</h3>
-  <p>In ThrottleStop's TPL window the <strong>Disable Controls</strong> box must be unchecked. HWiNFO's “PL1/PL2 (Static)” rows keep showing the stock values; look for the “Power Limit Exceeded” flags instead.</p>
-  <h3>Windows “Internal parity error” (WHEA 19)</h3>
-  <p>A corrected CPU error is a warning that the undervolt is too deep for this chip. Do not go deeper; if it returns, use −80/−80/−70 mV.</p>
-  <h3>HWiNFO shows an error dialog</h3>
-  <p>Never start the free <code>HWiNFO64.exe</code> with command-line arguments; set <code>SensorsOnly=1</code> and <code>SensorsSM=1</code> in <code>HWiNFO64.INI</code> instead.</p>
-  <h3>WSL2 / Docker stopped working</h3>
-  <p>That is the price of turning VBS off. Run <code>scripts\maintenance\restore_vbs.ps1</code> and reboot (the undervolt stops working while VBS is on; the boost and power caps may still apply).</p>
-  <p>More, including the test protocol and stop conditions: <a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a>.</p>
-</section>
-
-<!-- ============================ ROADMAP ============================ -->
-<section class="view" id="roadmap">
-  <h1>Roadmap</h1>
-  <p class="muted">Ideas, not promises. None of this exists yet.</p>
-  <ul>
-    <li><strong>Presets with a recommendation score.</strong> Named tunings per CPU family (the current one is the “Default preset” for this laptop), each with requirements, risk and source. The app would score every preset against the detected CPU, cooling and a short baseline measurement, and recommend the best fit. Presets that were not validated on real hardware would be labelled as such.</li>
-    <li><strong>Guided test session.</strong> The app starts a sensor logger while you play, then shows peak temperature, power, throttling and WHEA errors before vs after a change.</li>
-    <li><strong>Windows installer package</strong> (<code>npm run dist</code> is configured, not built) and a <strong>fresh-Windows test</strong>.</li>
-    <li><strong>Linux backend</strong> for power limits and boost caps. Undervolting is often locked on 13th/14th-gen chips; macOS has no equivalent.</li>
-  </ul>
-</section>
-
-<!-- ============================ DOCS ============================ -->
-<section class="view" id="docs">
-  <h1>Documentation</h1>
-  <table>
-    <tr><th>Document</th><th>What is in it</th></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/README.md">README.md</a></td><td>Overview, quick start, limitations, repository layout.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/AGENTS.md">AGENTS.md</a></td><td>Current state, rules and the repo map for anyone (human or AI) changing it.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/getting-started.md">getting-started.md</a></td><td>Step-by-step onboarding.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/ARCHITECTURE.md">ARCHITECTURE.md</a></td><td>How the app, the step runner and the PowerShell library fit together.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/CONFIGURATION.md">CONFIGURATION.md</a></td><td>ThrottleStop.ini keys, the voltage encoding, community comparison.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/TESTING.md">TESTING.md</a></td><td>Unit tests, UI screenshots, the safe way to test a tuning change.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a></td><td>Lessons learned, stop conditions, rollback.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/RESULTS.md">RESULTS.md</a></td><td>Measurements and the reference machine.</td></tr>
-  </table>
-  <footer>Not affiliated with Lenovo, Intel, TechPowerUp (ThrottleStop) or HWiNFO. Use at your own risk: changing CPU voltages can cause instability.</footer>
-</section>
-
-</main>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header"><div class="wrap"><a class="brand" href="index.html"><img src="favicon-32.png" alt="" width="32" height="32"><span>KafkaBoost</span></a><nav class="nav" id="site-nav" aria-label="Main"><a href="index.html" aria-current="page">Home</a><a href="compare.html">Compare</a><a href="download.html">Download</a><a href="faq.html">FAQ</a><a href="about-app.html">About the app</a></nav><div class="lang" role="group" aria-label="Language"><span aria-current="true" lang="en">EN</span><a href="pt-br/index.html" hreflang="pt-BR" lang="pt-BR" aria-label="Português (Brasil)">PT</a></div><button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="site-nav">Menu</button></div></header>
+<main id="main">
+<section class="hero" id="hero"><div class="wrap"><div class="grid"><div>
+<div class="eyebrow">Free PC optimizer</div>
+<h1>Optimize your PC. <span class="grad">Check what it changed.</span></h1>
+<p class="lead">KafkaBoost applies Windows tweaks and a CPU thermal tuning, takes a restore point first, and keeps every change reversible. No account, no licence key, no telemetry.</p>
+<div class="actions"><a class="btn primary" href="download.html">Download</a><a class="btn" href="#how">How it works</a></div>
+<div class="badges"><span class="badge">Free</span><span class="badge">Public source code</span><span class="badge">Windows 11 tested</span></div>
+</div><figure class="shot"><img src="assets/health-ok.png" alt="KafkaBoost Dashboard showing a green check and the message Your PC is optimized, with CPU temperature, clock and power cards." width="1104" height="741" loading="lazy"><figcaption>The Dashboard after a health check (demo data).</figcaption></figure></div></div></section>
+<section class="alt" id="facts" aria-labelledby="facts-h"><div class="wrap"><h2 id="facts-h" class="center">Numbers you can check in the repository</h2><div class="stats">
+<div class="stat"><b data-fact="tweaks">30</b><span>Windows tweaks in the catalog, each with a documented revert</span></div>
+<div class="stat"><b data-fact="pester">57</b><span>Pester tests for the PowerShell library</span></div>
+<div class="stat"><b data-fact="node">25</b><span>Node tests for settings, languages and updates</span></div>
+<div class="stat"><b>0</b><span>accounts, licence keys or telemetry calls</span></div>
+</div></div></section>
+<section id="how" aria-labelledby="how-h"><div class="wrap"><div class="section-head"><div class="eyebrow">How it works</div><h2 id="how-h">Four steps, in this order</h2></div><div class="cards four"><div class="card"><span class="num">1</span><h3>Analyze</h3><p class="muted">A read-only look at your PC: hardware, Windows build, power plan and what is already tuned. Nothing is changed.</p></div><div class="card"><span class="num">2</span><h3>Restore point</h3><p class="muted">Before the first tweak, KafkaBoost asks Windows for a System Restore point. Windows allows one per 24 hours, and the app tells you when it was skipped.</p></div><div class="card"><span class="num">3</span><h3>Apply</h3><p class="muted">Switch tweaks one by one, or use Apply recommended (safe tweaks only). Each card says what it does and the previous value is saved.</p></div><div class="card"><span class="num">4</span><h3>Verify</h3><p class="muted">The Dashboard re-checks the settings, for example after a Windows update, and a Fix it button re-applies only what drifted.</p></div></div></div></section>
+<section class="alt" id="why" aria-labelledby="why-h"><div class="wrap"><div class="section-head"><div class="eyebrow">What is different</div><h2 id="why-h">Built to be checked, not trusted blindly</h2></div><div class="cards"><div class="card"><h3>Free, with public source</h3><p class="muted">Nothing to buy and nothing to unlock. You can read every script the app runs.</p></div><div class="card"><h3>Every change explained</h3><p class="muted">Each tweak states what it changes and its trade-off. The catalog is a data file, not a black box.</p></div><div class="card"><h3>Reversible by design</h3><p class="muted">The previous value of every tweak is recorded, so turning it off restores what you had, not a guess.</p></div><div class="card"><h3>Risk tiers</h3><p class="muted">21 safe, 7 advanced and 2 risky tweaks. Risky ones need two confirmations and are never part of Apply recommended.</p></div><div class="card"><h3>Notices when updates undo it</h3><p class="muted">Windows updates can reset tuning. The health check compares today with the setup and offers a one-click fix.</p></div><div class="card"><h3>No account, no telemetry</h3><p class="muted">Settings stay on your PC. The only network calls are ones you start, like checking for an update.</p></div></div></div></section>
+<section id="results" aria-labelledby="results-h"><div class="wrap"><div class="section-head"><div class="eyebrow">Results</div><h2 id="results-h">Measured on one laptop</h2>
+<p class="lead">The CPU thermal tuning (undervolt, boost caps, power limits) on a Lenovo Legion 83DE with an Intel Core i9-14900HX, in 19-minute CS2 sessions, logged with HWiNFO shared memory every 2 seconds.</p></div>
+<div class="results">
+<div class="stat"><b>90 &deg;C</b><span>peak CPU temperature (was 99-100&nbsp;&deg;C)</span></div>
+<div class="stat"><b>73 W</b><span>peak package power (was 139 W)</span></div>
+<div class="stat"><b>0</b><span>thermal-throttle samples in 19 minutes (was frequent)</span></div>
+<div class="stat"><b>~79 &deg;C</b><span>average CPU temperature after, flat over the session. Before: 91&nbsp;&deg;C</span></div>
 </div>
-
-<script>
-(function () {
-  var views = Array.prototype.slice.call(document.querySelectorAll('.view'));
-  var links = Array.prototype.slice.call(document.querySelectorAll('#drawer a'));
-  function route() {
-    var id = (location.hash.replace(/^#\/?/, '') || 'overview');
-    if (!document.getElementById(id)) id = 'overview';
-    views.forEach(function (v) { v.classList.toggle('active', v.id === id); });
-    links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#/' + id); });
-    document.title = (id === 'overview' ? '' : document.getElementById(id).querySelector('h1').textContent + ' · ') + 'Legion Tuning';
-    document.body.classList.remove('open'); document.getElementById('menu').setAttribute('aria-expanded', 'false');
-    window.scrollTo(0, 0);
-  }
-  document.getElementById('menu').addEventListener('click', function () {
-    var open = document.body.classList.toggle('open'); this.setAttribute('aria-expanded', String(open));
-  });
-  window.addEventListener('hashchange', route); route();
-})();
-</script>
+<div class="note"><strong>About the 91 &deg;C:</strong> it is the owner&rsquo;s own figure and is not backed by a recorded log. The old screenshots show maxima only. So the lower peak and the end of thermal throttling were measured; the average improvement is indicative, not measured. FPS was not measured.</div>
+<p class="muted">These values belong to this chip and are not a recipe for another CPU. <a href="about-app.html#/overview">Details in the app docs</a> &middot; <a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/RESULTS.md">RESULTS.md</a></p>
+</div></section>
+<section class="alt" id="features" aria-labelledby="features-h"><div class="wrap"><div class="section-head"><div class="eyebrow">Features</div><h2 id="features-h">What is in the app today</h2></div><div class="cards"><article class="card"><figure class="shot"><img src="assets/tweaks.png" alt="Optimizations screen: tweak cards with Safe and Advanced badges and toggles." width="1104" height="741" loading="lazy"></figure><h3>Windows tweaks catalog</h3><p class="muted">30 tweaks in 7 categories with search and filters, a risk badge on each card and a toggle that applies or reverts it.</p></article><article class="card"><figure class="shot"><img src="assets/cleanup.png" alt="Cleanup screen listing temporary files with their sizes and checkboxes." width="1104" height="741" loading="lazy"></figure><h3>Cleanup</h3><p class="muted">Sizes are measured first. You delete only what you tick, and the Recycle Bin is flagged as dangerous.</p></article><article class="card"><figure class="shot"><img src="assets/restore.png" alt="Restore screen with the roll-back option and restore points." width="1104" height="741" loading="lazy"></figure><h3>Restore points</h3><p class="muted">List, create and open System Restore from the app. A safety point is requested before the first tweak.</p></article><article class="card"><figure class="shot"><img src="assets/health-attention.png" alt="Dashboard in red after a Windows update with a Fix it button." width="1104" height="741" loading="lazy"></figure><h3>Health check and CPU thermal tuning</h3><p class="muted">The Dashboard notices when a Windows update undid the tuning and Fix it re-applies only what drifted. The thermal tuning itself is specific to the Legion 83DE.</p></article><article class="card"><figure class="shot"><img src="assets/settings.png" alt="Settings screen with theme, language, tray and update options." width="1104" height="741" loading="lazy"></figure><h3>Settings</h3><p class="muted">Light, dark or system theme, English or Portuguese, tray behavior, notifications and a user-started update check.</p></article><article class="card"><figure class="shot"><img src="assets/analysis.png" alt="System analysis screen listing the computer, processor, memory and Windows." width="1104" height="741" loading="lazy"></figure><h3>System analysis</h3><p class="muted">A read-only report of the computer, processor, graphics, memory, Windows build and power plan. It changes nothing.</p></article></div></div></section>
+<section id="platforms" aria-labelledby="platforms-h"><div class="wrap"><div class="section-head"><div class="eyebrow">Availability</div><h2 id="platforms-h">Windows first. Other systems are untested.</h2></div>
+<div class="table-wrap stack"><table><thead><tr><th scope="col">System</th><th scope="col">Status</th><th scope="col">Details</th></tr></thead><tbody>
+<tr><th scope="row">Windows 11</th><td data-label="Status" class="yes">Supported</td><td data-label="Details">Everything in the app. Tested on Windows 11 build 26300 on one laptop only.</td></tr>
+<tr><th scope="row">Windows 10</th><td data-label="Status" class="maybe">Not tested</td><td data-label="Details">Most tweaks should apply, but none were run on Windows 10. Some need a minimum build.</td></tr>
+<tr><th scope="row">macOS</th><td data-label="Status" class="maybe">Never run</td><td data-label="Details">The code for a reduced feature set (analysis, settings, help) was written but never run on a Mac. Treat it as unavailable.</td></tr>
+<tr><th scope="row">Linux</th><td data-label="Status" class="maybe">Never run</td><td data-label="Details">Same: written, never run on Linux. Tweaks, Cleanup and Restore are Windows-only by design.</td></tr>
+</tbody></table></div></div></section>
+<section class="cta alt" id="cta" aria-labelledby="cta-h"><div class="wrap"><h2 id="cta-h">Try it, then undo it if you do not like it</h2><p class="lead" style="margin-inline:auto">Free, with no account. Every change can be reverted from the app.</p>
+<div class="actions"><a class="btn primary" href="download.html">Go to Download</a><a class="btn" href="compare.html">Compare</a></div></div></section>
+</main>
+<footer class="site-footer"><div class="wrap"><div class="cols"><div><a class="brand" href="index.html"><img src="favicon-32.png" alt="" width="32" height="32"><span>KafkaBoost</span></a><p style="margin-top:12px">A free PC optimizer with public source code. No account, no telemetry.</p></div><div><h3>Product</h3><ul><li><a href="index.html">Home</a></li><li><a href="compare.html">Compare</a></li><li><a href="download.html">Download</a></li><li><a href="faq.html">FAQ</a></li><li><a href="about-app.html">About the app</a></li></ul></div><div><h3>Legal</h3><ul><li><a href="privacy.html">Privacy</a></li><li><a href="terms.html">Terms</a></li><li><a href="https://github.com/carloskafka/legion-14900hx-throttlestop">GitHub</a></li><li><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/releases">Releases</a></li><li><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/issues">Report a problem</a></li></ul></div></div><p class="fine">Not affiliated with Microsoft, Lenovo, Intel, NVIDIA, TechPowerUp (ThrottleStop) or HWiNFO. Product names belong to their owners. Changing system settings can cause instability: use at your own risk.</p></div></footer>
+<script src="site.js" defer></script>
 </body>
 </html>
