@@ -111,6 +111,12 @@ function check(root) {
     const pester = /(\d+) tests\./.exec(t); const node = /# (\d+) tests/.exec(t);
     if (pester) facts.pester = pester[1]; if (node) facts.node = node[1];
   } catch (e) { /* ignore */ }
+  try { // the UI check counts must agree between docs/TESTING.md and AGENTS.md (the totals only exist at run time)
+    const ui = /(\d+) checks on Windows, (\d+) on/.exec(fs.readFileSync(path.join(docs, 'TESTING.md'), 'utf8'));
+    const ag = /UI checks in demo mode \((\d+) \+ (\d+)\)/.exec(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'));
+    if (!ui !== !ag) err(ui ? 'AGENTS.md' : 'docs/TESTING.md', 'the UI check counts are stated in only one of docs/TESTING.md and AGENTS.md (or reworded)');
+    else if (ui && ag && (ui[1] !== ag[1] || ui[2] !== ag[2])) err('AGENTS.md', 'UI check counts ' + ag[1] + ' + ' + ag[2] + ' differ from docs/TESTING.md (' + ui[1] + ' + ' + ui[2] + ')');
+  } catch (e) { /* no docs or AGENTS.md in a fixture */ }
   for (const p of pages) {
     for (const m of read(p.abs).matchAll(/data-fact="(\w+)">([^<]*)</g)) {
       if (facts[m[1]] === undefined) err(p.rel, 'unknown or unverifiable fact "' + m[1] + '"');
