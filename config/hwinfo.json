@@ -1,0 +1,10 @@
+{
+  "name": "HWiNFO",
+  "downloadPage": "https://www.hwinfo.com/download/",
+  "filePrefix": "https://www.hwinfo.com/files/",
+  "homepage": "https://www.hwinfo.com/",
+  "exe": "HWiNFO64.exe",
+  "ini": "HWiNFO64.INI",
+  "signer": "REALiX",
+  "license": "Freeware for non-commercial use (proprietary)"
+}

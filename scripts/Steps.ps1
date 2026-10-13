@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -24,7 +24,9 @@ param(
     [string]$CleanupIds,       # cleanup-run: comma separated target ids
     [string]$RestoreName,      # restore-create: description of the point
     [switch]$NoSafetyPoint,    # tweak-set / tweaks-recommended: do not create the safety restore point first
-    [switch]$Download          # get step: fetch ThrottleStop from TechPowerUp when it is not on the PC (the user agreed in the app)
+    [switch]$Download,         # get step: fetch ThrottleStop from TechPowerUp when it is not on the PC (the user agreed in the app); hwinfo-get: the user agreed to download HWiNFO
+    [string]$HwinfoVersion,    # hwinfo-get: the version the user was shown and agreed to (refused when the page offers another)
+    [switch]$UpdateIni         # hwinfo-start: turn SensorsSM=1 on in the user's own HWiNFO64.INI (a timestamped .bak is made first)
 )
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -36,6 +38,7 @@ if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleSto
 . (Join-Path $root 'lib\Cleanup.ps1')
 . (Join-Path $root 'lib\Restore.ps1')
 . (Join-Path $root 'lib\Sensors.ps1')
+. (Join-Path $root 'lib\Hwinfo.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -47,7 +50,8 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    if ($Step -in 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop' -and -not (Test-Admin)) { Done $false 'Administrator rights are required for this step. Restart the app as administrator.' $null 'msg.hwinfo.needsAdmin' @{}; return }
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
     switch ($Step) {
@@ -193,6 +197,42 @@ try {
         'sensors-read' {
             $r = Get-SensorSnapshot
             Done $r.ok $r.message $r.data $r.code @{ detail = $r.message }
+        }
+        'hwinfo-state' {
+            $st = Get-HwinfoState
+            Done $true $(if ($st.installed) { "HWiNFO $($st.version) found ($($st.source))." } else { 'HWiNFO is not on this PC.' }) $st $(if ($st.installed) { 'msg.hwinfo.state.installed' } else { 'msg.hwinfo.state.missing' }) @{ version = $st.version }
+        }
+        'hwinfo-check' {
+            $cfg = Get-HwinfoConfig
+            try { $rel = Get-HwinfoRelease $cfg } catch {
+                $c = $_.Exception.Data['code']; Log $_.Exception.Message
+                Done $false $_.Exception.Message $null $(if ($c) { $c } else { 'msg.hwinfo.networkFailed' }) @{ detail = $_.Exception.Message }
+                return
+            }
+            Done $true "HWiNFO $($rel.version) is the current portable build." $rel 'msg.hwinfo.checked' @{ version = $rel.version }
+        }
+        'hwinfo-get' {
+            if (-not $Download -and -not $ZipPath) { Done $false 'Downloading HWiNFO needs your agreement in the app.' $null 'msg.hwinfo.consentNeeded' @{}; return }
+            $cfg = Get-HwinfoConfig
+            if ($HwinfoVersion -and $HwinfoVersion -notmatch '^[0-9]+\.[0-9]+$') { throw 'Bad -HwinfoVersion.' }
+            if ($ZipPath) { Log "using $ZipPath (no download)" } else { Log "downloading HWiNFO from $($cfg.downloadPage)" }
+            try { $r = Install-Hwinfo $cfg $HwinfoVersion $ZipPath } catch {
+                $c = $_.Exception.Data['code']; $a = $_.Exception.Data['args']; Log $_.Exception.Message
+                Done $false $_.Exception.Message $null $(if ($c) { $c } else { 'msg.hwinfo.getFailed' }) $(if ($a) { $a } else { @{ detail = $_.Exception.Message } })
+                return
+            }
+            Log "signature OK ($($r.signer)); unpacked to $($r.dir); INI: $($r.ini)"
+            Done $true "HWiNFO $($r.version) installed." $r 'msg.hwinfo.installed' @{ version = $r.version }
+        }
+        'hwinfo-start' {
+            $r = Start-HwinfoApp (Get-HwinfoConfig) -UpdateIni:$UpdateIni
+            Log "$($r.code): $($r.message)"
+            Done $r.ok $r.message $r.data $r.code @{ detail = $r.message }
+        }
+        'hwinfo-stop' {
+            $r = Stop-HwinfoApp
+            Log "$($r.code): $($r.message)"
+            Done $r.ok $r.message $r.data $r.code @{}
         }
         'rollback' {
             $l = Invoke-Rollback $InstallDir $TaskName -RestoreVbs:$RestoreVbs
