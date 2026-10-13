@@ -24,7 +24,15 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     if (PLATFORM !== 'win32') { await click('[data-view=help]'); await sleep(300); await click('[data-view=optimizations]'); await sleep(500); await shot(win, out('windows-only')); continue; }
 
     demo.state.scenario = 'ok'; demo.state.fixed = false;
-    await click('[data-view=health]'); await sleep(1200); await shot(win, out('health-ok'));
+    demo.state.hwinfo = { installed: false, running: false };
+    const until = async (expr) => { for (let i = 0; i < 60 && !(await js(win, expr)); i++) await sleep(100); };
+    const top = "document.querySelector('main, .main, body').scrollTop = 0; window.scrollTo(0, 0); 0";
+    await click('[data-view=health]'); await until("!document.getElementById('hwCard').hidden && !document.getElementById('hwCheck').hidden"); await sleep(900);
+    await click('#hwCheck'); await until("!document.getElementById('hwGet').hidden"); await sleep(300);
+    await js(win, "document.getElementById('hwCard').scrollIntoView({ block: 'center' }); 0"); await sleep(300); await shot(win, out('hwinfo-consent'));
+    await click('#hwConsent'); await sleep(200); await click('#hwGetBtn'); await until("!document.getElementById('hwStart').hidden"); await sleep(300);
+    await click('#hwStart'); await until("!document.getElementById('hwStop').hidden"); await sleep(300);
+    await js(win, top); await click('#check'); await sleep(1000); await shot(win, out('health-ok'));
     demo.state.scenario = 'updated'; demo.state.fixed = false;
     await click('#check'); await sleep(900); await shot(win, out('health-attention'));
     await click('#fix'); await sleep(1300); await shot(win, out('health-fixed'));

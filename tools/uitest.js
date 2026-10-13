@@ -132,6 +132,23 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
   check('last cleanup time is saved', !!settings.get().lastCleanup);
   check('sizes read zero after cleaning', (await js(win, "document.querySelector('.clean-row[data-id=user-temp] .clean-size').textContent")).startsWith('0'));
 
+  // HWiNFO on demand (Dashboard card; demo: nothing is downloaded or started)
+  await click('[data-view=health]'); await sleep(1500);
+  check('Dashboard has the live telemetry source card, HWiNFO not installed', await visible('hwCard') && (await q('#hwStatus')).includes('not on this PC'), await q('#hwStatus'));
+  check('only "Check what will be downloaded" is offered at first', await visible('hwCheck') && !(await visible('hwGet')) && !(await visible('hwGetBtn')) && !(await visible('hwStart')) && !(await visible('hwStop')));
+  await click('#hwCheck'); await sleep(900);
+  check('checking shows the version, the official source and the expected signer', await visible('hwGet') && (await q('#hwRelease')).includes('8.54') && (await q('#hwRelease')).includes('https://www.hwinfo.com/files/hwi_854.zip') && (await q('#hwRelease')).includes('REALiX'), await q('#hwRelease'));
+  check('the details say: signed by REALiX or deleted, admin-only folder, proprietary, not bundled', (await q('#hwDetails')).includes('REALiX') && (await q('#hwDetails')).includes('LegionTuning') && (await q('#hwDetails')).includes('proprietary') && (await q('#hwDetails')).includes('not part of KafkaBoost'), await q('#hwDetails'));
+  check('Download stays disabled until the consent box is ticked', await visible('hwGetBtn') && (await js(win, "document.getElementById('hwGetBtn').disabled")) === true && (await q('#hwConsentText')).includes('8.54'));
+  await click('#hwConsent'); await sleep(200);
+  check('ticking the consent box enables Download', (await js(win, "document.getElementById('hwGetBtn').disabled")) === false);
+  await click('#hwGetBtn'); await sleep(1300);
+  check('after the install the card offers Start (no consent box left over)', await visible('hwStart') && !(await visible('hwGet')) && (await q('#hwResult')).includes('installed'), await q('#hwResult'));
+  await click('#hwStart'); await sleep(900);
+  check('Start turns into Stop and the status says the tiles are fed', await visible('hwStop') && !(await visible('hwStart')) && (await q('#hwStatus')).includes('sharing'), await q('#hwStatus'));
+  await click('#hwStop'); await sleep(1200);
+  check('Stop turns back into Start', await visible('hwStart') && !(await visible('hwStop')), await q('#hwStatus'));
+
   // sensors (demo: canned readings; support starts as not installed so the consent card can be exercised)
   const rows = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
   const reads = () => js(win, 'KB.sensorReads || 0');
