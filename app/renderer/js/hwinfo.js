@@ -47,7 +47,9 @@
     if (!res.ok || !res.data) { show('fail', KB.message(res) || t('common.failed')); return; }
     state = res.data;
     if (state.installed) release = null;
+    KB.hwinfoData = state; KB.hwinfoStamp = Date.now();
     render();
+    document.dispatchEvent(new Event('kb:hwinfo'));            // the Dashboard notice follows this state
   }
 
   async function check() {
@@ -76,15 +78,17 @@
     if (zip) install(zip);
   }
 
-  async function start() {
-    if (busy) return;
+  // updateIni = the user's explicit consent to turn SensorsSM=1 on (card box or the Dashboard notice box). Returns the step result, or null when busy.
+  async function start(updateIni) {
+    if (busy) return null;
     busy = true; render(); show('warn', t('hwinfo.starting'));
-    const res = await window.kb.runStep('hwinfo-start', { updateIni: $('hwIniConsent').checked });
+    const res = await window.kb.runStep('hwinfo-start', { updateIni: updateIni === true });
     busy = false;
-    if (!res.ok) { show('fail', KB.message(res) || t('common.failed')); await loadState(); return; }
+    if (!res.ok) { show('fail', KB.message(res) || t('common.failed')); await loadState(); return res; }
     show('ok', KB.message(res));
     await loadState();
     if (res.code === 'msg.hwinfo.started') setTimeout(async () => { await loadState(); if (KB.runHealth && !document.hidden) KB.runHealth(); }, REFRESH_AFTER_START_MS);
+    return res;
   }
 
   async function stop() {
@@ -98,12 +102,14 @@
   }
 
   KB.hwinfoRefresh = loadState;
+  KB.hwinfoStart = start;
+  KB.hwinfoBusy = () => busy;
 
   document.addEventListener('DOMContentLoaded', () => {
     $('hwCheck').addEventListener('click', check);
     $('hwGetBtn').addEventListener('click', () => install(null));
     $('hwPick').addEventListener('click', pick);
-    $('hwStart').addEventListener('click', start);
+    $('hwStart').addEventListener('click', () => start($('hwIniConsent').checked));
     $('hwStop').addEventListener('click', stop);
     $('hwConsent').addEventListener('change', render);
     $('hwIniConsent').addEventListener('change', render);

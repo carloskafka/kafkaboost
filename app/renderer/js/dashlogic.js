@@ -52,17 +52,33 @@
 
   // What the tiles area says. reading: null before the first read | { failed: true } when the step failed | { available: bool }.
   // admin: whether KafkaBoost itself runs elevated (HWiNFO usually does, and a non-elevated process cannot open its shared memory).
+  // hw: the hwinfo-state data when known (null/undefined = not known yet); ui: { iniConsent, busy } of the notice's own controls.
   //   live        values are shown, no notice
   //   pending     nothing read yet: dashes, no notice
   //   needsAdmin  unreadable and KafkaBoost is not elevated: "run as administrator" + restart button
-  //   noSharing   unreadable although elevated: start HWiNFO / turn Shared Memory Support on (the HWiNFO card below)
+  //   hwMissing   elevated, HWiNFO is not installed: points to the HWiNFO card (download flow)
+  //   hwStopped   elevated, HWiNFO installed but not running: "Start HWiNFO" button; when its INI has shared memory off, the notice also
+  //               carries the explicit consent box (maps to -UpdateIni; the start stays disabled until it is ticked)
+  //   hwNoSm      elevated, HWiNFO is running but not sharing (Shared Memory Support is off): explanation only, nothing is started
+  //   noSharing   elevated, state unknown or HWiNFO runs and shares (just started): generic text
   //   error       the read itself failed
-  function tilesNotice(reading, admin) {
-    if (!reading) return { state: 'pending', key: null, restart: false };
-    if (reading.failed) return { state: 'error', key: 'dashboard.tiles.error', restart: false };
-    if (reading.available) return { state: 'live', key: null, restart: false };
-    if (!admin) return { state: 'needsAdmin', key: 'dashboard.tiles.needsAdmin', restart: true };
-    return { state: 'noSharing', key: 'dashboard.tiles.noSharing', restart: false };
+  function tilesNotice(reading, admin, hw, ui) {
+    const n = (state, key, extra) => Object.assign({ state, key, restart: false, start: false, iniOption: false, startEnabled: false }, extra);
+    if (!reading) return n('pending', null);
+    if (reading.failed) return n('error', 'dashboard.tiles.error');
+    if (reading.available) return n('live', null);
+    if (!admin) return n('needsAdmin', 'dashboard.tiles.needsAdmin', { restart: true });
+    if (hw && typeof hw === 'object') {
+      const u = ui || {};
+      if (!hw.installed) return n('hwMissing', 'dashboard.tiles.hwMissing');
+      if (!hw.running) {
+        const iniOption = hw.ini === 'noSharedMemory';
+        return n('hwStopped', iniOption ? 'dashboard.tiles.hwStoppedIni' : 'dashboard.tiles.hwStopped',
+          { start: true, iniOption, startEnabled: !u.busy && (!iniOption || !!u.iniConsent) });
+      }
+      if (!hw.sharedMemory) return n('hwNoSm', 'dashboard.tiles.hwNoSm');
+    }
+    return n('noSharing', 'dashboard.tiles.noSharing');
   }
 
   return { REFRESH_MS, tilesNotice, optimizationLevel, formatTile, clockTime, formatSize };

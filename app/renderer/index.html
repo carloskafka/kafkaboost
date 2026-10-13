@@ -81,6 +81,9 @@
         <div id="tilesNotice" class="result warn tiles-notice" hidden>
           <span id="tilesNoticeText"></span>
           <button id="tilesRestart" class="btn small" type="button" data-i18n="banner.restart" hidden></button>
+          <label id="tilesIniRow" class="check" hidden><input id="tilesIniBox" type="checkbox"> <span data-i18n="dashboard.tiles.iniConsent"></span></label>
+          <button id="tilesStart" class="btn small primary" type="button" data-i18n="hwinfo.start" hidden></button>
+          <div id="tilesStartResult" class="result" hidden></div>
         </div>
         <p id="tilesWhen" class="muted tiles-when" hidden></p>
 
@@ -444,6 +447,10 @@
           <div class="row">
             <div class="row-text"><label class="row-title" for="sStartHidden" data-i18n="settings.startHidden"></label></div>
             <label class="switch"><input type="checkbox" id="sStartHidden"><span class="slider"></span></label>
+          </div>
+          <div class="row" id="sStartHwinfoRow">
+            <div class="row-text"><label class="row-title" for="sStartHwinfo" data-i18n="settings.startHwinfo"></label><div class="row-hint" data-i18n="settings.startHwinfo.hint"></div></div>
+            <label class="switch"><input type="checkbox" id="sStartHwinfo"><span class="slider"></span></label>
           </div>
           <div class="row">
             <div class="row-text"><label class="row-title" for="sCloseToTray" data-i18n="settings.closeToTray"></label></div>

@@ -65,7 +65,8 @@
 
   // ---- live tiles ---------------------------------------------------------------------------------------------
   // Values come only from the telemetry step (HWiNFO shared memory). When they cannot be read the tiles stay "–" and a notice says why.
-  let reading = null, live = null, takenAt = '', tActive = false, tBusy = false, tTimer = null;
+  let reading = null, live = null, takenAt = '', tActive = false, tBusy = false, tTimer = null, noticeBusy = false;
+  const HW_FRESH_MS = 10000;                           // how old the HWiNFO state may get while the tiles stay empty
   const canPoll = () => tActive && !document.hidden && KB.featureOn('optimizations');
 
   function renderTiles() {
@@ -73,10 +74,14 @@
     $('tiles').hidden = !on;
     if (!on) { $('tilesNotice').hidden = true; $('tilesWhen').hidden = true; return; }
     setText($('tTemp'), L.formatTile('temp', live)); setText($('tClock'), L.formatTile('clock', live)); setText($('tPower'), L.formatTile('power', live));
-    const n = L.tilesNotice(reading, !!(KB.state.info && KB.state.info.isAdmin));
+    const n = L.tilesNotice(reading, !!(KB.state.info && KB.state.info.isAdmin), KB.hwinfoData || null, { iniConsent: $('tilesIniBox').checked, busy: noticeBusy || (KB.hwinfoBusy ? KB.hwinfoBusy() : false) });
     $('tilesNotice').hidden = !n.key;
     if (n.key) setText($('tilesNoticeText'), t(n.key));
     $('tilesRestart').hidden = !n.restart;
+    $('tilesStart').hidden = !n.start; $('tilesStart').disabled = !n.startEnabled;
+    $('tilesIniRow').hidden = !n.iniOption;
+    if (!n.start) $('tilesIniBox').checked = false;
+    if (!n.key) KB.showResult($('tilesStartResult'), '', '');
     const time = n.state === 'live' ? L.clockTime(takenAt) : '';
     $('tilesWhen').hidden = !time;
     if (time) setText($('tilesWhen'), t('dashboard.tiles.when', { time }));
@@ -92,7 +97,18 @@
     if (res && res.ok && res.data) { reading = { available: !!res.data.available }; live = res.data.available ? res.data.live : null; takenAt = res.data.takenAt || ''; }
     else { reading = { failed: true }; live = null; }
     renderTiles();
+    // empty tiles: keep the HWiNFO state fresh (throttled), so the notice follows HWiNFO being started or closed outside the app
+    if (reading && reading.available === false && KB.hwinfoRefresh && Date.now() - (KB.hwinfoStamp || 0) > HW_FRESH_MS) KB.hwinfoRefresh();
     scheduleTelemetry();
+  }
+  async function startFromNotice() {
+    if (noticeBusy || !KB.hwinfoStart) return;
+    noticeBusy = true; renderTiles();
+    const res = await KB.hwinfoStart($('tilesIniBox').checked);
+    noticeBusy = false;
+    if (res) KB.showResult($('tilesStartResult'), res.ok ? 'ok' : 'fail', KB.message(res) || t('common.failed'));
+    renderTiles();
+    if (res && res.ok && canPoll()) { clearTimeout(tTimer); tTimer = setTimeout(readTelemetry, 1500); }   // pick the readings up as soon as HWiNFO has them
   }
   function startTelemetry() { tActive = true; clearTimeout(tTimer); if (canPoll()) readTelemetry(); }
   function stopTelemetry() { tActive = false; clearTimeout(tTimer); }
@@ -190,6 +206,9 @@
     $('fix').addEventListener('click', runFix);
     $('applyReco').addEventListener('click', applyReco);
     $('tilesRestart').addEventListener('click', () => window.kb.relaunchAdmin());
+    $('tilesStart').addEventListener('click', startFromNotice);
+    $('tilesIniBox').addEventListener('change', renderTiles);
+    document.addEventListener('kb:hwinfo', renderTiles);
     window.kb.onLog((step, line) => { if (step === 'fix') { const log = $('healthLog'); log.textContent += line + '\n'; log.scrollTop = log.scrollHeight; } });
     // a hidden window (closed to the tray) must not keep reading; coming back resumes
     document.addEventListener('visibilitychange', () => { if (document.hidden) clearTimeout(tTimer); else if (tActive) startTelemetry(); });

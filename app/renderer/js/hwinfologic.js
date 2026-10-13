@@ -36,5 +36,17 @@
     };
   }
 
-  return { DOWNLOAD_PAGE, cardModel };
+  // Should the app start HWiNFO by itself after it starts (setting startHwinfoWithApp)? Only when it is installed (ours or the user's),
+  // elevated (the start step needs administrator rights), not already running, and its INI already has shared memory on:
+  // the INI is never edited silently, so 'noSharedMemory' / 'missing' mean "do nothing" (the Dashboard notice explains).
+  function autoStartDecision(state, admin) {
+    const s = state || {};
+    if (!s.installed) return { start: false, reason: 'notInstalled' };
+    if (s.running) return { start: false, reason: 'running' };
+    if (!admin) return { start: false, reason: 'needsAdmin' };
+    if (s.ini !== 'ok') return { start: false, reason: s.ini === 'noSharedMemory' ? 'iniNoSharedMemory' : 'iniMissing' };
+    return { start: true, reason: 'ok' };
+  }
+
+  return { DOWNLOAD_PAGE, cardModel, autoStartDecision };
 });

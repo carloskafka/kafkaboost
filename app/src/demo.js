@@ -179,7 +179,7 @@ function hwinfoStep(step, opts) {
   if (step === 'hwinfo-state') {
     return ok(h.installed ? 'msg.hwinfo.state.installed' : 'msg.hwinfo.state.missing', { version: '8.54-6090' }, 'demo', {
       installed: h.installed, source: h.installed ? 'own' : null, dir: h.installed ? HW_DIR : null, version: h.installed ? '8.54-6090' : null,
-      running: h.running, runningHere: h.running, sharedMemory: h.running, ini: h.installed ? (h.iniOff ? 'noSharedMemory' : 'ok') : 'none',
+      running: h.running, runningHere: h.running, sharedMemory: h.running && !h.noSm, ini: h.installed ? (h.iniOff ? 'noSharedMemory' : 'ok') : 'none',
       name: 'HWiNFO', homepage: 'https://www.hwinfo.com/', downloadPage: 'https://www.hwinfo.com/download/', signer: 'REALiX',
       license: 'non-commercial use only', installRoot: 'C:\\ProgramData\\LegionTuning\\hwinfo'
     });
