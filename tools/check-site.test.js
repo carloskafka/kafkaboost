@@ -59,6 +59,18 @@ test('a wrong fact is reported', () => {
   fs.writeFileSync(path.join(dir, 'config', 'tweaks.json'), JSON.stringify({ tweaks: [{}, {}] }));
   assert.ok(check(dir).errors.some((e) => /fact "tweaks" says 99/.test(e)));
 });
+test('mismatching UI check counts are reported', () => {
+  const dir = fixture();
+  fs.writeFileSync(path.join(dir, 'docs', 'TESTING.md'), '172 checks on Windows, 12 on a faked Linux');
+  fs.writeFileSync(path.join(dir, 'AGENTS.md'), '# UI checks in demo mode (170 + 12)');
+  assert.ok(check(dir).errors.some((e) => /UI check counts 170 \+ 12 differ/.test(e)));
+});
+test('matching UI check counts pass', () => {
+  const dir = fixture();
+  fs.writeFileSync(path.join(dir, 'docs', 'TESTING.md'), '172 checks on Windows, 12 on a faked Linux');
+  fs.writeFileSync(path.join(dir, 'AGENTS.md'), '# UI checks in demo mode (172 + 12)');
+  assert.ok(!check(dir).errors.some((e) => /UI check counts/.test(e)));
+});
 test('open source wording without a LICENSE file is reported', () => {
   const r = check(fixture((f) => { f['docs/index.html'] = page('en', 'index.html', '<p>Open source (MIT licence)</p>'); }));
   assert.ok(r.errors.some((e) => /no LICENSE file/.test(e)));
