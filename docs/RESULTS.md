@@ -10,7 +10,7 @@ from HWiNFO/HWMonitor screenshots taken during the original sessions, so they ar
 | **Current:** same, **P 47x** | **90 C** | about 79 C | 73 W | 4.69 GHz | **0** (19 min) | 0 |
 
 Notes
-- **No average temperature was recorded before the tuning** (the old screenshots show maxima and the average column is cut off, and those sessions were not matched runs), so no average improvement is claimed. After the tuning the average is about 79 C and flat over the session.
+- **Before-tuning average: 91 C, the owner's own figure, not backed by a recorded log** (the old screenshots show maxima and the average column is cut off, and those sessions were not matched runs). Treat the average improvement as indicative, not measured. After the tuning the average is about 79 C and flat over the session.
 - The 19-minute runs were taken after the PL change at 21:11 (49x) and 21:35 (47x); temperatures stayed flat across the
   session (80, 79, 78, 78 C per 5-minute block at 47x).
 - The two extra HWiNFO sensors ("CPU Package", "CPU IA Cores") peaked at 100 C once after the 49x cap and at 89 C at 47x.
