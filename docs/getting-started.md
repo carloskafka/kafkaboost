@@ -28,8 +28,10 @@ Open the app: **Dashboard** runs a read-only health check and should say *Your P
 administrator rights; only *Fix it* and the wizard need them. Below the verdict you get live CPU temperature, clock and power (read from
 HWiNFO about every 2 s while the screen is open, with the time of the last read), cards for your processor, graphics, memory, disks and
 system, an optimization level with its formula, and **Apply recommended**. The live values need HWiNFO's shared memory, and HWiNFO runs
-with administrator rights, so if the tiles are empty the app tells you why: restart KafkaBoost as administrator, or start HWiNFO from the
-card on the same screen.
+with administrator rights, so if the tiles are empty the app tells you why: restart KafkaBoost as administrator, or, when HWiNFO is
+installed but not running, press **Start HWiNFO** in the notice under the tiles (if its INI has shared memory off, you tick a box first and a
+backup of the INI is made). If HWiNFO is not on the PC, the card below gets it after you agree. To have HWiNFO started for you every time,
+turn on **Settings > Start HWiNFO with KafkaBoost** (off by default; it only starts a copy that already shares its sensors).
 
 Make a shortcut with the app icon:
 

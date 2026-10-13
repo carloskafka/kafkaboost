@@ -95,7 +95,7 @@ Light and dark theme, English and Brazilian Portuguese.
 - **Dashboard** compares the settings, the startup task, VBS and the Windows build with the moment you set it up, offers **Fix it**, which re-applies only what drifted, and adds: **live tiles** (CPU package temperature, highest P-core clock, package
   power) read from HWiNFO shared memory about every 2 s while the Dashboard and the window are visible, each labelled with the time it was read
   and never faked; when they cannot be read the app says why (not elevated: *Run KafkaBoost as administrator*, with a restart button, because
-  HWiNFO runs elevated and a normal app cannot open its sensors; elevated: start HWiNFO from the card below or turn on Shared Memory Support);
+  HWiNFO runs elevated and a normal app cannot open its sensors; elevated: the notice says in words whether HWiNFO is not installed, not running or running with Shared Memory Support off, and for an installed but stopped HWiNFO it offers a one-click *Start HWiNFO*, with an explicit checkbox when its INI has shared memory off);
   **hardware cards** (processor, graphics, memory with speed, each disk by model, size and type, system; never a serial number); an
   **optimization level** computed only from real data, `(active safe recommended tweaks + 1 if the CPU tuning is in place) / (safe recommended
   tweaks available + 1 when the CPU tuning applies)`, with the formula shown; and **Apply recommended** (same confirmation as in
@@ -107,9 +107,9 @@ Light and dark theme, English and Brazilian Portuguese.
   `%ProgramData%\LegionTuning\hwinfo\<version>`. An HWiNFO you already have (Downloads, Desktop, Documents, `C:\Tools`, Program Files) is
   reused: its INI is never overwritten (turning shared memory on in it asks first and keeps a timestamped `.bak`). *Start* never passes
   arguments to HWiNFO and never starts a second copy; *Stop* only ends the process that runs from that exact file. Installing, starting
-  and stopping need administrator rights. HWiNFO is proprietary freeware for non-commercial use and is **not** in this repository.
+  and stopping need administrator rights. **Settings > Start HWiNFO with KafkaBoost** (off by default) starts an installed HWiNFO once, a few seconds after the app starts (also when it starts hidden at logon), only if it is not running and its INI already has shared memory on; it never edits the INI for you. HWiNFO is proprietary freeware for non-commercial use and is **not** in this repository.
   If the site answers with a protection page instead of the zip, the card says so and lets you pick a zip you downloaded yourself
-  (same checks). **Not run on the PC yet:** the elevated install, start and stop (see `docs/TESTING.md`).
+  (same checks). **Not run on the PC yet:** the elevated install, start and stop, the Dashboard notice's Start button and the start-with-the-app setting (only run against the demo and fakes; see `docs/TESTING.md`).
 - **System analysis** is a read-only look at the PC (model, CPU, GPU, RAM, Windows, power plan, VBS) and whether the tuning can be applied.
 - **Optimizations** is a catalog of 30 tweaks (performance, GPU, gaming, network, privacy, appearance) with search, category
   filters and a risk badge on each (`safe`, `advanced`, `risky`). Toggle one on and the previous value is saved, so toggling it
@@ -125,6 +125,8 @@ Light and dark theme, English and Brazilian Portuguese.
 - **Apps** installs and removes a short list of popular apps (browsers, Steam, Discord, VLC, OBS, 7-Zip and more) with the package manager your system already has: winget on Windows, Homebrew on macOS, Flatpak (or apt, dnf, pacman through a password prompt) on Linux. It works on all three systems, bundles nothing, and removing an app asks first. You can also search the package manager, export the installed list to a JSON file and import it on another PC (the app shows the list and asks before installing anything). On Windows it can also remove pre-installed Store apps (News, Solitaire, Clipchamp and others) from a fixed list, one at a time; each can be reinstalled from the Microsoft Store. The ids were checked against the package sites, but only the read-only Windows parts (`winget list`, `winget search`, the Store-app list) were run on a real machine: **installing and removing with winget was not run for real, and the macOS and Linux code was never run at all**; it is covered by unit tests with a fake command runner.
 
 <img src="docs/assets/hwinfo-consent.png" alt="Dashboard: the live telemetry source card shows the version, source and signer before the download is confirmed (demo data)" width="560">
+
+<img src="docs/assets/health-start-hwinfo.png" alt="Dashboard: no live readings because HWiNFO is installed but not running; the notice offers Start HWiNFO (demo data)" width="560">
 
 <img src="docs/assets/sensors.png" alt="Sensors: live CPU temperatures with min and max (demo data)" width="560">
 
