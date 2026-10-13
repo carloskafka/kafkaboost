@@ -1,5 +1,5 @@
 @echo off
-rem Starts the Legion Tuning Wizard (dev mode) with administrator rights.
+rem Starts KafkaBoost (dev mode) with administrator rights.
 rem Requires Node.js; installs Electron on first run.
 net session >nul 2>&1
 if %errorlevel% neq 0 (

@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Creates the "Legion Tuning" shortcut (desktop and Start Menu) that opens the app with administrator rights.
+  Creates the "KafkaBoost" shortcut (desktop and Start Menu) that opens the app with administrator rights.
 
 .DESCRIPTION
   A .lnk file holds absolute paths, so it cannot be committed; this script builds it for wherever the repo (or the
@@ -11,14 +11,14 @@
 .EXAMPLE
   .\Create-Shortcut.ps1                      # desktop + Start Menu
   .\Create-Shortcut.ps1 -NoStartMenu
-  .\Create-Shortcut.ps1 -Target "C:\Program Files\Legion Tuning Wizard\Legion Tuning Wizard.exe"
+  .\Create-Shortcut.ps1 -Target "C:\Program Files\KafkaBoost\KafkaBoost.exe"
   .\Create-Shortcut.ps1 -OutDir $env:TEMP    # write the .lnk somewhere else (used by the tests)
 #>
 [CmdletBinding()]
 param(
     [string]$Target,
     [string]$Icon,
-    [string]$Name = 'Legion Tuning',
+    [string]$Name = 'KafkaBoost',
     [string]$OutDir,
     [switch]$NoDesktop,
     [switch]$NoStartMenu
@@ -34,7 +34,7 @@ function New-Lnk([string]$Path) {
     $s = $ws.CreateShortcut($Path)
     $s.TargetPath = (Resolve-Path -LiteralPath $Target).Path
     $s.WorkingDirectory = Split-Path -Parent $s.TargetPath
-    $s.Description = 'Check and apply the CPU tuning (ThrottleStop) - Legion Tuning'
+    $s.Description = 'Check and apply the CPU tuning (ThrottleStop) - KafkaBoost'
     $s.WindowStyle = 7                                   # minimized: the .cmd launcher window stays out of the way
     if (Test-Path -LiteralPath $Icon) { $s.IconLocation = (Resolve-Path -LiteralPath $Icon).Path }
     $s.Save()

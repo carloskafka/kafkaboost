@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Legion Tuning">
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="KafkaBoost">
   <!-- CPU chip with a gauge whose needle rests in the green (cool) zone. Source of every icon size: tools/make-icons.js -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
