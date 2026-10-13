@@ -129,11 +129,11 @@ function hwinfoStep(step, opts) {
       installed: h.installed, source: h.installed ? 'own' : null, dir: h.installed ? HW_DIR : null, version: h.installed ? '8.54-6090' : null,
       running: h.running, runningHere: h.running, sharedMemory: h.running, ini: h.installed ? (h.iniOff ? 'noSharedMemory' : 'ok') : 'none',
       name: 'HWiNFO', homepage: 'https://www.hwinfo.com/', downloadPage: 'https://www.hwinfo.com/download/', signer: 'REALiX',
-      license: 'Freeware for non-commercial use (proprietary)', installRoot: 'C:\\ProgramData\\LegionTuning\\hwinfo'
+      license: 'non-commercial use only', installRoot: 'C:\\ProgramData\\LegionTuning\\hwinfo'
     });
   }
   if (step === 'hwinfo-check') {
-    return ok('msg.hwinfo.checked', { version: '8.54' }, 'demo', { name: 'HWiNFO', version: '8.54', url: 'https://www.hwinfo.com/files/hwi_854.zip', source: 'https://www.hwinfo.com/download/', signer: 'REALiX', license: 'Freeware for non-commercial use (proprietary)' });
+    return ok('msg.hwinfo.checked', { version: '8.54' }, 'demo', { name: 'HWiNFO', version: '8.54', url: 'https://www.hwinfo.com/files/hwi_854.zip', source: 'https://www.hwinfo.com/download/', signer: 'REALiX', license: 'non-commercial use only' });
   }
   if (step === 'hwinfo-get') {
     if (!opts.download && !opts.zipPath) return { logs: [], res: { ok: false, code: 'msg.hwinfo.consentNeeded', args: {}, message: 'consent needed', data: null } };
