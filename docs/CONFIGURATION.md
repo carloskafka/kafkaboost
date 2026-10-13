@@ -143,6 +143,23 @@ flatpak, apt, dnf, pacman is used (Flatpak installs per user without root; the o
 The exported list (`kafkaboost-apps.json`) is `{ "app": "KafkaBoost", "format": 1, "exportedAt", "platform", "manager", "packages": [{ "id", "kind"?, "catalogId"? }] }`.
 `catalogId` lets a list made on one OS be imported on another through the catalog.
 
+## Sensor library (`config/sensors.json`)
+| Field | Meaning |
+|---|---|
+| `name`, `version` | the library and the exact release the app downloads (LibreHardwareMonitor 0.9.6) |
+| `url` | the official GitHub release zip (`LibreHardwareMonitor.zip`, the .NET Framework 4.7.2 build that Windows PowerShell 5.1 can load); must start with `urlPrefix` |
+| `urlPrefix` | `https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/download/`: any other address is refused |
+| `sha256` | the SHA-256 of that zip (`086d9f1b...c001`, the same value GitHub shows for the release asset). A different file is deleted and nothing is installed |
+| `sizeBytes` | about 6.3 MB, shown in the consent text |
+| `library` | the DLL the zip must contain and the reader loads |
+| `license`, `homepage` | MPL-2.0 and the project page |
+
+**What is downloaded and where.** Nothing is in this repository. After the user ticks the consent box and clicks *Get sensor support* (as administrator) the zip goes to a fresh folder in `%TEMP%`, is hash-checked, only the library DLLs are unpacked (23 files, no GUI exe) into `%ProgramData%\LegionTuning\sensors\<version>\` (ACL: administrators and SYSTEM write, users read), and the zip is deleted. To update the library, change `version`, `url` and `sha256` together and re-run the sensor tests. The library DLLs are **not Authenticode-signed**; the pinned hash is the only proof of origin.
+
+**Drivers.** LibreHardwareMonitor 0.9.6 reads Intel/AMD CPU registers (temperature, clocks, power) through the **PawnIO** driver, which is installed separately and which KafkaBoost never installs (the older WinRing0 driver is not referenced by this version). On the reference PC PawnIO was not installed: the CPU load, GPU (temperature, clocks, power, memory) and memory readings worked without it, and CPU temperature, clocks and power were absent. The app shows them as missing, never as 0. Without administrator rights the library also returned no disk or board sensors. Some anti-cheat systems dislike kernel drivers from monitoring tools; this was not tested.
+
+**Scope.** Temperatures, clocks, voltages, power, fans and load, like HWMonitor. It does **not** measure DPC/ISR latency (use LatencyMon for that). The warm (80 C) and hot (90 C) temperature colors are generic and not specific to any chip or disk.
+
 ## App settings (`userData/settings.json`)
 `theme` (system|dark|light), `language` (auto|en|pt-BR), `closeToTray`, `startHidden`, `notifications`, `checkIntervalMin` (5-1440),
 `installDir` (ThrottleStop folder, empty = automatic), `checkForUpdates` (default on), `lastSeenVersion`, `lastCleanup`. Invalid values are rejected.

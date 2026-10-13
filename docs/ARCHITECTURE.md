@@ -3,7 +3,7 @@
 Three layers, one source of truth for the logic:
 
 ```
-app/ (Electron UI)  ──spawn──▶  scripts/Steps.ps1  ──dot-source──▶  scripts/lib/Tuning.ps1 + Health.ps1 + Tweaks.ps1 + Cleanup.ps1 + Restore.ps1
+app/ (Electron UI)  ──spawn──▶  scripts/Steps.ps1  ──dot-source──▶  scripts/lib/Tuning.ps1 + Health.ps1 + Tweaks.ps1 + Cleanup.ps1 + Restore.ps1 + Sensors.ps1
 install.cmd ─────────────────▶  scripts/Install-Tuning.ps1 ───────────────────▲
                                          config/{ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json}
 ```
@@ -13,7 +13,7 @@ install.cmd ─────────────────▶  scripts/Inst
 |---|---|
 | `Tuning.ps1` | Hardware info, unpack ThrottleStop, VBS on/off, **merge** settings into `ThrottleStop.ini` (stops only its own process), register the logon task + 5-minute watchdog, read-only `Test-Tuning`, `Invoke-Rollback`, FIVR/V-F encoders, `Get-Defaults`. |
 | `Health.ps1` | The health check: `Compare-IniSettings` (drift), `Get-TurboCapMHz`, `Get-Verdict` (fail > warn > ok, `info` never counts), baseline of the Windows build (`%ProgramData%\LegionTuning\baseline.json`), optional live telemetry from HWiNFO shared memory, `Get-HealthReport`, `Invoke-Fix` (re-applies only what drifted; VBS only with consent). |
-
+| `Sensors.ps1` | The Sensors screen. Pinned release from `config/sensors.json` (LibreHardwareMonitor, MPL-2.0): `Save-SensorDownload` (fresh temp folder, **SHA-256 must match** or the file is deleted, zip checked for the library and for `../` paths), `Expand-SensorZip` (only the library DLLs, by name), `Set-SensorsAcl` (administrators write, others read: an elevated process loads these DLLs), `Install-SensorSupport` (zip deleted at the end). `Read-SensorsLive` loads `LibreHardwareMonitorLib.dll` in Windows PowerShell 5.1 (the net472 build; `Assembly.LoadFrom` resolves its dependencies in the same folder), reads CPU, GPU, memory, board and storage twice (a second pass gives the load and power counters a delta) and `ConvertTo-SensorGroups` returns `hardware -> sensors` (name, type, value, min, max, unit code). Sensors without a value are dropped, CPU power is dropped when the PawnIO driver is missing (the library would show 0 W), and `Get-SensorSnapshot` picks the code (`msg.sensors.ok`, `needsAdmin`, `noCpuTemp`, `empty`, `loadFailed`, `missing`). Tests set `$script:SensorProvider` and `$script:SensorDownloader`. |
 | `Tweaks.ps1` | The tweak engine, driven by `config/tweaks.json` (30 tweaks, 7 categories, risk `safe`/`advanced`/`risky`). A tweak is a list of declarative actions (`registry`, `regkey`, `service`, `powerplan`, `dns`, `defender`, `vbs`). `Set-Tweak` is all-or-nothing: it records the previous value in `%ProgramData%\LegionTuning\state.json`, applies, and rolls back if an action fails; turning a tweak off restores the recorded value. Risky tweaks need `-AllowRisky`; `minBuild` hides tweaks the Windows build does not support. `Set-RecommendedTweaks` applies only the safe ones marked `recommended`. |
 | `Cleanup.ps1` | Disk cleanup: a fixed allow-list of targets (user temp, Windows temp, Prefetch `*.pf`, Windows Update downloads, thumbnail cache, Recycle Bin). `Get-CleanupSizes` is a dry run; `Invoke-Cleanup` deletes only the contents of the chosen ids, never follows junctions or symlinks, skips locked files and counts them, and leaves the target folder itself. The Recycle Bin is the one irreversible target. |
 | `Restore.ps1` | System Restore points: `Get-KbRestorePoints` (newest first, needs admin), `New-KbRestorePoint` (checks that Windows really made one, because `Checkpoint-Computer` only warns when it declines; reports `created` / `skipped` / `failed`), `Test-FirstTweak`. `tweak-set` (on) and `tweaks-recommended` make a safety point first unless `-NoSafetyPoint`; a declined or failed point never blocks the tweak. Windows' 24-hour limit and System Protection are never changed, and there is no single-point delete (the app opens `rstrui.exe` instead). Tests use `$script:RestoreProvider`. |
@@ -24,11 +24,11 @@ tests never touch real registry keys or folders.
 
 ## Step runner (`scripts/Steps.ps1`)
 Runs **one** step (`detect`, `backup`, `get`, `vbs`, `apply`, `task`, `verify`, `health`, `fix`, `autostart`, `rollback`, `paths`,
-`cleanbackups`, `tweaks-list`, `tweak-set`, `tweaks-recommended`, `cleanup-scan`, `cleanup-run`, `restore-list`, `restore-create`, `restore-open`) and prints a protocol the
+`cleanbackups`, `tweaks-list`, `tweak-set`, `tweaks-recommended`, `cleanup-scan`, `cleanup-run`, `restore-list`, `restore-create`, `restore-open`, `sensors-state`, `sensors-get`, `sensors-read`) and prints a protocol the
 app parses: `LOG: <text>` lines and one final `RESULT: {"ok":…,"message":…,"code":…,"args":…,"data":…}`. `code` + `args` are a
 language-neutral message key (`msg.*`, `tweak.*`, `check.*`) the UI translates; `message` is the English fallback. Steps that
 change the system refuse to run without administrator rights; the read-only ones (`detect`, `verify`, `health`, `paths`,
-`cleanbackups`, `tweaks-list`, `tweaks-recommended`, `cleanup-scan`, `autostart` status) do not, and `tweak-set` checks per tweak
+`cleanbackups`, `tweaks-list`, `tweaks-recommended`, `cleanup-scan`, `autostart` status, `sensors-state`, `sensors-read`) do not (`sensors-get` checks for administrator rights itself and answers with a `msg.sensors.getNeedsAdmin` code), and `tweak-set` checks per tweak
 (registry tweaks under HKCU need no admin). `get -Download` fetches ThrottleStop from TechPowerUp only when the user agreed in the
 app: version list page, then the download form, validated as a zip containing `ThrottleStop.exe`, unpacked, zip deleted.
 
@@ -46,11 +46,12 @@ app: version list page, then the download form, validated as a zip containing `T
   The lookup sends no personal data; nothing downloads without a click. It needs a published release with an installer and
   `latest.yml`; there is no release workflow yet.
 - `src/packages/` (the Apps manager, no Electron code, unit-tested with a fake runner): `ids.js` (strict id/query patterns), `runner.js` (the only place that starts a process: `execFile` with an args array, never a shell), `base.js` (shared provider shape and result codes), `winget.js` (parses the localized table by header position), `brew.js` (casks + formulae; tries `/opt/homebrew/bin` and `/usr/local/bin` because apps started from the Finder get no shell PATH), `linux.js` (`flatpak` per user, `apt`/`dnf`/`pacman` through `pkexec`), `catalog.js` (loads and validates `config/apps.json`), `bloat.js` (Windows inbox Store apps: allow-list only, current user, via PowerShell), `index.js` (`createService`: picks the provider for the OS, flags what is installed, builds the export file and the import plan). Every provider has the same interface: `available, list, search, install, uninstall, exportList, importList`. IPC `apps:*` in `main.js` re-validates every argument; import is two calls (pick and validate, then run only the validated plan). The macOS and Linux providers were never run on real systems.
+- Sensors screen: `renderer/js/sensors.js` (view) and `renderer/js/sensorlogic.js` (pure logic shared with the main process and the tests: thresholds, formatting, `sanitizeSnapshot`). The page runs `sensors-state`, shows the consent box when the library is missing, then repeats `sensors-read` about every 2 s (the next read is scheduled only after the previous one ends) **only while it is the visible screen and the window is visible** (`onHide` in `core.js`, `visibilitychange`). Each read starts a short Windows PowerShell and opens the library, so the interval is "2 s after the previous read". Min/max are tracked by the page over what it has seen, because the library is reopened for every read. IPC `sensors:copy` / `sensors:save` rebuild the snapshot with `sanitizeSnapshot` before it reaches the clipboard or a file. A step is spawned per read (no long-running process), which keeps the "thin UI" rule.
 - `src/demo.js` and `src/demo-apps.js`: canned results for **demo mode** (`WIZARD_DEMO=1`): used for the docs screenshots, never touches the PC. The tweak
   list comes from the real `config/tweaks.json`.
 - `renderer/`: plain scripts on one `window.KB` object (`js/core.js` plus one file per screen). Sections: Dashboard, System
   analysis, Optimizations (the tweak catalog with search, category chips, risk badges and toggles, plus *CPU thermal tuning*, the
-  step-by-step wizard), Cleanup, Restore, Apps (all OSes), Settings, Help. Advanced and risky tweaks ask for confirmation (risky: two, with a strong
+  step-by-step wizard), Cleanup, Restore, Sensors, Apps (all OSes), Settings, Help. Advanced and risky tweaks ask for confirmation (risky: two, with a strong
   warning); *Apply recommended* never includes them. Text is set with `textContent`, never `innerHTML`.
 - OS detection: Windows gets everything; the Windows-only sections (`WINDOWS_ONLY` in `core.js`) are hidden elsewhere.
 
@@ -67,7 +68,7 @@ starts ThrottleStop only if no process of that name exists, so there is never a 
 
 ## Config (`config/`)
 `ThrottleStop.settings.ini` is merged key by key into the INI (see `CONFIGURATION.md`); `defaults.json` holds the install dir and
-task name for PowerShell and Node alike; `HWiNFO64.INI` enables shared-memory logging; `tweaks.json` is the tweak catalog.
+task name for PowerShell and Node alike; `HWiNFO64.INI` enables shared-memory logging; `tweaks.json` is the tweak catalog; `sensors.json` pins the sensor library release (version, official url, SHA-256).
 
 ## Tools (`tools/`)
 `make-icons.js` renders every icon size from `app/renderer/icon.svg`; `make-shots.ps1` regenerates `docs/assets/*.png` from

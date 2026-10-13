@@ -4,18 +4,19 @@
 ```powershell
 Invoke-Pester tests        # Pester 3.4 (ships with Windows) or Pester 5 (CI)
 ```
-57 tests. `Tuning.Tests.ps1` covers the FIVR/V-F encoding table, the INI merge (replace, append, idempotent, no duplicates, only its
+70 tests. `Tuning.Tests.ps1` covers the FIVR/V-F encoding table, the INI merge (replace, append, idempotent, no duplicates, only its
 own process), the drift check, the turbo-cap parser, the verdict rules, the config template and the ThrottleStop download helpers
 (form parsing, zip validation). `Tweaks.Tests.ps1` runs the tweak engine against a **sandbox registry map and state file**
 (apply, revert to the recorded value, all-or-nothing rollback, risk gate, `minBuild`, catalog validation: unique ids, valid
 categories and risks). `Cleanup.Tests.ps1` works in temporary folders (dry run deletes nothing, only the asked ids, file filter,
-locked file skipped, junction not followed, only the Recycle Bin is dangerous). `Restore.Tests.ps1` uses a fake provider (date conversion, ordering, created vs skipped vs failed, first-tweak detection); no real restore point is made. Nothing touches your ThrottleStop, real registry
+locked file skipped, junction not followed, only the Recycle Bin is dangerous). `Restore.Tests.ps1` uses a fake provider (date conversion, ordering, created vs skipped vs failed, first-tweak detection); no real restore point is made. `Sensors.Tests.ps1` uses a fake sensor provider and a fake downloader (parsing and grouping, rounding, dropped CPU power without the driver, the `needsAdmin` / `noCpuTemp` / `empty` / `loadFailed` / `missing` paths, the pinned release in `config/sensors.json`, a sandbox zip with the right hash unpacked as DLLs only, a zip with a **wrong hash** deleted and nothing installed, an address outside the official release prefix, a zip with `../` or without the library); nothing is downloaded and no hardware is read. Nothing touches your ThrottleStop, real registry
 keys or real temp folders. Tests use plain `throw` assertions and a shared `tests/Setup.ps1`, so the same file runs on Pester 3.4 and 5.
 
 ## Node tests
 ```powershell
-cd app; node --test "test/*.test.js"      # 52 tests: settings store, i18n key parity, autostart, update logic, Apps manager
+cd app; node --test "test/*.test.js"      # 59 tests: settings store, i18n key parity, autostart, update logic, Apps manager, Sensors logic
 ```
+`sensors.test.js` covers `renderer/js/sensorlogic.js`: the generic temperature thresholds, value formatting, snapshot sanitizing (unknown fields, groups and units dropped, sizes bounded), grouping order and that every group, sensor type and message is translated.
 `updates.test.js` covers release comparison, picking the right asset per OS, changelog parsing and the self-update gate, with no network.
 `packages.test.js` (27 tests) covers the Apps manager with a **fake command runner**: the exact command line built for winget, brew (cask/formula), flatpak, apt, dnf and pacman (privileged ones through `pkexec`, plain when root), parsing of each manager's list/search output (including a localized winget table), provider choice by platform and availability, id and query validation (shell metacharacters, leading dashes and non-ASCII are rejected and never reach the runner), catalog validity (unique ids, every shown id valid, text in both languages), export/import (cross-OS mapping by catalog id, invalid entries dropped, forged item lists re-validated), the bloatware allow-list, and that the real runner passes arguments without a shell. Nothing is installed or removed. **The macOS and Linux managers were never run on real systems.**
 
@@ -28,10 +29,10 @@ The CI workflow (`.github/workflows/ci.yml`) runs the same on a Windows runner.
 
 ## UI checks
 ```powershell
-powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 64 checks on Windows, 9 on a faked Linux
+powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 80 checks on Windows, 10 on a faked Linux
 ```
 It covers navigation, settings, the changelog dialog, the tweak catalog (search, filters, toggles, the double confirmation for risky
-tweaks), Cleanup, the restore points and the Apps view (install, confirmed removal, search, import and export on a fake package manager, the Store-app removal list; on the faked Linux it checks the Flatpak catalog and that the bloatware card is hidden). `tools\run-traytest.ps1` covers the tray.
+tweaks), Cleanup, the restore points and the Sensors screen (consent before any download, the license and fingerprint text, the five groups, demo label, values refreshing by themselves, Pause/Resume, polling stopping when the screen is left, copy and save) and the Apps view (install, confirmed removal, search, import and export on a fake package manager, the Store-app removal list; on the faked Linux it checks the Flatpak catalog and that the bloatware card is hidden). `tools\run-traytest.ps1` covers the tray.
 
 ## Read-only checks on the real machine
 ```powershell
@@ -52,7 +53,15 @@ Follow the protocol in `TROUBLESHOOTING.md` (matched runs, one variable at a tim
 `scripts\monitoring\hwinfo_logger.ps1` for 15-20 minutes of the same CS2 route before and after, compare peak temperature,
 package power, throttle flags and the WHEA counter, and keep the change only if there is no new error and frame times hold.
 
+## Sensors on the real machine
+```powershell
+powershell -File scriptsSteps.ps1 -Step sensors-state      # installed or not, pinned version
+powershell -File scriptsSteps.ps1 -Step sensors-read       # needs the library; non-elevated it returns msg.sensors.needsAdmin plus what is readable
+```
+`sensors-get` needs an elevated shell (it writes to `%ProgramData%LegionTuningsensors`). On 2026-10-12 the real download and SHA-256 check were run once into a scratch folder (hash matched the pinned value, 23 DLLs unpacked) and a **non-elevated** read returned 78 sensors (CPU load, GPU, memory) with `msg.sensors.needsAdmin`. **An elevated read was not run**, so disk, board and fan sensors were not seen on real hardware, and no CPU temperature was ever read because the PawnIO driver is not installed on that PC (we do not install drivers).
+
 ## Not covered yet
+- An elevated Sensors read, and a read with the PawnIO driver installed (CPU temperature, clocks and power); anti-cheat behaviour with that driver was never tested.
 - The installer on a fresh Windows install; the changing wizard steps through the UI (they are covered through
   `Install-Tuning.ps1` and the library tests); FPS (never measured, only judged by feel).
 - An elevated apply and revert of the safe tweaks on a real PC with a registry diff, and real (non-sandbox) cleanup deletion.

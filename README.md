@@ -86,7 +86,7 @@ Run from a terminal: `cd app; npm install; npm start` (administrator needed to a
 |---|---|---|
 | <img src="docs/assets/tweaks.png" alt="Optimizations: 30 tweaks with search, category filters, risk badges and toggles"> | <img src="docs/assets/cleanup.png" alt="Cleanup: sizes measured first, delete only what is ticked"> | <img src="docs/assets/settings.png" alt="Settings: theme, language, tray and update options"> |
 
-The side menu has eight sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Apps**, **Settings** and **Help**.
+The side menu has nine sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Sensors**, **Apps**, **Settings** and **Help**.
 The app is being renamed **KafkaBoost** (launchers and window already; the repo, package ids and task names keep their old names).
 Light and dark theme, English and Brazilian Portuguese.
 
@@ -103,14 +103,17 @@ Light and dark theme, English and Brazilian Portuguese.
   you tick; locked files are skipped, junctions are never followed, and the Recycle Bin (permanent) asks twice.
 - **Restore** lists your Windows restore points, creates one on demand and opens Windows System Restore. KafkaBoost also creates one before your first tweak or *Apply recommended* (Windows allows one per 24 hours; if it declines, the app says so and still applies the tweak). It also undoes the CPU tuning (startup task, INI backup, optionally VBS). **Settings** has theme, language, tray options,
   start with Windows, check interval, ThrottleStop folder and the update check. **Help** has short answers and the documentation links.
+- **Sensors** (Windows) shows live temperatures, clocks, voltages, power, fans and load for the CPU, GPU, board, disks and memory, refreshed about every 2 s while the screen is open, with a pause button, session min/max, generic warm (80 C) and hot (90 C) highlights and a copy/save of the snapshot as JSON. It is a viewer of the HWMonitor kind; it does **not** measure DPC/ISR latency, so it does not replace LatencyMon. The sensor library is [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) (MPL-2.0). It is not bundled: when you tick the consent box and click *Get sensor support* the app downloads the pinned release from GitHub, refuses it if its SHA-256 differs from the one in `config/sensors.json`, unpacks only the DLLs under `%ProgramData%\LegionTuning\sensors` and deletes the zip. CPU temperature, clocks and power additionally need the third-party **PawnIO** driver, which the app does not install (without it they are shown as missing, not zero); disks and board sensors need administrator rights. We did not test any anti-cheat with that driver. Verified on a real PC: the download and hash check and a non-elevated read; **an elevated read was not run**.
 - **Apps** installs and removes a short list of popular apps (browsers, Steam, Discord, VLC, OBS, 7-Zip and more) with the package manager your system already has: winget on Windows, Homebrew on macOS, Flatpak (or apt, dnf, pacman through a password prompt) on Linux. It works on all three systems, bundles nothing, and removing an app asks first. You can also search the package manager, export the installed list to a JSON file and import it on another PC (the app shows the list and asks before installing anything). On Windows it can also remove pre-installed Store apps (News, Solitaire, Clipchamp and others) from a fixed list, one at a time; each can be reinstalled from the Microsoft Store. The ids were checked against the package sites, but only the read-only Windows parts (`winget list`, `winget search`, the Store-app list) were run on a real machine: **installing and removing with winget was not run for real, and the macOS and Linux code was never run at all**; it is covered by unit tests with a fake command runner.
+
+<img src="docs/assets/sensors.png" alt="Sensors: live CPU temperatures with min and max (demo data)" width="560">
 
 <img src="docs/assets/apps.png" alt="Apps: curated catalog with install and remove buttons, search, export and import" width="560">
 
 - **Updates:** the app looks at this repo's GitHub Releases and shows the changelog when a newer version exists; the installed
   Windows build can update in place. It needs a published release with an installer (no release workflow yet).
 
-Not built yet: CS2 preset, the new landing site.
+Not built yet: CS2 preset.
 
 Every screen is in the [live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/about-app.html#/walkthrough). Screenshots come from
 demo mode (`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
@@ -158,7 +161,7 @@ while it is on; the boost and power caps are separate and may still apply.
   watchdog (no duplicates, restarts when closed), the health check and the demo UI. Not tested: the changing wizard steps through
   the UI, the Windows installer package (`npm run dist` is configured, not built), a real in-app update, an elevated apply/revert of the tweaks on a real PC (they are tested against a sandbox registry), macOS and Linux.
 - Tweaks change Windows settings; the risky ones lower security. Use at your own risk.
-- ThrottleStop is not redistributed here: the app downloads it from TechPowerUp when you agree. HWiNFO is optional and yours to download.
+- ThrottleStop is not redistributed here: the app downloads it from TechPowerUp when you agree. HWiNFO is optional and yours to download. The Sensors screen downloads LibreHardwareMonitor (MPL-2.0) from its official GitHub release only when you agree; nothing of it is in this repository.
 - Model-specific: Lenovo Legion type 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"). Other models need their own limits.
 - Changing CPU voltages can cause instability. Use at your own risk.
 
@@ -180,9 +183,9 @@ while it is on; the boost and power caps are separate and may still apply.
 install.cmd            one-click installer (self-elevates)
 KafkaBoost.cmd/.command/.lnk  launchers for the app
 app/                   Electron app: src/ (main, preload, settings, updates, i18n, tray, demo), renderer/, build/ (icons), test/ (node tests)
-config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog)
-scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore), monitoring/, maintenance/
-tests/                 Pester tests for the library (57)
+config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog), sensors.json (pinned sensor library)
+scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore, Sensors), monitoring/, maintenance/
+tests/                 Pester tests for the library (70)
 tools/                 make-icons.js, make-shots.ps1, run-uitest.ps1 (UI checks)
 docs/                  GitHub Pages site (index.html landing, about-app.html docs hub, compare/download/faq/privacy/terms, pt-br/ mirror, site.css, site.js, assets/) and the reference documents
 local/                 git-ignored: backups, evidence, experiments

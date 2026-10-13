@@ -32,21 +32,23 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 8. Closing the window hides it to the tray; only the tray menu "Quit" exits. The app is a thin UI: logic belongs in `scripts/lib/`, behind `scripts/Steps.ps1`, with a unit test.
 9. Tweaks: the previous value is recorded before every change and restored on revert; all-or-nothing; risky tweaks need `-AllowRisky` plus two confirmations and are never "recommended". Cleanup deletes only the fixed allow-list, never follows reparse points, and the Recycle Bin asks twice. Never claim an FPS gain.
 10. UI text lives in `app/renderer/i18n/{en,pt-BR}.json` (keys must match; a test checks). PowerShell results carry `code` + `args`, not translated text. Render remote text (release notes) with `textContent` only.
+11. **Sensors:** the library comes only from the release pinned in `config/sensors.json` (a different SHA-256 means delete and refuse); nothing from it is committed; the user must agree in the app before the download; we never install a driver (CPU temperature/clock/power need the third-party PawnIO driver; without it they are *missing*, never shown as 0); never claim DPC/ISR latency (that is LatencyMon's job); the 80/90 C colors are generic, not chip-specific; any new sensor claim must be something we measured.
 
 ## Layout
 | Path | What |
 |---|---|
 | `install.cmd` | one-click installer (self-elevates) -> `scripts/Install-Tuning.ps1` |
 | `KafkaBoost.cmd/.command/.lnk` | root launchers (the `.lnk` is generated per machine and git-ignored) |
-| `app/` | Electron app. `src/main.js` (IPC, spawns `Steps.ps1`, update check), `src/preload.js`, `src/settings.js` (validated store), `src/i18n.js`, `src/updates.js` (GitHub Releases logic), `src/autostart.js`, `src/tray.js`, `src/demo.js` + `src/demo-apps.js` (demo mode), `src/packages/` (Apps manager: one provider per package manager behind one interface, injectable command runner, curated catalog, bloatware allow-list), `renderer/` (`js/` one file per screen on `window.KB`, `i18n/`, the CPU-thermal-tuning wizard, `icon.svg`), `build/` (generated icons), `test/` (node tests), `Launch-Wizard.cmd` |
-| `config/` | `ThrottleStop.settings.ini` (the tuning), `HWiNFO64.INI` (shared memory on), `defaults.json` (install dir + task name, read by PowerShell **and** Node), `tweaks.json` (tweak catalog, 30 entries), `apps.json` (Apps catalog: 21 apps with per-OS ids + the Windows bloatware allow-list) |
+| `app/` | Electron app. `src/main.js` (IPC, spawns `Steps.ps1`, update check), `src/preload.js`, `src/settings.js` (validated store), `src/i18n.js`, `src/updates.js` (GitHub Releases logic), `src/autostart.js`, `src/tray.js`, `src/demo.js` + `src/demo-apps.js` (demo mode, incl. canned labelled sensors), `src/packages/` (Apps manager: one provider per package manager behind one interface, injectable command runner, curated catalog, bloatware allow-list), `renderer/` (`js/` one file per screen on `window.KB`; `sensorlogic.js` is the pure Sensors logic shared with `main.js` and the tests; `i18n/`, the CPU-thermal-tuning wizard, `icon.svg`), `build/` (generated icons), `test/` (node tests), `Launch-Wizard.cmd` |
+| `config/` | `ThrottleStop.settings.ini` (the tuning), `HWiNFO64.INI` (shared memory on), `defaults.json` (install dir + task name, read by PowerShell **and** Node), `tweaks.json` (tweak catalog, 30 entries), `apps.json` (Apps catalog: 21 apps with per-OS ids + the Windows bloatware allow-list), `sensors.json` (the pinned LibreHardwareMonitor release: version, official url, SHA-256) |
 | `scripts/lib/Tuning.ps1` | merge INI, register task, unpack ThrottleStop, VBS, verify, rollback, FIVR/V-F encoders, `Get-Defaults` |
 | `scripts/lib/Health.ps1` | health check (`Get-HealthReport`, `Compare-IniSettings`, `Get-Verdict`), Windows-build baseline, live telemetry, `Invoke-Fix` |
 | `scripts/lib/Tweaks.ps1`, `Cleanup.ps1`, `Restore.ps1` | tweak engine (declarative actions, state in `%ProgramData%\LegionTuning\state.json`, sandboxable in tests) disk cleanup (allow-list, dry run first) and System Restore points (list/create via an injectable provider; safety point before the first tweak, never blocks it) |
-| `scripts/Steps.ps1` | runs ONE step (detect, backup, get [-Download], vbs, apply, task, verify, health, fix, autostart, rollback, paths, cleanbackups, tweaks-list, tweak-set, tweaks-recommended, cleanup-scan, cleanup-run, restore-list, restore-create, restore-open), prints `LOG:` / `RESULT:` lines |
+| `scripts/lib/Sensors.ps1` | live sensors: pinned download + SHA-256 check + DLL-only unpack (`Install-SensorSupport`), reader (`Read-SensorsLive`, injectable `$script:SensorProvider` / `$script:SensorDownloader` in tests), grouping and result codes (`Get-SensorSnapshot`) |
+| `scripts/Steps.ps1` | runs ONE step (detect, backup, get [-Download], vbs, apply, task, verify, health, fix, autostart, rollback, paths, cleanbackups, tweaks-list, tweak-set, tweaks-recommended, cleanup-scan, cleanup-run, restore-list, restore-create, restore-open, sensors-state, sensors-get, sensors-read), prints `LOG:` / `RESULT:` lines |
 | `scripts/Create-Shortcut.ps1` | desktop + Start Menu shortcut with the icon and the run-as-administrator flag |
 | `scripts/monitoring/`, `scripts/maintenance/` | loggers (output to `logs/`), `restore_vbs.ps1` |
-| `tests/` | Pester tests (57; `Setup.ps1` shared, plain `throw` assertions: runs on Pester 3.4 and 5) |
+| `tests/` | Pester tests (70; `Setup.ps1` shared, plain `throw` assertions: runs on Pester 3.4 and 5) |
 | `tools/` | `check-site.js` (+ test: links, anchors, EN/PT parity, facts), `make-icons.js` (all icon sizes from `app/renderer/icon.svg`), `make-shots.ps1` (docs screenshots from demo mode; not yet regenerated for the new screens), `run-uitest.ps1` + `uitest.js` (UI checks in demo mode), `run-traytest.ps1` |
 | `docs/` | GitHub Pages site: `index.html` landing, `about-app.html` docs hub (hash routes), `compare/download/faq/privacy/terms.html`, `pt-br/` mirror, `site.css`, `site.js`, `assets/`, favicons; checked by `node tools/check-site.js`. Plus `getting-started`, `ARCHITECTURE`, `CONFIGURATION`, `TESTING`, `TROUBLESHOOTING`, `RESULTS` |
 | `.github/workflows/` | `ci.yml` (tests + syntax on Windows), `pages.yml` (publishes `docs/`) |
@@ -54,9 +56,9 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 
 ## Commands
 ```powershell
-Invoke-Pester tests                                                   # unit tests (57)
-cd app; node --test "test/*.test.js"                                  # node tests (52)
-powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (64 + 9)
+Invoke-Pester tests                                                   # unit tests (70)
+cd app; node --test "test/*.test.js"                                  # node tests (59)
+powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (80 + 10)
 powershell -File scripts\Steps.ps1 -Step health -InstallDir "<dir>"   # read-only verdict + live telemetry (no admin needed)
 powershell -File scripts\Create-Shortcut.ps1                          # shortcut with the app icon
 cd app; npm install; npm start                                        # the app (needs admin for changes)
@@ -83,8 +85,8 @@ cd app; npx electron ..\tools\make-icons.js                           # regenera
   labels in `app/renderer/index.html` once the exact tab names are known. The old disabled placeholder cards were replaced by the tweak catalog.- **Presets with a recommendation score** (not built): named tunings per CPU family; each with requirements (CPU generation, hybrid
   or not, VBS, laptop vs desktop), risk and source, scored against the detected system. Only the current profile is validated;
   anything from forums must be labelled unverified. The current ini is the "Default preset" for the 83DE only.
-- **Guided test session** (not built): the app starts a sensor logger while the user plays and reports before/after. HWiNFO is
-  proprietary (user downloads it); LibreHardwareMonitor (MPL-2.0) could be bundled.
+- **Live sensors** (built): the Sensors screen reads CPU/GPU/board/disk/memory sensors with LibreHardwareMonitor 0.9.6 (MPL-2.0, downloaded on demand, see rule 11 and `docs/CONFIGURATION.md`). Verified on the real PC: the download + hash check and a **non-elevated** read (78 sensors: CPU load, GPU, memory). **Not verified:** an elevated read (disk/board/fan sensors), any CPU temperature (PawnIO is not installed there), anti-cheat behaviour with that driver, and a long session (the library is reopened by a new PowerShell for every read, about 1 s each).
+- **Guided test session** (not built): the app starts a sensor logger while the user plays and reports before/after. The sensor source would now be the Sensors library above (HWiNFO stays optional and proprietary); no logging, comparison or report exists yet.
 - Not tested on a fresh Windows install; `npm run dist` (Windows installer) configured but not built; the macOS/Linux code (launchers, autostart) was never run.
 - FPS was never measured, only judged by feel.
 - **Landing site** (built, not yet published): `docs/index.html` + pages in EN and `pt-br/`; every number on it comes from `config/tweaks.json`, `docs/TESTING.md` or `docs/RESULTS.md` (checker enforces the first two). No FPS claims, testimonials or user counts. The repo has no LICENSE file yet, so the site says "public source", not "open source".
