@@ -14,9 +14,10 @@ keys or real temp folders. Tests use plain `throw` assertions and a shared `test
 
 ## Node tests
 ```powershell
-cd app; node --test "test/*.test.js"      # 25 tests: settings store, i18n key parity, autostart, update logic
+cd app; node --test "test/*.test.js"      # 52 tests: settings store, i18n key parity, autostart, update logic, Apps manager
 ```
 `updates.test.js` covers release comparison, picking the right asset per OS, changelog parsing and the self-update gate, with no network.
+`packages.test.js` (27 tests) covers the Apps manager with a **fake command runner**: the exact command line built for winget, brew (cask/formula), flatpak, apt, dnf and pacman (privileged ones through `pkexec`, plain when root), parsing of each manager's list/search output (including a localized winget table), provider choice by platform and availability, id and query validation (shell metacharacters, leading dashes and non-ASCII are rejected and never reach the runner), catalog validity (unique ids, every shown id valid, text in both languages), export/import (cross-OS mapping by catalog id, invalid entries dropped, forged item lists re-validated), the bloatware allow-list, and that the real runner passes arguments without a shell. Nothing is installed or removed. **The macOS and Linux managers were never run on real systems.**
 
 ## Syntax checks
 ```powershell
@@ -27,10 +28,10 @@ The CI workflow (`.github/workflows/ci.yml`) runs the same on a Windows runner.
 
 ## UI checks
 ```powershell
-powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 48 checks on Windows, 5 on a faked Linux
+powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 64 checks on Windows, 9 on a faked Linux
 ```
 It covers navigation, settings, the changelog dialog, the tweak catalog (search, filters, toggles, the double confirmation for risky
-tweaks), Cleanup and the restore points. `tools\run-traytest.ps1` covers the tray.
+tweaks), Cleanup, the restore points and the Apps view (install, confirmed removal, search, import and export on a fake package manager, the Store-app removal list; on the faked Linux it checks the Flatpak catalog and that the bloatware card is hidden). `tools\run-traytest.ps1` covers the tray.
 
 ## Read-only checks on the real machine
 ```powershell
@@ -56,4 +57,5 @@ package power, throttle flags and the WHEA counter, and keep the change only if 
   `Install-Tuning.ps1` and the library tests); FPS (never measured, only judged by feel).
 - An elevated apply and revert of the safe tweaks on a real PC with a registry diff, and real (non-sandbox) cleanup deletion.
 - A real self-update: it needs a published GitHub release with an installer and `latest.yml` (no release workflow yet).
-- macOS and Linux: the code paths exist but were never run.
+- macOS and Linux: the code paths exist but were never run (this includes the Apps providers for brew, flatpak, apt, dnf and pacman).
+- Apps on Windows: `winget list`, `winget search` and the Store-app listing were checked read-only on a real PC; a real `winget install` / `uninstall` and a real Store-app removal were not run.

@@ -121,6 +121,28 @@ writes it back (a value that did not exist is deleted again). A tweak is applied
 (uses `Set-MpPreference`; if Tamper Protection blocks it the app says so and does not work around it) and `core-isolation-off`.
 No tweak promises an FPS gain: they change settings, and nothing here was benchmarked.
 
+## Apps catalog (`config/apps.json`)
+| Field | Meaning |
+|---|---|
+| `version` | file format (1) |
+| `categories[]` | filter chips of the Apps view; each needs an `apps.cat.<name>` text in both languages |
+| `apps[].id` | unique lowercase id (`[a-z0-9-]`); the UI text comes from `apps.app.<id>.desc` in `renderer/i18n/*.json` |
+| `apps[].name` | product name shown on the card (not translated) |
+| `apps[].desc` | short English description (the English text of the i18n key) |
+| `apps[].category` | one of `categories` |
+| `apps[].ids.win32` | winget id (`Publisher.Package`) |
+| `apps[].ids.darwin` | `{ "cask": "<name>" }` or `{ "formula": "<name>" }` for Homebrew |
+| `apps[].ids.linux` | any of `flatpak` (reverse-DNS app id), `apt`, `dnf`, `pacman` package names |
+| `bloatware[]` | Windows only. `id` (UI text `apps.bloat.<id>.name/desc`) and `appx` (the inbox package name). Only these can ever be removed, for the current user |
+
+A missing OS or manager means the app is not offered there; ids are never guessed. The ids were checked against winget (`winget show`),
+formulae.brew.sh, flathub.org, archlinux.org and the Debian and Fedora package pages; none of them was installed. Every id must match
+the strict pattern of its manager (`app/src/packages/ids.js`) and a unit test enforces it. On Linux the first available manager of
+flatpak, apt, dnf, pacman is used (Flatpak installs per user without root; the others ask for the password through `pkexec`).
+
+The exported list (`kafkaboost-apps.json`) is `{ "app": "KafkaBoost", "format": 1, "exportedAt", "platform", "manager", "packages": [{ "id", "kind"?, "catalogId"? }] }`.
+`catalogId` lets a list made on one OS be imported on another through the catalog.
+
 ## App settings (`userData/settings.json`)
 `theme` (system|dark|light), `language` (auto|en|pt-BR), `closeToTray`, `startHidden`, `notifications`, `checkIntervalMin` (5-1440),
 `installDir` (ThrottleStop folder, empty = automatic), `checkForUpdates` (default on), `lastSeenVersion`, `lastCleanup`. Invalid values are rejected.

@@ -33,7 +33,7 @@ change the system refuse to run without administrator rights; the read-only ones
 app: version list page, then the download form, validated as a zip containing `ThrottleStop.exe`, unpacked, zip deleted.
 
 ## Electron app (`app/`)
-- `src/main.js`: window, IPC (`app:info`, `step:run`, `settings:get|set`, `app:whatsNew`, `app:installUpdate`, `dialog:zip`,
+- `src/main.js`: window, IPC (`app:info`, `step:run`, `apps:*` (Apps manager), `settings:get|set`, `app:whatsNew`, `app:installUpdate`, `dialog:zip`,
   `app:relaunchAdmin`), spawns `Steps.ps1`, reads `config/defaults.json`. Context isolation on, no Node in the renderer, strict CSP.
 - `src/preload.js`: the small `window.kb` API (`runStep`, settings, `whatsNew`, `installUpdate`, `onUpdate`).
 - `src/settings.js`: validated settings store in `userData/settings.json` (theme, language, tray options, check interval,
@@ -45,11 +45,12 @@ app: version list page, then the download form, validated as a zip containing `T
   installed (non-portable, packaged) Windows build, installs through `electron-updater`. Other builds get a link to the release.
   The lookup sends no personal data; nothing downloads without a click. It needs a published release with an installer and
   `latest.yml`; there is no release workflow yet.
-- `src/demo.js`: canned results for **demo mode** (`WIZARD_DEMO=1`): used for the docs screenshots, never touches the PC. The tweak
+- `src/packages/` (the Apps manager, no Electron code, unit-tested with a fake runner): `ids.js` (strict id/query patterns), `runner.js` (the only place that starts a process: `execFile` with an args array, never a shell), `base.js` (shared provider shape and result codes), `winget.js` (parses the localized table by header position), `brew.js` (casks + formulae; tries `/opt/homebrew/bin` and `/usr/local/bin` because apps started from the Finder get no shell PATH), `linux.js` (`flatpak` per user, `apt`/`dnf`/`pacman` through `pkexec`), `catalog.js` (loads and validates `config/apps.json`), `bloat.js` (Windows inbox Store apps: allow-list only, current user, via PowerShell), `index.js` (`createService`: picks the provider for the OS, flags what is installed, builds the export file and the import plan). Every provider has the same interface: `available, list, search, install, uninstall, exportList, importList`. IPC `apps:*` in `main.js` re-validates every argument; import is two calls (pick and validate, then run only the validated plan). The macOS and Linux providers were never run on real systems.
+- `src/demo.js` and `src/demo-apps.js`: canned results for **demo mode** (`WIZARD_DEMO=1`): used for the docs screenshots, never touches the PC. The tweak
   list comes from the real `config/tweaks.json`.
 - `renderer/`: plain scripts on one `window.KB` object (`js/core.js` plus one file per screen). Sections: Dashboard, System
   analysis, Optimizations (the tweak catalog with search, category chips, risk badges and toggles, plus *CPU thermal tuning*, the
-  step-by-step wizard), Cleanup, Restore, Settings, Help. Advanced and risky tweaks ask for confirmation (risky: two, with a strong
+  step-by-step wizard), Cleanup, Restore, Apps (all OSes), Settings, Help. Advanced and risky tweaks ask for confirmation (risky: two, with a strong
   warning); *Apply recommended* never includes them. Text is set with `textContent`, never `innerHTML`.
 - OS detection: Windows gets everything; the Windows-only sections (`WINDOWS_ONLY` in `core.js`) are hidden elsewhere.
 

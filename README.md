@@ -86,7 +86,7 @@ Run from a terminal: `cd app; npm install; npm start` (administrator needed to a
 |---|---|---|
 | <img src="docs/assets/tweaks.png" alt="Optimizations: 30 tweaks with search, category filters, risk badges and toggles"> | <img src="docs/assets/cleanup.png" alt="Cleanup: sizes measured first, delete only what is ticked"> | <img src="docs/assets/settings.png" alt="Settings: theme, language, tray and update options"> |
 
-The side menu has seven sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Settings** and **Help**.
+The side menu has eight sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Apps**, **Settings** and **Help**.
 The app is being renamed **KafkaBoost** (launchers and window already; the repo, package ids and task names keep their old names).
 Light and dark theme, English and Brazilian Portuguese.
 
@@ -103,10 +103,14 @@ Light and dark theme, English and Brazilian Portuguese.
   you tick; locked files are skipped, junctions are never followed, and the Recycle Bin (permanent) asks twice.
 - **Restore** lists your Windows restore points, creates one on demand and opens Windows System Restore. KafkaBoost also creates one before your first tweak or *Apply recommended* (Windows allows one per 24 hours; if it declines, the app says so and still applies the tweak). It also undoes the CPU tuning (startup task, INI backup, optionally VBS). **Settings** has theme, language, tray options,
   start with Windows, check interval, ThrottleStop folder and the update check. **Help** has short answers and the documentation links.
+- **Apps** installs and removes a short list of popular apps (browsers, Steam, Discord, VLC, OBS, 7-Zip and more) with the package manager your system already has: winget on Windows, Homebrew on macOS, Flatpak (or apt, dnf, pacman through a password prompt) on Linux. It works on all three systems, bundles nothing, and removing an app asks first. You can also search the package manager, export the installed list to a JSON file and import it on another PC (the app shows the list and asks before installing anything). On Windows it can also remove pre-installed Store apps (News, Solitaire, Clipchamp and others) from a fixed list, one at a time; each can be reinstalled from the Microsoft Store. The ids were checked against the package sites, but only the read-only Windows parts (`winget list`, `winget search`, the Store-app list) were run on a real machine: **installing and removing with winget was not run for real, and the macOS and Linux code was never run at all**; it is covered by unit tests with a fake command runner.
+
+<img src="docs/assets/apps.png" alt="Apps: curated catalog with install and remove buttons, search, export and import" width="560">
+
 - **Updates:** the app looks at this repo's GitHub Releases and shows the changelog when a newer version exists; the installed
   Windows build can update in place. It needs a published release with an installer (no release workflow yet).
 
-Not built yet: an Apps installer/uninstaller, CS2 preset, the new landing site.
+Not built yet: CS2 preset, the new landing site.
 
 Every screen is in the [live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/about-app.html#/walkthrough). Screenshots come from
 demo mode (`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
