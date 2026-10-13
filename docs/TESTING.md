@@ -26,7 +26,7 @@ cd app; node --test "test/*.test.js"      # 66 tests: settings store, i18n key p
 Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object { [void][Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$null,[ref]$e) }
 cd app; Get-ChildItem -Recurse src,renderer -Filter *.js | ForEach-Object { node --check $_.FullName }
 ```
-The CI workflow (`.github/workflows/ci.yml`) runs the same on a Windows runner.
+The CI workflow (`.github/workflows/ci.yml`) runs the PowerShell parse and Pester tests on a Windows runner (the scripts use Windows-only APIs), the Node tests and the JavaScript syntax check on Windows, Linux and macOS (the Linux and macOS legs have never run), and the site check once on Linux.
 
 ## UI checks
 ```powershell

@@ -171,7 +171,7 @@ while it is on; the boost and power caps are separate and may still apply.
 
 - **Not tested on a fresh Windows install.** Tested: unpacking from a zip, creating/merging the INI, registering the task, the
   watchdog (no duplicates, restarts when closed), the health check and the demo UI. Not tested: the changing wizard steps through
-  the UI, the Windows installer package (`npm run dist` is configured, not built), a real in-app update, an elevated apply/revert of the tweaks on a real PC (they are tested against a sandbox registry), macOS and Linux.
+  the UI, the Windows installer package (`npm run dist` builds an unsigned installer locally; the release workflow has not run on GitHub yet), a real in-app update, an elevated apply/revert of the tweaks on a real PC (they are tested against a sandbox registry), macOS and Linux.
 - Tweaks change Windows settings; the risky ones lower security. Use at your own risk.
 - ThrottleStop is not redistributed here: the app downloads it from TechPowerUp when you agree. HWiNFO (proprietary freeware, non-commercial use only) is optional and is never bundled or redistributed: the Dashboard card downloads it from hwinfo.com only after you read the version and source and tick the consent box, and refuses it unless the exe carries a valid REALiX signature. The Sensors screen downloads LibreHardwareMonitor (MPL-2.0) from its official GitHub release only when you agree; nothing of it is in this repository.
 - Model-specific: Lenovo Legion type 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"). Other models need their own limits.
