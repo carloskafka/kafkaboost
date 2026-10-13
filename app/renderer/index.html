@@ -25,6 +25,7 @@
         <button class="nav-btn" type="button" data-view="optimizations"><span class="nav-ic" aria-hidden="true">✦</span><span data-i18n="nav.optimizations">Optimizations</span></button>
         <button class="nav-btn" type="button" data-view="cleanup"><span class="nav-ic" aria-hidden="true">♻</span><span data-i18n="nav.cleanup">Cleanup</span></button>
         <button class="nav-btn" type="button" data-view="restore"><span class="nav-ic" aria-hidden="true">↺</span><span data-i18n="nav.restore">Restore</span></button>
+        <button class="nav-btn" type="button" data-view="apps"><span class="nav-ic" aria-hidden="true">▦</span><span data-i18n="nav.apps">Apps</span></button>
         <button class="nav-btn" type="button" data-view="settings"><span class="nav-ic" aria-hidden="true">⚙</span><span data-i18n="nav.settings">Settings</span></button>
         <button class="nav-btn" type="button" data-view="help"><span class="nav-ic" aria-hidden="true">?</span><span data-i18n="nav.help">Help</span></button>
       </nav>
@@ -170,6 +171,45 @@
           <div class="clean-foot"><span id="cleanSelected" class="muted"></span>
             <button id="cleanRun" class="btn primary" type="button" data-i18n="cleanup.run" disabled></button></div>
           <div id="cleanResult" class="result" hidden></div>
+        </div>
+      </section>
+
+      <!-- ===== Apps ===== -->
+      <section id="apps" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <div class="kicker" data-i18n="apps.kicker"></div>
+            <h1 data-i18n="apps.title"></h1>
+            <p class="muted" data-i18n="apps.intro"></p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="clean-top"><span id="appsManager" class="muted"></span>
+            <span class="tweaks-tools">
+              <button id="appsRefresh" class="btn small" type="button" data-i18n="apps.refresh"></button>
+              <button id="appsExport" class="btn small" type="button" data-i18n="apps.export"></button>
+              <button id="appsImport" class="btn small" type="button" data-i18n="apps.import"></button>
+            </span></div>
+          <div id="appsResult" class="result" hidden></div>
+          <div id="appsNone" class="muted" hidden></div>
+          <div id="appsMain">
+            <div class="tweaks-head">
+              <h2 class="h2" data-i18n="apps.catalog"></h2>
+              <div class="tweaks-tools">
+                <input id="appsSearch" class="field" type="search" maxlength="64" data-i18n-placeholder="apps.search" autocomplete="off">
+                <button id="appsSearchBtn" class="btn small" type="button" data-i18n="apps.searchBtn"></button>
+              </div>
+            </div>
+            <div id="appsSearchOut" class="clean-list" hidden></div>
+            <div id="appsChips" class="chips" role="tablist"></div>
+            <div id="appsGrid" class="tweak-grid"></div>
+          </div>
+        </div>
+        <div id="bloatCard" class="card" hidden>
+          <h2 class="h2" data-i18n="apps.bloat.title"></h2>
+          <p class="muted" data-i18n="apps.bloat.intro"></p>
+          <div id="bloatList" class="clean-list"></div>
+          <div id="bloatResult" class="result" hidden></div>
         </div>
       </section>
 
@@ -348,6 +388,7 @@
   <script src="js/restore.js"></script>
   <script src="js/optimizations.js"></script>
 <script src="js/cleanup.js"></script>
+  <script src="js/apps.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/updates.js"></script>
   <script src="js/boot.js"></script>

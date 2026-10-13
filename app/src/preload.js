@@ -21,6 +21,19 @@ contextBridge.exposeInMainWorld('kb', {
   openInstallDir: () => ipcRenderer.invoke('app:openInstallDir'),
   clearCache: () => ipcRenderer.invoke('app:clearCache'),
   pickZip: () => ipcRenderer.invoke('dialog:zip'),
+  apps: {
+    info: () => ipcRenderer.invoke('apps:info'),
+    list: () => ipcRenderer.invoke('apps:list'),
+    search: (q) => ipcRenderer.invoke('apps:search', q),
+    install: (ref) => ipcRenderer.invoke('apps:install', ref),
+    uninstall: (ref) => ipcRenderer.invoke('apps:uninstall', ref),
+    exportList: () => ipcRenderer.invoke('apps:export'),
+    importPick: () => ipcRenderer.invoke('apps:importPick'),
+    importRun: (ids) => ipcRenderer.invoke('apps:importRun', ids),
+    onProgress: (cb) => ipcRenderer.on('apps:progress', (_e, payload) => cb(payload)),
+    bloatList: () => ipcRenderer.invoke('apps:bloatList'),
+    bloatRemove: (id) => ipcRenderer.invoke('apps:bloatRemove', id)
+  },
   pickFolder: () => ipcRenderer.invoke('dialog:folder'),
   relaunchAdmin: () => ipcRenderer.invoke('app:relaunchAdmin'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url)

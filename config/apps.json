@@ -1,0 +1,395 @@
+{
+  "version": 1,
+  "categories": [
+    "browsers",
+    "gaming",
+    "chat",
+    "media",
+    "tools",
+    "dev"
+  ],
+  "apps": [
+    {
+      "id": "chrome",
+      "name": "Google Chrome",
+      "category": "browsers",
+      "desc": "Fast web browser from Google.",
+      "ids": {
+        "win32": "Google.Chrome",
+        "darwin": {
+          "cask": "google-chrome"
+        },
+        "linux": {
+          "flatpak": "com.google.Chrome"
+        }
+      }
+    },
+    {
+      "id": "firefox",
+      "name": "Mozilla Firefox",
+      "category": "browsers",
+      "desc": "Open-source browser focused on privacy.",
+      "ids": {
+        "win32": "Mozilla.Firefox",
+        "darwin": {
+          "cask": "firefox"
+        },
+        "linux": {
+          "flatpak": "org.mozilla.firefox",
+          "dnf": "firefox",
+          "pacman": "firefox"
+        }
+      }
+    },
+    {
+      "id": "brave",
+      "name": "Brave",
+      "category": "browsers",
+      "desc": "Browser with a built-in ad and tracker blocker.",
+      "ids": {
+        "win32": "Brave.Brave",
+        "darwin": {
+          "cask": "brave-browser"
+        },
+        "linux": {
+          "flatpak": "com.brave.Browser"
+        }
+      }
+    },
+    {
+      "id": "steam",
+      "name": "Steam",
+      "category": "gaming",
+      "desc": "Valve game store and launcher.",
+      "ids": {
+        "win32": "Valve.Steam",
+        "darwin": {
+          "cask": "steam"
+        },
+        "linux": {
+          "flatpak": "com.valvesoftware.Steam"
+        }
+      }
+    },
+    {
+      "id": "epic",
+      "name": "Epic Games Launcher",
+      "category": "gaming",
+      "desc": "Store and launcher for Epic Games titles.",
+      "ids": {
+        "win32": "EpicGames.EpicGamesLauncher",
+        "darwin": {
+          "cask": "epic-games"
+        }
+      }
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "category": "chat",
+      "desc": "Voice, video and text chat for gaming communities.",
+      "ids": {
+        "win32": "Discord.Discord",
+        "darwin": {
+          "cask": "discord"
+        },
+        "linux": {
+          "flatpak": "com.discordapp.Discord"
+        }
+      }
+    },
+    {
+      "id": "telegram",
+      "name": "Telegram",
+      "category": "chat",
+      "desc": "Fast messenger with desktop sync.",
+      "ids": {
+        "win32": "Telegram.TelegramDesktop",
+        "darwin": {
+          "cask": "telegram"
+        },
+        "linux": {
+          "flatpak": "org.telegram.desktop",
+          "apt": "telegram-desktop",
+          "pacman": "telegram-desktop"
+        }
+      }
+    },
+    {
+      "id": "zoom",
+      "name": "Zoom",
+      "category": "chat",
+      "desc": "Video meetings and webinars.",
+      "ids": {
+        "win32": "Zoom.Zoom",
+        "darwin": {
+          "cask": "zoom"
+        },
+        "linux": {
+          "flatpak": "us.zoom.Zoom"
+        }
+      }
+    },
+    {
+      "id": "vlc",
+      "name": "VLC media player",
+      "category": "media",
+      "desc": "Plays almost any video or audio file.",
+      "ids": {
+        "win32": "VideoLAN.VLC",
+        "darwin": {
+          "cask": "vlc"
+        },
+        "linux": {
+          "flatpak": "org.videolan.VLC",
+          "apt": "vlc",
+          "pacman": "vlc"
+        }
+      }
+    },
+    {
+      "id": "obs",
+      "name": "OBS Studio",
+      "category": "media",
+      "desc": "Free recording and live streaming.",
+      "ids": {
+        "win32": "OBSProject.OBSStudio",
+        "darwin": {
+          "cask": "obs"
+        },
+        "linux": {
+          "flatpak": "com.obsproject.Studio",
+          "apt": "obs-studio",
+          "pacman": "obs-studio"
+        }
+      }
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "category": "media",
+      "desc": "Music streaming.",
+      "ids": {
+        "win32": "Spotify.Spotify",
+        "darwin": {
+          "cask": "spotify"
+        },
+        "linux": {
+          "flatpak": "com.spotify.Client"
+        }
+      }
+    },
+    {
+      "id": "audacity",
+      "name": "Audacity",
+      "category": "media",
+      "desc": "Free audio recorder and editor.",
+      "ids": {
+        "win32": "Audacity.Audacity",
+        "darwin": {
+          "cask": "audacity"
+        },
+        "linux": {
+          "flatpak": "org.audacityteam.Audacity",
+          "apt": "audacity",
+          "pacman": "audacity"
+        }
+      }
+    },
+    {
+      "id": "handbrake",
+      "name": "HandBrake",
+      "category": "media",
+      "desc": "Video converter and transcoder.",
+      "ids": {
+        "win32": "HandBrake.HandBrake",
+        "darwin": {
+          "cask": "handbrake-app"
+        },
+        "linux": {
+          "flatpak": "fr.handbrake.ghb",
+          "apt": "handbrake",
+          "pacman": "handbrake"
+        }
+      }
+    },
+    {
+      "id": "gimp",
+      "name": "GIMP",
+      "category": "media",
+      "desc": "Free image editor.",
+      "ids": {
+        "win32": "GIMP.GIMP.3",
+        "darwin": {
+          "cask": "gimp"
+        },
+        "linux": {
+          "flatpak": "org.gimp.GIMP",
+          "apt": "gimp",
+          "dnf": "gimp",
+          "pacman": "gimp"
+        }
+      }
+    },
+    {
+      "id": "7zip",
+      "name": "7-Zip",
+      "category": "tools",
+      "desc": "Opens and creates zip, 7z, rar and other archives.",
+      "ids": {
+        "win32": "7zip.7zip",
+        "darwin": {
+          "formula": "sevenzip"
+        },
+        "linux": {
+          "apt": "7zip",
+          "dnf": "7zip",
+          "pacman": "7zip"
+        }
+      }
+    },
+    {
+      "id": "qbittorrent",
+      "name": "qBittorrent",
+      "category": "tools",
+      "desc": "Open-source torrent client with no ads.",
+      "ids": {
+        "win32": "qBittorrent.qBittorrent",
+        "darwin": {
+          "cask": "qbittorrent"
+        },
+        "linux": {
+          "flatpak": "org.qbittorrent.qBittorrent",
+          "apt": "qbittorrent",
+          "dnf": "qbittorrent",
+          "pacman": "qbittorrent"
+        }
+      }
+    },
+    {
+      "id": "notepadpp",
+      "name": "Notepad++",
+      "category": "tools",
+      "desc": "Light text and code editor for Windows.",
+      "ids": {
+        "win32": "Notepad++.Notepad++"
+      }
+    },
+    {
+      "id": "powertoys",
+      "name": "PowerToys",
+      "category": "tools",
+      "desc": "Microsoft utilities: window layouts, quick launcher, color picker.",
+      "ids": {
+        "win32": "Microsoft.PowerToys"
+      }
+    },
+    {
+      "id": "sharex",
+      "name": "ShareX",
+      "category": "tools",
+      "desc": "Screenshots and screen recording with quick sharing.",
+      "ids": {
+        "win32": "ShareX.ShareX"
+      }
+    },
+    {
+      "id": "vscode",
+      "name": "Visual Studio Code",
+      "category": "dev",
+      "desc": "Popular code editor from Microsoft.",
+      "ids": {
+        "win32": "Microsoft.VisualStudioCode",
+        "darwin": {
+          "cask": "visual-studio-code"
+        },
+        "linux": {
+          "flatpak": "com.visualstudio.code"
+        }
+      }
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "category": "dev",
+      "desc": "Version control for your code.",
+      "ids": {
+        "win32": "Git.Git",
+        "darwin": {
+          "formula": "git"
+        },
+        "linux": {
+          "apt": "git",
+          "dnf": "git",
+          "pacman": "git"
+        }
+      }
+    }
+  ],
+  "bloatware": [
+    {
+      "id": "bing-news",
+      "appx": "Microsoft.BingNews"
+    },
+    {
+      "id": "bing-weather",
+      "appx": "Microsoft.BingWeather"
+    },
+    {
+      "id": "get-help",
+      "appx": "Microsoft.GetHelp"
+    },
+    {
+      "id": "tips",
+      "appx": "Microsoft.Getstarted"
+    },
+    {
+      "id": "solitaire",
+      "appx": "Microsoft.MicrosoftSolitaireCollection"
+    },
+    {
+      "id": "office-hub",
+      "appx": "Microsoft.MicrosoftOfficeHub"
+    },
+    {
+      "id": "people",
+      "appx": "Microsoft.People"
+    },
+    {
+      "id": "feedback-hub",
+      "appx": "Microsoft.WindowsFeedbackHub"
+    },
+    {
+      "id": "movies-tv",
+      "appx": "Microsoft.ZuneVideo"
+    },
+    {
+      "id": "phone-link",
+      "appx": "Microsoft.YourPhone"
+    },
+    {
+      "id": "skype",
+      "appx": "Microsoft.SkypeApp"
+    },
+    {
+      "id": "mixed-reality",
+      "appx": "Microsoft.MixedReality.Portal"
+    },
+    {
+      "id": "3d-viewer",
+      "appx": "Microsoft.Microsoft3DViewer"
+    },
+    {
+      "id": "maps",
+      "appx": "Microsoft.WindowsMaps"
+    },
+    {
+      "id": "power-automate",
+      "appx": "Microsoft.PowerAutomateDesktop"
+    },
+    {
+      "id": "clipchamp",
+      "appx": "Clipchamp.Clipchamp"
+    }
+  ]
+}

@@ -115,4 +115,6 @@ function demoStep(step, opts = {}, configDir) {
   return STEP[step] || { logs: [], res: { ok: false, message: 'Not available in demo mode: ' + step } };
 }
 
-module.exports = { demoStep, state };
+const { appsService, demoAppsFile } = require('./demo-apps');
+
+module.exports = { demoStep, state, appsService, demoAppsFile };
