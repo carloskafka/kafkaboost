@@ -60,3 +60,13 @@ test('the file is written atomically (no .tmp left behind)', () => {
   const f = tmpFile(); createStore(f).set({ theme: 'dark' });
   assert.ok(fs.existsSync(f)); assert.ok(!fs.existsSync(f + '.tmp'));
 });
+
+test('startHwinfoWithApp: off by default, boolean only, survives a reload, sanitize drops junk', () => {
+  assert.equal(DEFAULTS.startHwinfoWithApp, false);
+  const f = tmpFile(); const s = createStore(f);
+  for (const bad of ['yes', 1, null, undefined, {}]) assert.deepEqual(s.set({ startHwinfoWithApp: bad }).rejected, ['startHwinfoWithApp']);
+  assert.equal(s.get().startHwinfoWithApp, false);
+  assert.deepEqual(s.set({ startHwinfoWithApp: true }).rejected, []);
+  assert.equal(createStore(f).get().startHwinfoWithApp, true);
+  assert.equal(sanitize({ startHwinfoWithApp: 'true' }).startHwinfoWithApp, false);
+});

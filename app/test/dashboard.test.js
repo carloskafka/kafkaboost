@@ -46,10 +46,38 @@ test('level on the demo catalog is consistent with its own formula', () => {
 
 test('tiles notice: which message to show (administrator vs sharing vs failure)', () => {
   assert.equal(L.tilesNotice(null, false).state, 'pending'); assert.equal(L.tilesNotice(null, false).key, null);
-  assert.deepEqual(L.tilesNotice({ available: true }, false), { state: 'live', key: null, restart: false });
-  assert.deepEqual(L.tilesNotice({ available: false }, false), { state: 'needsAdmin', key: 'dashboard.tiles.needsAdmin', restart: true });
-  assert.deepEqual(L.tilesNotice({ available: false }, true), { state: 'noSharing', key: 'dashboard.tiles.noSharing', restart: false });
-  assert.deepEqual(L.tilesNotice({ failed: true }, true), { state: 'error', key: 'dashboard.tiles.error', restart: false });
+  const base = { restart: false, start: false, iniOption: false, startEnabled: false };
+  assert.deepEqual(L.tilesNotice({ available: true }, false), { ...base, state: 'live', key: null });
+  assert.deepEqual(L.tilesNotice({ available: false }, false), { ...base, state: 'needsAdmin', key: 'dashboard.tiles.needsAdmin', restart: true });
+  assert.deepEqual(L.tilesNotice({ available: false }, true), { ...base, state: 'noSharing', key: 'dashboard.tiles.noSharing' }, 'HWiNFO state not known yet');
+  assert.deepEqual(L.tilesNotice({ failed: true }, true), { ...base, state: 'error', key: 'dashboard.tiles.error' });
+});
+
+test('tiles notice: what is wrong with HWiNFO, in words, and when Start is offered', () => {
+  const none = { available: false };
+  const hw = (o) => ({ installed: true, running: false, sharedMemory: false, ini: 'ok', ...o });
+  // not elevated: always the administrator notice, whatever HWiNFO looks like (a start would need administrator rights)
+  assert.equal(L.tilesNotice(none, false, hw()).state, 'needsAdmin');
+  assert.ok(!L.tilesNotice(none, false, hw()).start);
+  // not installed: points to the HWiNFO card (download flow), no start button
+  let n = L.tilesNotice(none, true, { installed: false, running: false });
+  assert.deepEqual([n.state, n.key, n.start], ['hwMissing', 'dashboard.tiles.hwMissing', false]);
+  // installed, not running, INI fine: one-click start, no consent box
+  n = L.tilesNotice(none, true, hw());
+  assert.deepEqual([n.state, n.key, n.start, n.iniOption, n.startEnabled], ['hwStopped', 'dashboard.tiles.hwStopped', true, false, true]);
+  assert.equal(L.tilesNotice(none, true, hw(), { busy: true }).startEnabled, false, 'busy');
+  // installed, not running, INI without SensorsSM: explicit consent box, Start disabled until it is ticked
+  n = L.tilesNotice(none, true, hw({ ini: 'noSharedMemory' }));
+  assert.deepEqual([n.state, n.key, n.start, n.iniOption, n.startEnabled], ['hwStopped', 'dashboard.tiles.hwStoppedIni', true, true, false]);
+  assert.equal(L.tilesNotice(none, true, hw({ ini: 'noSharedMemory' }), { iniConsent: true }).startEnabled, true);
+  assert.equal(L.tilesNotice(none, true, hw({ ini: 'noSharedMemory' }), { iniConsent: true, busy: true }).startEnabled, false);
+  // running but not sharing: explanation only, nothing to start
+  n = L.tilesNotice(none, true, hw({ running: true }));
+  assert.deepEqual([n.state, n.key, n.start], ['hwNoSm', 'dashboard.tiles.hwNoSm', false]);
+  // running and sharing but the tiles are still empty (just started): the generic text
+  assert.equal(L.tilesNotice(none, true, hw({ running: true, sharedMemory: true })).state, 'noSharing');
+  // readings win over everything
+  assert.equal(L.tilesNotice({ available: true }, true, hw()).state, 'live');
 });
 
 test('tiles: missing values stay a dash, the time is the one from the script, sizes are decimal', () => {

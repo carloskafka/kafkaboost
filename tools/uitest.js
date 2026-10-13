@@ -12,7 +12,7 @@ async function run(ctx) {
   finally { if (saved !== null) { try { await clipboard.writeText(saved); } catch { /* best effort */ } } }
 }
 
-async function runChecks({ win, js, sleep, settings, demo, outFile, platform }) {
+async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, outFile, platform }) {
   const results = [];
   const check = (name, ok, detail) => results.push({ name, ok: !!ok, detail: detail === undefined ? '' : String(detail) });
   const q = (sel) => js(win, `(()=>{const e=document.querySelector(${JSON.stringify(sel)});return e?e.textContent.trim():null})()`);
@@ -48,7 +48,7 @@ async function runChecks({ win, js, sleep, settings, demo, outFile, platform }) 
     check('the Counter-Strike 2 page is Windows only too', await visible('windowsOnly') && !(await visible('cs2')));
     await click('[data-view=settings]'); await sleep(400);
     check('Settings still works on this OS', await visible('settings'));
-    check('Windows-only settings are hidden', !(await visible('thermalCard')));
+    check('Windows-only settings are hidden', !(await visible('thermalCard')) && !(await visible('sStartHwinfoRow')));
     await click('[data-view=apps]'); await sleep(1500);
     const cnt = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
     check('Apps works on this OS (no Windows-only panel)', await visible('apps') && !(await visible('windowsOnly')));
@@ -87,6 +87,22 @@ async function runChecks({ win, js, sleep, settings, demo, outFile, platform }) 
   check('toggle: notifications off is saved', settings.get().notifications === false);
   await click('#sStartHidden'); await sleep(300);
   check('toggle: start hidden on is saved', settings.get().startHidden === true);
+  check('Settings has the "Start HWiNFO with KafkaBoost" switch, off by default, with a plain hint', (await visible('sStartHwinfoRow')) && (await js(win, "document.getElementById('sStartHwinfo').checked")) === false && settings.get().startHwinfoWithApp === false && (await q('#sStartHwinfoRow .row-hint')).includes('never changed'), await q('#sStartHwinfoRow .row-hint'));
+  await click('#sStartHwinfo'); await sleep(300);
+  check('turning it on is saved', settings.get().startHwinfoWithApp === true);
+  await click('#sStartHwinfo'); await sleep(300);
+  check('turning it off is saved', settings.get().startHwinfoWithApp === false);
+  // the start-with-the-app logic of main.js (runs through the demo steps; the real timer is not used in test mode)
+  const autoRun = async (st) => { demo.state.hwinfo = st; return startHwinfoWithApp(); };
+  check('auto-start: setting off -> nothing happens', (await autoRun({ installed: true, running: false })).skipped === 'off' && demo.state.hwinfo.running === false);
+  settings.set({ startHwinfoWithApp: true });
+  check('auto-start: not installed -> nothing happens', (await autoRun({ installed: false, running: false })).skipped === 'notInstalled');
+  check('auto-start: INI without shared memory -> never edited, never started', (await autoRun({ installed: true, running: false, iniOff: true })).skipped === 'iniNoSharedMemory' && demo.state.hwinfo.running === false && demo.state.hwinfo.iniOff === true);
+  check('auto-start: already running -> no second copy', (await autoRun({ installed: true, running: true })).skipped === 'running');
+  const started = await autoRun({ installed: true, running: false });
+  check('auto-start: installed, stopped, shared memory on -> started once, no INI consent passed', started.started === true && demo.state.hwinfo.running === true && demo.state.hwinfo.iniOff !== true, JSON.stringify(started));
+  settings.set({ startHwinfoWithApp: false });
+  demo.state.hwinfo = { installed: false, running: false };
 
   await setVal('sInterval', '45'); await sleep(300);
   check('interval: 45 minutes saved', settings.get().checkIntervalMin === 45);
@@ -97,7 +113,7 @@ async function runChecks({ win, js, sleep, settings, demo, outFile, platform }) 
 
   await click('#mReset'); await sleep(500);
   const s = settings.get();
-  check('reset restores every default', s.theme === 'system' && s.language === 'auto' && s.closeToTray === true && s.notifications === true && s.checkIntervalMin === 30 && s.installDir === '');
+  check('reset restores every default', s.startHwinfoWithApp === false && s.theme === 'system' && s.language === 'auto' && s.closeToTray === true && s.notifications === true && s.checkIntervalMin === 30 && s.installDir === '');
   check('reset refreshes the form', (await js(win, "document.getElementById('sInterval').value")) === '30');
 
   // after Reset the language is 'auto' = the OS language (Portuguese on a pt-BR PC); the checks below read English text
@@ -131,6 +147,27 @@ async function runChecks({ win, js, sleep, settings, demo, outFile, platform }) 
   await js(win, 'KB.state.info.isAdmin = true; 0');
   await waitFor("document.getElementById('tilesNoticeText').textContent.includes('HWiNFO card')");
   check('elevated + no readings: the notice points to the HWiNFO card instead, no restart button', (await q('#tilesNoticeText')).includes('HWiNFO card') && !(await visible('tilesRestart')), await q('#tilesNoticeText'));
+  // elevated + no readings, HWiNFO installed: the notice says what is wrong in words and offers the one-click start
+  const hwNow = async (st) => { demo.state.hwinfo = st; await js(win, 'KB.hwinfoRefresh(); 0'); };
+  const noticeIs = (part) => waitFor("document.getElementById('tilesNoticeText').textContent.includes(" + JSON.stringify(part) + ")");
+  await hwNow({ installed: true, running: false });
+  await noticeIs('installed on this PC but not running');
+  check('HWiNFO installed but not running: the notice says so and offers Start HWiNFO', (await visible('tilesStart')) && (await q('#tilesStart')) === 'Start HWiNFO' && !(await visible('tilesIniRow')) && (await js(win, "document.getElementById('tilesStart').disabled")) === false && !(await visible('tilesRestart')), await q('#tilesNoticeText'));
+  await hwNow({ installed: true, running: false, iniOff: true });
+  await noticeIs('Shared Memory Support is off in its HWiNFO64.INI');
+  check('its INI has shared memory off: an explicit consent box, Start disabled until ticked', (await visible('tilesIniRow')) && (await q('#tilesIniRow')).includes('backup') && (await js(win, "document.getElementById('tilesStart').disabled")) === true && (await js(win, "document.getElementById('tilesIniBox').checked")) === false, await q('#tilesNoticeText'));
+  await click('#tilesIniBox');
+  await waitFor("!document.getElementById('tilesStart').disabled");
+  check('ticking the consent box enables Start', (await js(win, "document.getElementById('tilesStart').disabled")) === false);
+  await click('#tilesStart');
+  await waitFor("document.getElementById('tilesStartResult') && !document.getElementById('tilesStartResult').hidden");
+  check('Start from the notice runs the same step with the INI consent: HWiNFO runs, the INI is on, the result is shown', demo.state.hwinfo.running === true && demo.state.hwinfo.iniOff === false && (await q('#tilesStartResult')).includes('started'), await q('#tilesStartResult'));
+  await waitFor("!document.getElementById('tilesStart') || document.getElementById('tilesStart').hidden");
+  check('once HWiNFO runs the Start button is gone (no second copy is offered)', !(await visible('tilesStart')) && !(await visible('tilesIniRow')) && (await js(win, "document.getElementById('tilesIniBox').checked")) === false);
+  await hwNow({ installed: true, running: true, noSm: true });
+  await noticeIs('Shared Memory Support is off in its settings');
+  check('HWiNFO running without shared memory: explanation, nothing to start', !(await visible('tilesStart')) && (await q('#tilesNoticeText')).includes('is running'), await q('#tilesNoticeText'));
+  demo.state.hwinfo = { installed: false, running: false };
   demo.state.telemetry = 'live';
   await waitFor("document.getElementById('tilesNotice').hidden && document.getElementById('tTemp').textContent.includes('°C')");
   check('readings come back: notice gone, values back', !(await visible('tilesNotice')) && (await tileTemp()).includes('°C'));

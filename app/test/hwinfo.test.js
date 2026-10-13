@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { cardModel, DOWNLOAD_PAGE } = require('../renderer/js/hwinfologic');
+const { cardModel, autoStartDecision, DOWNLOAD_PAGE } = require('../renderer/js/hwinfologic');
 const demo = require('../src/demo');
 
 const release = { version: '8.54', url: 'https://www.hwinfo.com/files/hwi_854.zip', signer: 'REALiX' };
@@ -77,4 +77,16 @@ test('Steps.ps1 declares every hwinfo step and the two read-only ones need no ad
   const ro = ps.match(/\$readOnly = \(([^\r\n]*?)\) -or/)[1];
   assert.ok(ro.includes("'hwinfo-state'") && ro.includes("'hwinfo-check'"));
   assert.ok(!ro.includes("'hwinfo-get'") && !ro.includes("'hwinfo-start'") && !ro.includes("'hwinfo-stop'"));
+});
+
+test('auto-start with the app: only when installed, elevated, not running and the INI already shares memory', () => {
+  const s = { installed: true, source: 'existing', running: false, ini: 'ok' };
+  assert.deepEqual(autoStartDecision(s, true), { start: true, reason: 'ok' });
+  assert.equal(autoStartDecision({ ...s, source: 'own' }, true).start, true, 'our own copy too');
+  assert.deepEqual(autoStartDecision({ installed: false }, true), { start: false, reason: 'notInstalled' });
+  assert.deepEqual(autoStartDecision(null, true), { start: false, reason: 'notInstalled' });
+  assert.deepEqual(autoStartDecision({ ...s, running: true }, true), { start: false, reason: 'running' }, 'never a second copy');
+  assert.deepEqual(autoStartDecision(s, false), { start: false, reason: 'needsAdmin' });
+  assert.deepEqual(autoStartDecision({ ...s, ini: 'noSharedMemory' }, true), { start: false, reason: 'iniNoSharedMemory' }, 'the INI is never edited silently');
+  assert.deepEqual(autoStartDecision({ ...s, ini: 'missing' }, true), { start: false, reason: 'iniMissing' });
 });

@@ -38,7 +38,10 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     // the tiles cannot be read and the app is not elevated: the notice asks for administrator rights
     demo.state.telemetry = 'unavailable'; await js(win, 'KB.state.info.isAdmin = false; 0');
     await until("!document.getElementById('tilesNotice').hidden"); await sleep(300); await shot(win, out('health-no-admin'));
-    demo.state.telemetry = 'live'; await js(win, 'KB.state.info.isAdmin = true; 0');
+    // elevated, HWiNFO installed but not running: the notice says so and offers a one-click start
+    demo.state.hwinfo = { installed: true, running: false }; await js(win, 'KB.state.info.isAdmin = true; KB.hwinfoRefresh(); 0');
+    await until("!document.getElementById('tilesStart').hidden"); await sleep(300); await shot(win, out('health-start-hwinfo'));
+    demo.state.hwinfo = { installed: true, running: true }; demo.state.telemetry = 'live'; await js(win, 'KB.hwinfoRefresh(); 0');
     await until("document.getElementById('tilesNotice').hidden"); await sleep(300);
     demo.state.scenario = 'updated'; demo.state.fixed = false;
     await click('#check'); await sleep(900); await shot(win, out('health-attention'));
