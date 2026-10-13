@@ -84,6 +84,16 @@ function Get-LiveTelemetry {
     }
 }
 
+# The telemetry step: ONLY the shared-memory read (no health check, no admin). Reader is injectable for the tests.
+# available = false when HWiNFO is not running with shared memory (or the memory is not readable from this process): the tiles then
+# say so instead of showing anything. takenAt is the local time of the read.
+function Get-TelemetrySnapshot([scriptblock]$Reader = { Get-LiveTelemetry }) {
+    $live = $null
+    try { $live = & $Reader } catch { $live = $null }
+    $has = [bool]($live -and ($null -ne $live.packageTempC -or $null -ne $live.pClockMaxMHz -or $null -ne $live.packagePowerW))
+    [pscustomobject]@{ available = $has; live = $(if ($has) { $live } else { $null }); takenAt = (Get-Date).ToString('s') }
+}
+
 # ---------------------------------------------------------------- the report
 
 function Get-HealthReport([string]$InstallDir, [string]$SettingsFile, [string]$TaskName) {

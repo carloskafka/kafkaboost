@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | telemetry
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'telemetry')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -50,7 +50,7 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'telemetry') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
     if ($Step -in 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop' -and -not (Test-Admin)) { Done $false 'Administrator rights are required for this step. Restart the app as administrator.' $null 'msg.hwinfo.needsAdmin' @{}; return }
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
@@ -101,6 +101,10 @@ try {
             $h.checks | ForEach-Object { Log ("{0}: {1} - {2}" -f $_.name, $(if ($_.ok) { 'OK' } else { 'ATTENTION' }), $_.detail) }
             $msg = switch ($h.verdict) { 'ok' { 'Your PC is still optimized.' } 'warn' { 'Mostly fine, one thing needs a look.' } default { 'The optimization is not fully in place.' } }
             Done ($h.verdict -ne 'fail') $msg $h ('msg.health.' + $h.verdict) @{}
+        }
+        'telemetry' {
+            $tm = Get-TelemetrySnapshot
+            Done $true $(if ($tm.available) { 'HWiNFO shared memory read.' } else { 'No live readings: HWiNFO is not sharing its sensors with this process.' }) $tm $(if ($tm.available) { 'msg.telemetry.ok' } else { 'msg.telemetry.unavailable' }) @{}
         }
         'fix' {
             $l = Invoke-Fix $InstallDir $SettingsFile $TaskName -DisableVbs:$DisableVBS

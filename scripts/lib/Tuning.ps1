@@ -24,12 +24,47 @@ function Test-Admin {
     ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+# ---- hardware details for the Dashboard cards (read-only, no serial numbers anywhere) -----------------------------
+# Disks: model, size in GB and type only. Win32_DiskDrive and MSFT_PhysicalDisk are injectable so the tests need no hardware.
+# MSFT_PhysicalDisk.MediaType: 3 = HDD, 4 = SSD, 5 = SCM; BusType 17 = NVMe. Everything else is "unknown".
+function Get-DiskSummary([scriptblock]$Drives = { Get-CimInstance Win32_DiskDrive }, [scriptblock]$Physical = { Get-CimInstance -Namespace 'root\Microsoft\Windows\Storage' -ClassName MSFT_PhysicalDisk }) {
+    $rows = @(); $phys = @()
+    try { $rows = @(& $Drives) } catch { return @() }
+    try { $phys = @(& $Physical) } catch { $phys = @() }
+    $out = @()
+    foreach ($d in $rows) {
+        if (-not $d.Model -or $d.MediaType -match 'Removable') { continue }
+        $p = $phys | Where-Object { $_.FriendlyName -and $_.FriendlyName.Trim() -eq $d.Model.Trim() } | Select-Object -First 1
+        $type = 'unknown'
+        if ($p) {
+            if ($p.BusType -eq 17) { $type = 'nvme' }
+            elseif ($p.MediaType -eq 4) { $type = 'ssd' }
+            elseif ($p.MediaType -eq 3) { $type = 'hdd' }
+        }
+        $out += [pscustomobject]@{ model = $d.Model.Trim(); sizeGB = [int][math]::Round([double]$d.Size / 1e9); type = $type }
+    }
+    return $out
+}
+
+# RAM: total GB, configured speed in MHz (the highest module speed) and the number of modules. $Modules = Win32_PhysicalMemory rows.
+function Get-MemorySummary([scriptblock]$Modules = { Get-CimInstance Win32_PhysicalMemory }) {
+    $rows = @()
+    try { $rows = @(& $Modules) } catch { $rows = @() }
+    $speeds = @($rows | ForEach-Object { if ($_.ConfiguredClockSpeed) { [int]$_.ConfiguredClockSpeed } elseif ($_.Speed) { [int]$_.Speed } } | Where-Object { $_ })
+    [pscustomobject]@{
+        speedMHz = $(if ($speeds.Count) { ($speeds | Measure-Object -Maximum).Maximum } else { $null })
+        modules = $rows.Count
+    }
+}
+
 function Get-HardwareInfo([string]$InstallDir, [string]$TaskName) {
     $cs  = Get-CimInstance Win32_ComputerSystem
     $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
     $os  = Get-CimInstance Win32_OperatingSystem
     $exe = Join-Path $InstallDir 'ThrottleStop.exe'
     $ts  = Get-Process ThrottleStop -ErrorAction SilentlyContinue | Select-Object -First 1
+    $mem = Get-MemorySummary
+    $disks = @(Get-DiskSummary)
     [pscustomobject]@{
         os                = 'windows'
         osVersion         = "$($os.Caption) (build $($os.BuildNumber))"
@@ -39,6 +74,11 @@ function Get-HardwareInfo([string]$InstallDir, [string]$TaskName) {
         manufacturer      = $cs.Manufacturer
         model             = $cs.Model
         cpu               = $cpu.Name.Trim()
+        cpuCores          = [int]$cpu.NumberOfCores
+        cpuThreads        = [int]$cpu.NumberOfLogicalProcessors
+        ramSpeedMHz       = $mem.speedMHz
+        ramModules        = $mem.modules
+        disks             = $disks
         cpuSupported      = [bool]($cpu.Name -match '14900HX')
         modelVerified     = [bool]($cs.Model -eq '83DE')
         isAdmin           = (Test-Admin)
