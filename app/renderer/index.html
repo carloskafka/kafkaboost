@@ -78,6 +78,29 @@
           <div class="tile"><div class="tile-v" id="tClock">–</div><div class="tile-l" data-i18n="dashboard.tile.clock">Highest P-core clock</div></div>
           <div class="tile"><div class="tile-v" id="tPower">–</div><div class="tile-l" data-i18n="dashboard.tile.power">Package power</div></div>
         </div>
+        <div id="tilesNotice" class="result warn tiles-notice" hidden>
+          <span id="tilesNoticeText"></span>
+          <button id="tilesRestart" class="btn small" type="button" data-i18n="banner.restart" hidden></button>
+        </div>
+        <p id="tilesWhen" class="muted tiles-when" hidden></p>
+
+        <div id="optLevel" class="card" hidden>
+          <h2 class="h2" data-i18n="dashboard.level.title"></h2>
+          <div class="level-row">
+            <div id="levelPct" class="level-pct">–</div>
+            <div class="level-body">
+              <div class="level-bar" aria-hidden="true"><div id="levelFill" class="level-fill"></div></div>
+              <p id="levelLine"></p>
+            </div>
+          </div>
+          <p id="levelFormula" class="muted"></p>
+          <div id="levelResult" class="result" hidden></div>
+          <div class="clean-foot"><span class="muted" data-i18n="dashboard.level.note"></span>
+            <button id="applyReco" class="btn primary" type="button" data-i18n="tweaks.recommended" disabled></button>
+          </div>
+        </div>
+
+        <div id="hwCards" class="hw-cards" hidden></div>
 
         <div id="hwCard" class="card" hidden>
           <h2 class="h2" data-i18n="hwinfo.title"></h2>
@@ -448,7 +471,8 @@
 </div>
 </dialog>
 <script src="js/core.js"></script>
-  <script src="js/dashboard.js"></script>
+  <script src="js/dashlogic.js"></script>
+<script src="js/dashboard.js"></script>
   <script src="js/analysis.js"></script>
   <script src="js/wizard.js"></script>
   <script src="js/restore.js"></script>

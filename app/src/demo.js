@@ -6,11 +6,15 @@
 const HW = {
   os: 'windows', osVersion: 'Microsoft Windows 11 Home (build 26300)', manufacturer: 'LENOVO', model: '83DE',
   cpu: 'Intel(R) Core(TM) i9-14900HX', cpuSupported: true, modelVerified: true, isAdmin: true, hypervisorPresent: false,
-  gpu: 'NVIDIA GeForce RTX 4090 Laptop GPU', ramGB: 32, powerPlan: 'Legion Balance Mode',
+  gpu: 'NVIDIA GeForce RTX 4090 Laptop GPU', ramGB: 32, ramSpeedMHz: 5600, ramModules: 2, cpuCores: 24, cpuThreads: 32, powerPlan: 'Legion Balance Mode',
+  disks: [{ model: 'Demo NVMe SSD 1TB', sizeGB: 1024, type: 'nvme' }, { model: 'Demo NVMe SSD 1TB', sizeGB: 1024, type: 'nvme' }],
   throttleStopFound: true, throttleStopRunning: true, taskInstalled: true
 };
 
-const state = { scenario: process.env.WIZARD_DEMO_SCENARIO || 'ok', fixed: false };
+// telemetry: 'live' (HWiNFO shares its sensors) or 'unavailable' (it does not, or this process cannot read it: the Dashboard then asks for
+// administrator rights or points to the HWiNFO card, depending on whether the app is elevated).
+const state = { scenario: process.env.WIZARD_DEMO_SCENARIO || 'ok', fixed: false, telemetry: 'live' };
+let telemetryTick = 0;
 
 function healthReport() {
   const updated = state.scenario === 'updated' && !state.fixed;
@@ -150,6 +154,13 @@ function hwinfoStep(step, opts) {
 }
 
 function demoStep(step, opts = {}, configDir) {
+  if (step === 'telemetry') {
+    telemetryTick++;
+    const takenAt = new Date().toISOString().slice(0, 19);
+    if (state.telemetry !== 'live') return { logs: [], res: { ok: true, code: 'msg.telemetry.unavailable', args: {}, message: 'No live readings', data: { available: false, live: null, takenAt } } };
+    const l = healthReport().live;
+    return { logs: [], res: { ok: true, code: 'msg.telemetry.ok', args: {}, message: 'read', data: { available: true, takenAt, live: { ...l, packageTempC: l.packageTempC + (telemetryTick % 4) } } } };
+  }
   if (step.startsWith('sensors-')) return sensorStep(step);
   if (step.startsWith('hwinfo-')) return hwinfoStep(step, opts);
   if (step === 'restore-list') return { logs: [], res: { ok: true, code: 'msg.restore.listed', args: { count: restorePoints.length }, message: 'ok', data: { admin: true, points: restorePoints.slice() } } };

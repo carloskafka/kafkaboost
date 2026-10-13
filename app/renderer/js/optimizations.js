@@ -114,15 +114,22 @@
     await load();
   }
 
-  async function applyRecommended() {
-    const todo = tweaks.filter((x) => x.risk === 'safe' && x.recommended && x.status === 'inactive');
-    if (!todo.length) { KB.showResult($('tweakResult'), 'ok', t('tweaks.recommendedNone')); return; }
+  // "Apply recommended" for any screen (Optimizations and the Dashboard): lists what will change, asks, then runs the tweaks-recommended
+  // step (restore point first, safe tweaks only). Resolves { status: 'none' | 'cancelled' | 'done', res }.
+  KB.applyRecommended = async (list) => {
+    const todo = (list || tweaks).filter((x) => x.risk === 'safe' && x.recommended && x.status === 'inactive');
+    if (!todo.length) return { status: 'none' };
     const ok = await KB.confirm({ title: t('tweaks.recommended'), paragraphs: [t('tweaks.recommendedBody', { count: todo.length }), ...todo.map((x) => '• ' + title(x.id)), t('tweaks.recommendedNote')], ok: t('tweaks.apply') });
-    if (!ok) return;
+    if (!ok) return { status: 'cancelled' };
+    return { status: 'done', res: await window.kb.runStep('tweaks-recommended', {}) };
+  };
+
+  async function applyRecommended() {
+    if (!tweaks.some((x) => x.risk === 'safe' && x.recommended && x.status === 'inactive')) { KB.showResult($('tweakResult'), 'ok', t('tweaks.recommendedNone')); return; }
     busy = true; render(); KB.showResult($('tweakResult'), '', '');
-    const res = await window.kb.runStep('tweaks-recommended', {});
+    const r = await KB.applyRecommended();
     busy = false;
-    KB.showResult($('tweakResult'), res.ok ? 'ok' : 'warn', KB.message(res));
+    if (r.status === 'done') KB.showResult($('tweakResult'), r.res.ok ? 'ok' : 'warn', KB.message(r.res));
     await load();
   }
 
