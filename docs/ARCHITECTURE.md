@@ -71,3 +71,6 @@ task name for PowerShell and Node alike; `HWiNFO64.INI` enables shared-memory lo
 ## Tools (`tools/`)
 `make-icons.js` renders every icon size from `app/renderer/icon.svg`; `make-shots.ps1` regenerates `docs/assets/*.png` from
 demo mode.
+
+## The site
+`docs/` is a static site (no framework): `index.html` landing, `about-app.html` docs hub, secondary pages, an English root and a `pt-br/` mirror sharing `site.css` and `site.js`. `pages.yml` publishes the folder; `tools/check-site.js` (run in CI) checks links, anchors, language twins, hreflang and that the numbers still match the repository. The Download page reads the GitHub Releases API in the browser and falls back to plain links.

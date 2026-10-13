@@ -47,8 +47,8 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 | `scripts/Create-Shortcut.ps1` | desktop + Start Menu shortcut with the icon and the run-as-administrator flag |
 | `scripts/monitoring/`, `scripts/maintenance/` | loggers (output to `logs/`), `restore_vbs.ps1` |
 | `tests/` | Pester tests (57; `Setup.ps1` shared, plain `throw` assertions: runs on Pester 3.4 and 5) |
-| `tools/` | `make-icons.js` (all icon sizes from `app/renderer/icon.svg`), `make-shots.ps1` (docs screenshots from demo mode; not yet regenerated for the new screens), `run-uitest.ps1` + `uitest.js` (UI checks in demo mode), `run-traytest.ps1` |
-| `docs/` | GitHub Pages site (`index.html`, `assets/`, favicons) + `getting-started`, `ARCHITECTURE`, `CONFIGURATION`, `TESTING`, `TROUBLESHOOTING`, `RESULTS` |
+| `tools/` | `check-site.js` (+ test: links, anchors, EN/PT parity, facts), `make-icons.js` (all icon sizes from `app/renderer/icon.svg`), `make-shots.ps1` (docs screenshots from demo mode; not yet regenerated for the new screens), `run-uitest.ps1` + `uitest.js` (UI checks in demo mode), `run-traytest.ps1` |
+| `docs/` | GitHub Pages site: `index.html` landing, `about-app.html` docs hub (hash routes), `compare/download/faq/privacy/terms.html`, `pt-br/` mirror, `site.css`, `site.js`, `assets/`, favicons; checked by `node tools/check-site.js`. Plus `getting-started`, `ARCHITECTURE`, `CONFIGURATION`, `TESTING`, `TROUBLESHOOTING`, `RESULTS` |
 | `.github/workflows/` | `ci.yml` (tests + syntax on Windows), `pages.yml` (publishes `docs/`) |
 | `local/` | git-ignored: backups, evidence, experiments |
 
@@ -86,3 +86,4 @@ cd app; npx electron ..\tools\make-icons.js                           # regenera
   proprietary (user downloads it); LibreHardwareMonitor (MPL-2.0) could be bundled.
 - Not tested on a fresh Windows install; `npm run dist` (Windows installer) configured but not built; the macOS/Linux code (launchers, autostart) was never run.
 - FPS was never measured, only judged by feel.
+- **Landing site** (built, not yet published): `docs/index.html` + pages in EN and `pt-br/`; every number on it comes from `config/tweaks.json`, `docs/TESTING.md` or `docs/RESULTS.md` (checker enforces the first two). No FPS claims, testimonials or user counts. The repo has no LICENSE file yet, so the site says "public source", not "open source".
