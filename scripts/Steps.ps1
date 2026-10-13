@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | telemetry | cs2-state | cs2-gpu | cs2-autoexec
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | cs2-state | cs2-gpu | cs2-autoexec | telemetry
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'telemetry', 'cs2-state', 'cs2-gpu', 'cs2-autoexec')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'cs2-state', 'cs2-gpu', 'cs2-autoexec', 'telemetry')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
