@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -35,6 +35,7 @@ if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleSto
 . (Join-Path $root 'lib\Tweaks.ps1')
 . (Join-Path $root 'lib\Cleanup.ps1')
 . (Join-Path $root 'lib\Restore.ps1')
+. (Join-Path $root 'lib\Sensors.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -46,7 +47,7 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
     switch ($Step) {
@@ -172,6 +173,26 @@ try {
         'restore-open' {
             Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\rstrui.exe')
             Done $true 'System Restore opened.' $null 'msg.restore.opened' @{}
+        }
+        'sensors-state' {
+            $st = Get-SensorState
+            Done $true $(if ($st.installed) { "$($st.name) $($st.version) is installed." } else { "$($st.name) $($st.version) is not installed." }) $st $(if ($st.installed) { 'msg.sensors.installed' } else { 'msg.sensors.missing' }) @{ version = $st.version }
+        }
+        'sensors-get' {
+            if (-not (Test-Admin)) { Done $false 'Administrator rights are required to install the sensor library.' $null 'msg.sensors.getNeedsAdmin' @{}; return }
+            $cfg = Get-SensorConfig
+            Log "downloading $($cfg.name) $($cfg.version) ($($cfg.url))"
+            try { $r = Install-SensorSupport $cfg } catch {
+                Log $_.Exception.Message
+                Done $false $_.Exception.Message $null $(if ($_.Exception.Message -like 'SHA-256 mismatch*') { 'msg.sensors.hashMismatch' } else { 'msg.sensors.getFailed' }) @{ detail = $_.Exception.Message }
+                return
+            }
+            Log "unpacked $($r.files) files to $($r.dir)"
+            Done $true "$($cfg.name) $($cfg.version) installed." $r 'msg.sensors.installed' @{ version = $cfg.version }
+        }
+        'sensors-read' {
+            $r = Get-SensorSnapshot
+            Done $r.ok $r.message $r.data $r.code @{}
         }
         'rollback' {
             $l = Invoke-Rollback $InstallDir $TaskName -RestoreVbs:$RestoreVbs
