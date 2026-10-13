@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -22,6 +22,8 @@ param(
     [ValidateSet('on', 'off')][string]$TweakMode = 'on',   # tweak-set step
     [switch]$AllowRisky,
     [string]$CleanupIds,       # cleanup-run: comma separated target ids
+    [string]$RestoreName,      # restore-create: description of the point
+    [switch]$NoSafetyPoint,    # tweak-set / tweaks-recommended: do not create the safety restore point first
     [switch]$Download          # get step: fetch ThrottleStop from TechPowerUp when it is not on the PC (the user agreed in the app)
 )
 $ErrorActionPreference = 'Stop'
@@ -32,6 +34,7 @@ if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleSto
 . (Join-Path $root 'lib\Health.ps1')
 . (Join-Path $root 'lib\Tweaks.ps1')
 . (Join-Path $root 'lib\Cleanup.ps1')
+. (Join-Path $root 'lib\Restore.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -43,7 +46,7 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
     switch ($Step) {
@@ -127,15 +130,20 @@ try {
         }
         'tweak-set' {
             if (-not $TweakId) { throw 'tweak-set needs -TweakId.' }
+            $sp = $null
+            if ($TweakMode -eq 'on' -and -not $NoSafetyPoint -and (Test-FirstTweak)) { $sp = New-KbRestorePoint 'KafkaBoost: before the first tweak'; Log "restore point: $($sp.code)" }
             $r = Set-Tweak $TweakId ($TweakMode -eq 'on') -AllowRisky:$AllowRisky
+            if ($sp) { $r | Add-Member -NotePropertyName restorePoint -NotePropertyValue $sp.code -Force }
             Log "$TweakId -> $TweakMode : $(if ($r.ok) { 'ok' } else { $r.error })"
             Done $r.ok $(if ($r.ok) { "Tweak $TweakId $(if ($TweakMode -eq 'on') { 'applied' } else { 'reverted' })." } else { $r.error }) $r $r.code @{ id = $TweakId }
         }
         'tweaks-recommended' {
+            $sp = $null
+            if (-not $NoSafetyPoint) { $sp = New-KbRestorePoint 'KafkaBoost: before Apply recommended'; Log "restore point: $($sp.code)" }
             $rs = @(Set-RecommendedTweaks)
             $bad = @($rs | Where-Object { -not $_.ok }).Count
             $rs | ForEach-Object { Log "$($_.id): $(if ($_.ok) { 'applied' } else { $_.error })" }
-            Done ($bad -eq 0) "$($rs.Count - $bad) applied, $bad failed." @{ results = $rs } $(if ($bad) { 'msg.tweaks.recommendedPartial' } else { 'msg.tweaks.recommendedOk' }) @{ ok = ($rs.Count - $bad); failed = $bad }
+            Done ($bad -eq 0) "$($rs.Count - $bad) applied, $bad failed." @{ results = $rs; restorePoint = $(if ($sp) { $sp.code } else { $null }) } $(if ($bad) { 'msg.tweaks.recommendedPartial' } else { 'msg.tweaks.recommendedOk' }) @{ ok = ($rs.Count - $bad); failed = $bad }
         }
         'cleanup-scan' {
             $sizes = @(Get-CleanupSizes)
@@ -149,6 +157,21 @@ try {
             $bytes = [int64]0; $files = 0; $skipped = 0
             foreach ($r in $res) { $bytes += $r.bytes; $files += $r.files; $skipped += $r.skipped; Log "$($r.id): $($r.files) files, $([math]::Round($r.bytes / 1MB, 1)) MB, $($r.skipped) skipped" }
             Done $true "Freed $([math]::Round($bytes / 1MB, 1)) MB ($files files, $skipped skipped)." @{ results = $res; bytes = $bytes; files = $files; skipped = $skipped } 'msg.cleanup.done' @{ mb = [math]::Round($bytes / 1MB, 1); files = $files; skipped = $skipped }
+        }
+        'restore-list' {
+            if (-not (Test-Admin)) { Done $true 'Administrator rights are needed to read the restore points.' @{ admin = $false; points = @() } 'msg.restore.needsAdmin' @{}; return }
+            try { $pts = @(Get-KbRestorePoints) } catch { Done $true 'System Protection looks off, or Windows returned no restore points.' @{ admin = $true; points = @() } 'msg.restore.none' @{}; return }
+            Done $true "$($pts.Count) restore point(s)." @{ admin = $true; points = $pts } 'msg.restore.listed' @{ count = $pts.Count }
+        }
+        'restore-create' {
+            $name = if ($RestoreName) { $RestoreName.Substring(0, [math]::Min(100, $RestoreName.Length)) } else { 'KafkaBoost' }
+            $r = New-KbRestorePoint $name
+            Log "$($r.code): $($r.message)"
+            Done $r.ok $r.message $r $r.code @{}
+        }
+        'restore-open' {
+            Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\rstrui.exe')
+            Done $true 'System Restore opened.' $null 'msg.restore.opened' @{}
         }
         'rollback' {
             $l = Invoke-Rollback $InstallDir $TaskName -RestoreVbs:$RestoreVbs

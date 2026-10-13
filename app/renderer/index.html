@@ -182,6 +182,17 @@
           </div>
         </div>
         <div class="card">
+          <h2 class="h2" data-i18n="restore.points.title"></h2>
+          <p class="muted" data-i18n="restore.points.intro"></p>
+          <div id="rpList" class="clean-list"></div>
+          <div class="restore-new">
+            <input id="rpName" type="text" maxlength="100" data-i18n-placeholder="restore.points.namePlaceholder">
+            <button id="rpCreate" class="btn primary" type="button" data-i18n="restore.points.create"></button>
+            <button id="rpOpen" class="btn small" type="button" data-i18n="restore.points.open"></button>
+          </div>
+          <div id="rpResult" class="result" hidden></div>
+        </div>
+        <div class="card">
           <h2 class="h2" data-i18n="restore.what"></h2>
           <ul class="changes">
             <li data-i18n="restore.w1"></li>

@@ -71,7 +71,18 @@ function tweakList(configDir) {
 const cleanState = { 'user-temp': [428e6, 1224], 'win-temp': [64e6, 310], prefetch: [38e6, 212], 'update-cache': [1.6e9, 41], thumbnails: [11e6, 15], 'recycle-bin': [1.2e6, 57] };
 function cleanTargets() { return Object.entries(cleanState).map(([id, [bytes, files]]) => ({ id, danger: id === 'recycle-bin', bytes, files })); }
 
+const restorePoints = [
+  { id: 12, description: 'KafkaBoost: before the first tweak', created: '2026-10-10T22:31:00', type: 'settings' },
+  { id: 11, description: 'Windows Update', created: '2026-10-08T03:12:00', type: 'install' }
+];
+
 function demoStep(step, opts = {}, configDir) {
+  if (step === 'restore-list') return { logs: [], res: { ok: true, code: 'msg.restore.listed', args: { count: restorePoints.length }, message: 'ok', data: { admin: true, points: restorePoints.slice() } } };
+  if (step === 'restore-create') {
+    const id = restorePoints[0].id + 1; restorePoints.unshift({ id, description: String(opts.restoreName || 'KafkaBoost'), created: new Date().toISOString().slice(0, 19), type: 'settings' });
+    return { logs: [], res: { ok: true, code: 'msg.restore.created', args: {}, message: 'ok', data: { ok: true, created: true, id, code: 'msg.restore.created' } } };
+  }
+  if (step === 'restore-open') return { logs: [], res: { ok: true, code: 'msg.restore.opened', args: {}, message: 'ok', data: null } };
   if (step === 'cleanup-scan') { const l = cleanTargets(); const mb = Math.round(l.filter((x) => !x.danger).reduce((s, x) => s + x.bytes, 0) / 1048576); return { logs: [], res: { ok: true, code: 'msg.cleanup.scanned', args: { mb }, message: mb + ' MB', data: { targets: l, admin: true } } }; }
   if (step === 'cleanup-run') {
     const ids = String(opts.cleanupIds || '').split(',').filter(Boolean); let bytes = 0, files = 0;

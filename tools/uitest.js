@@ -102,6 +102,12 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
   if (recoOpen) { await click('#cfOk'); await sleep(900); }
   check('after Apply recommended the safe recommended ones are on', await js(win, "['fast-startup-off','background-apps-off','game-dvr-off','mouse-accel-off','advertising-id-off'].every(id => document.querySelector('.tweak[data-id=' + id + '] input').checked)"));
 
+  // restore points
+  await click('[data-view=restore]'); await sleep(900);
+  check('restore lists the 2 demo points', (await js(win, "document.querySelectorAll('.rp-row').length")) === 2);
+  await click('#rpCreate'); await sleep(900);
+  check('creating a restore point shows it first and says so', (await js(win, "document.querySelectorAll('.rp-row').length")) === 3 && (await js(win, "document.getElementById('rpResult').hidden")) === false);
+
   // cleanup
   await click('[data-view=cleanup]'); await sleep(900);
   check('cleanup lists 6 targets', (await js(win, "document.querySelectorAll('.clean-row').length")) === 6);
