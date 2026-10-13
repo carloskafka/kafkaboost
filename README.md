@@ -72,6 +72,10 @@ Run from a terminal: `cd app; npm install; npm start` (administrator needed to a
 |---|---|
 | <img src="docs/assets/health-ok.png" alt="Dashboard: your PC is optimized"> | <img src="docs/assets/health-attention.png" alt="Dashboard: settings drifted after a Windows update, Fix it button"> |
 
+| Optimizations — tweak catalog | Cleanup | Settings |
+|---|---|---|
+| <img src="docs/assets/tweaks.png" alt="Optimizations: 30 tweaks with search, category filters, risk badges and toggles"> | <img src="docs/assets/cleanup.png" alt="Cleanup: sizes measured first, delete only what is ticked"> | <img src="docs/assets/settings.png" alt="Settings: theme, language, tray and update options"> |
+
 The side menu has seven sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Settings** and **Help**.
 The app is being renamed **KafkaBoost** (launchers and window already; the repo, package ids and task names keep their old names).
 Light and dark theme, English and Brazilian Portuguese.
