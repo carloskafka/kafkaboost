@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | cs2-state | cs2-gpu | cs2-autoexec | telemetry
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-preview | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | cs2-state | cs2-gpu | cs2-autoexec | telemetry
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'cs2-state', 'cs2-gpu', 'cs2-autoexec', 'telemetry')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'cs2-state', 'cs2-gpu', 'cs2-autoexec', 'telemetry')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -19,6 +19,7 @@ param(
     [string]$AppExe,
     [string]$AppArgs,
     [string]$TweakId,
+    [string]$TweakIds,         # tweak-preview: comma separated tweak ids (empty = the ones Apply recommended would apply)
     [ValidateSet('on', 'off')][string]$TweakMode = 'on',   # tweak-set step
     [switch]$AllowRisky,
     [string]$CleanupIds,       # cleanup-run: comma separated target ids
@@ -51,11 +52,11 @@ $InstallDir = Resolve-InstallDir $InstallDir $TaskName   # ThrottleStop may live
 
 function Log($m) { Write-Output "LOG: $m" }
 function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
-    Write-Output ("RESULT: " + (@{ ok = [bool]$ok; message = $msg; code = $code; args = $cargs; data = $data } | ConvertTo-Json -Depth 6 -Compress))
+    Write-Output ("RESULT: " + (@{ ok = [bool]$ok; message = $msg; code = $code; args = $cargs; data = $data } | ConvertTo-Json -Depth 8 -Compress))
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'telemetry', 'cs2-state', 'cs2-gpu', 'cs2-autoexec') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'telemetry', 'cs2-state', 'cs2-gpu', 'cs2-autoexec') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
     if ($Step -in 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop' -and -not (Test-Admin)) { Done $false 'Administrator rights are required for this step. Restart the app as administrator.' $null 'msg.hwinfo.needsAdmin' @{}; return }
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
@@ -156,6 +157,12 @@ try {
         'tweaks-list' {
             $list = @(Get-TweakStatuses)
             Done $true "$($list.Count) tweaks." @{ tweaks = $list; admin = (Test-Admin); build = (Get-WindowsBuild) } 'msg.tweaks.listed' @{ count = $list.Count }
+        }
+        'tweak-preview' {
+            $ids = @($TweakIds -split '[,\s]+' | Where-Object { $_ })
+            if (-not $ids.Count) { $ids = @(Get-RecommendedTweaks | ForEach-Object { $_.id }) }
+            $pv = @(Get-TweakPreview $ids)
+            Done $true "$($pv.Count) tweak(s) previewed." @{ tweaks = $pv; admin = (Test-Admin); build = (Get-WindowsBuild) } 'msg.tweaks.previewed' @{ count = $pv.Count }
         }
         'tweak-set' {
             if (-not $TweakId) { throw 'tweak-set needs -TweakId.' }

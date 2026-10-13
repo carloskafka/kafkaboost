@@ -141,3 +141,85 @@ Describe 'Tweak catalog (config\tweaks.json)' {
         foreach ($s in $list) { if ($s.status -notin 'active', 'inactive', 'partial', 'unavailable') { throw "$($s.id): status $($s.status)" } }
     }
 }
+
+Describe 'Tweak preview (read-only, sandbox registry)' {
+    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
+    BeforeEach { $script:cat = New-TweakSandbox }
+    AfterEach { Remove-TweakSandbox }
+
+    It 'reports a value that is set: current, new, and that turning off sets it back' {
+        New-Item (Join-Path $script:SbRoot 'A\B') -Force | Out-Null
+        Set-ItemProperty (Join-Path $script:SbRoot 'A\B') -Name V -Value 7 -Type DWord
+        $p = @(Get-TweakPreview @('t-dword') $script:cat)[0]
+        $a = @($p.actions)[0]
+        Assert-Equal $a.type 'registry' 'type'; Assert-Equal $a.path 'HKCU:\A\B' 'path'; Assert-Equal $a.name 'V' 'name'
+        Assert-Equal $a.currentSet $true 'currentSet'; Assert-Equal $a.current '7' 'current'; Assert-Equal $a.new '0' 'new'
+        Assert-Equal $a.restoreDeletes $false 'restoreDeletes'; Assert-Equal $a.restore '7' 'restore'; Assert-Equal $a.alreadyInPlace $false 'in place'
+    }
+    It 'reports a value that is not set: "deleted again" on turning off (the catalog off value is NOT what comes back)' {
+        $a = @((@(Get-TweakPreview @('t-dword') $script:cat)[0]).actions)[0]
+        Assert-Equal $a.currentSet $false 'not set'; Assert-Equal $a.restoreDeletes $true 'delete'
+        if ($null -ne $a.current -or $null -ne $a.restore) { throw 'no current/restore value expected' }
+    }
+    It 'matches what Set-Tweak then really does on revert' {
+        $a = @((@(Get-TweakPreview @('t-policy') $script:cat)[0]).actions)[0]
+        Assert-Equal $a.restoreDeletes $true 'preview says deleted'
+        Set-Tweak 't-policy' $true -CatalogPath $script:cat | Out-Null
+        Set-Tweak 't-policy' $false -CatalogPath $script:cat | Out-Null
+        if ($null -ne (Get-Sb 'Pol' 'P')) { throw 'the value should be deleted again, as previewed' }
+    }
+    It 'shows a DWord 0xFFFFFFFF as 4294967295 and a string as is, and flags a value already in place' {
+        $a = @((@(Get-TweakPreview @('t-big') $script:cat)[0]).actions)[0]
+        Assert-Equal $a.new '4294967295' 'unsigned'
+        New-Item (Join-Path $script:SbRoot 'Mouse') -Force | Out-Null
+        Set-ItemProperty (Join-Path $script:SbRoot 'Mouse') -Name S -Value '0' -Type String
+        $s = @((@(Get-TweakPreview @('t-string') $script:cat)[0]).actions)[0]
+        Assert-Equal $s.current '0' 'string current'; Assert-Equal $s.alreadyInPlace $true 'in place'
+    }
+    It 'previews a regkey and tells whether turning off deletes it' {
+        $a = @((@(Get-TweakPreview @('t-key') $script:cat)[0]).actions)[0]
+        Assert-Equal $a.type 'regkey' 'type'; Assert-Equal $a.currentSet $false 'missing'; Assert-Equal $a.restoreDeletes $true 'deleted again'
+        New-Item (Join-Path $script:SbRoot 'Classes\Menu\Inproc') -Force | Out-Null
+        $b = @((@(Get-TweakPreview @('t-key') $script:cat)[0]).actions)[0]
+        Assert-Equal $b.currentSet $true 'exists'; Assert-Equal $b.restoreDeletes $false 'kept'
+    }
+    It 'writes nothing' {
+        Get-TweakPreview @('t-dword', 't-policy', 't-key') $script:cat | Out-Null
+        if (@(Get-ChildItem $script:SbRoot -Recurse -ErrorAction SilentlyContinue).Count) { throw 'the preview created registry keys' }
+        if (Test-Path $script:TweakStatePath) { throw 'the preview wrote the state file' }
+    }
+    It 'carries admin, reboot and risk facts, skips unknown ids and never throws on an unknown action type' {
+        $l = @(Get-TweakPreview @('nope', 't-multi', 't-risky') $script:cat)
+        Assert-Equal $l.Count 2 'unknown id skipped'
+        Assert-Equal $l[1].risk 'risky' 'risk'; Assert-Equal $l[1].needsAdmin $false 'HKCU only'
+        Assert-Equal @($l[0].actions).Count 2 'both actions'
+        Assert-Equal @($l[0].actions)[1].type 'bogus' 'unknown type is reported, not thrown'
+    }
+    It 'previews service, power plan, DNS, Defender and VBS actions as readable data (read-only on this PC)' {
+        $j = '{"version":1,"categories":["general"],"tweaks":[{"id":"nr","category":"general","risk":"advanced","recommended":false,"needsReboot":true,"actions":[' +
+             '{"type":"service","name":"KbNoSuchService123","on":"Disabled","off":"Auto"},{"type":"powerplan"},{"type":"dns","servers":["1.1.1.1","1.0.0.1"]},{"type":"defender"},{"type":"vbs"}]}]}'
+        $f = Join-Path ([IO.Path]::GetTempPath()) ("kb_cat3_" + [guid]::NewGuid().ToString('N') + '.json')
+        [IO.File]::WriteAllText($f, $j)
+        try {
+            $p = @(Get-TweakPreview @('nr') $f)[0]
+            Assert-Equal $p.needsAdmin $true 'needs admin'; Assert-Equal $p.needsReboot $true 'reboot'
+            $acts = @($p.actions)
+            Assert-Equal (@($acts | ForEach-Object { $_.type }) -join ',') 'service,powerplan,dns,defender,vbs' 'types in order'
+            Assert-Equal $acts[0].found $false 'missing service'; Assert-Equal $acts[0].new 'Disabled' 'service new'; Assert-Equal $acts[0].restore 'Auto' 'service restore'
+            Assert-Equal $acts[2].servers '1.1.1.1, 1.0.0.1' 'dns servers'
+            Assert-Equal ($acts[4].PSObject.Properties.Name -contains 'currentOn') $true 'vbs state field'
+            Assert-Equal ($acts[3].PSObject.Properties.Name -contains 'currentOn') $true 'defender state field'
+        } finally { Remove-Item $f -Force }
+    }
+    It 'previews the real catalog without throwing and without writing' {
+        $real = Join-Path $PSScriptRoot '..\config\tweaks.json'
+        $ids = @((Get-TweakCatalog $real).tweaks | ForEach-Object { $_.id })
+        $l = @(Get-TweakPreview $ids $real)
+        Assert-Equal $l.Count $ids.Count 'one preview per tweak'
+        foreach ($p in $l) { foreach ($a in @($p.actions)) { if ($a.PSObject.Properties['error']) { throw "$($p.id): $($a.error)" } } }
+    }
+    It 'Get-RecommendedTweaks lists the same tweaks Set-RecommendedTweaks would try' {
+        $ids = @(Get-RecommendedTweaks $script:cat | ForEach-Object { $_.id }) | Sort-Object
+        Assert-Equal ($ids -join ',') 't-dword,t-policy' 'safe recommended and applicable only'
+    }
+}

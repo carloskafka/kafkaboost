@@ -305,14 +305,100 @@ function Set-Tweak([string]$Id, [bool]$Enable, [switch]$AllowRisky, [string]$Cat
     }
 }
 
-# Applies every tweak that is marked recommended AND safe and is not active yet. Returns one result per tweak tried.
-function Set-RecommendedTweaks([string]$CatalogPath) {
+# The tweaks "Apply recommended" works on: marked recommended AND safe, available on this Windows build and not active yet.
+function Get-RecommendedTweaks([string]$CatalogPath) {
     $cat = Get-TweakCatalog $CatalogPath; $state = Get-TweakState; $build = Get-WindowsBuild
     foreach ($t in $cat.tweaks) {
         if ($t.risk -ne 'safe' -or -not $t.recommended) { continue }
         if (-not (Test-TweakApplicable $t $build)) { continue }
         if ((Get-TweakStatus $t $state $build) -eq 'active') { continue }
+        $t
+    }
+}
+
+# Applies every tweak that is marked recommended AND safe and is not active yet. Returns one result per tweak tried.
+function Set-RecommendedTweaks([string]$CatalogPath) {
+    foreach ($t in @(Get-RecommendedTweaks $CatalogPath)) {
         Set-Tweak $t.id $true -CatalogPath $CatalogPath
-        $state = Get-TweakState
+    }
+}
+
+# ---------------------------------------------------------------- preview (read-only)
+# What would change, before anything is written: for each action the current value on this PC, the new value and what turning the tweak
+# off puts back. Reads only (registry, service list, power plan, DNS, Defender, hypervisor state); needs no administrator rights.
+# "restore" is what Invoke-ActionRevert will do: the value recorded at apply time is the current value, so a value that is not set now is
+# deleted again, and a value that is set now is written back as it is.
+
+# DWord values come back as Int32; show them the way the catalog and regedit do (unsigned).
+function Format-RegDisplay($Value, [string]$Kind) {
+    if ($Kind -eq 'DWord') { return [string][BitConverter]::ToUInt32([BitConverter]::GetBytes([int](ConvertTo-DwordInt $Value)), 0) }
+    return [string]$Value
+}
+
+function Get-ActivePowerPlanName {
+    $o = (& powercfg /getactivescheme) -join ' '
+    if ($o -match '\(([^)]+)\)\s*$') { return $Matches[1] }
+    return $null
+}
+
+function Get-ActionPreview($a) {
+    switch ($a.type) {
+        'registry' {
+            $cur = Read-RegValue $a.path $a.name
+            $curText = if ($cur.exists) { Format-RegDisplay $cur.value $cur.kind } else { $null }
+            return [pscustomobject]@{
+                type = 'registry'; path = $a.path; name = $a.name; kind = $a.kind
+                currentSet = [bool]$cur.exists; current = $curText; new = (Format-RegDisplay $a.on $a.kind)
+                alreadyInPlace = (Test-RegEqual $cur $a.on $a.kind)
+                restoreDeletes = (-not $cur.exists); restore = $curText
+            }
+        }
+        'regkey' {
+            $exists = Test-Path -LiteralPath (Resolve-RegPath $a.path)
+            return [pscustomobject]@{ type = 'regkey'; path = $a.path; currentSet = $exists; alreadyInPlace = $exists; restoreDeletes = (-not $exists) }
+        }
+        'service' {
+            $s = Get-CimInstance Win32_Service -Filter "Name='$($a.name)'" -ErrorAction SilentlyContinue
+            return [pscustomobject]@{
+                type = 'service'; name = $a.name; found = [bool]$s; current = $(if ($s) { [string]$s.StartMode } else { $null })
+                running = $(if ($s) { $s.State -eq 'Running' } else { $false }); new = [string]$a.on; restore = $(if ($s) { [string]$s.StartMode } else { [string]$a.off })
+            }
+        }
+        'powerplan' {
+            return [pscustomobject]@{ type = 'powerplan'; current = (Get-ActivePowerPlanName); currentGuid = (Get-ActivePowerGuid); new = 'Ultimate Performance / High performance'; restore = (Get-ActivePowerPlanName) }
+        }
+        'dns' {
+            $ads = @(foreach ($ad in (Get-DnsAdapters)) {
+                $st = Get-StaticDnsServers $ad.InterfaceGuid
+                [pscustomobject]@{ name = [string]$ad.Name; current = [string]$st; restoreAutomatic = (-not $st) }
+            })
+            return [pscustomobject]@{ type = 'dns'; servers = (@($a.servers) -join ', '); adapters = $ads }
+        }
+        'defender' {
+            $off = $null; try { $off = [bool](Get-MpPreference).DisableRealtimeMonitoring } catch { }
+            return [pscustomobject]@{ type = 'defender'; currentOn = $(if ($null -eq $off) { $null } else { -not $off }) }
+        }
+        'vbs' {
+            $on = $null; try { $on = [bool](Get-CimInstance Win32_ComputerSystem).HypervisorPresent } catch { }
+            return [pscustomobject]@{ type = 'vbs'; currentOn = $on }
+        }
+        default { return [pscustomobject]@{ type = [string]$a.type } }
+    }
+}
+
+# One entry per tweak id (ids that are not in the catalog are skipped). Never throws: an action that cannot be read carries `error`.
+function Get-TweakPreview([string[]]$Ids, [string]$CatalogPath) {
+    $cat = Get-TweakCatalog $CatalogPath; $state = Get-TweakState; $build = Get-WindowsBuild
+    foreach ($id in @($Ids | Where-Object { $_ })) {
+        $t = $cat.tweaks | Where-Object { $_.id -eq $id } | Select-Object -First 1
+        if (-not $t) { continue }
+        $acts = @(foreach ($a in $t.actions) {
+            try { Get-ActionPreview $a } catch { [pscustomobject]@{ type = [string]$a.type; error = $_.Exception.Message } }
+        })
+        $status = try { Get-TweakStatus $t $state $build } catch { 'error' }
+        [pscustomobject]@{
+            id = $t.id; risk = $t.risk; recommended = [bool]$t.recommended; needsReboot = [bool]$t.needsReboot
+            needsAdmin = (Test-TweakNeedsAdmin $t); status = $status; actions = $acts
+        }
     }
 }
