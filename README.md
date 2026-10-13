@@ -16,7 +16,7 @@ It lowers the CPU's heat (voltage, boost ratios, power limits) and makes sure th
 | Result on the reference laptop (19-min CS2 sessions) | Before | After |
 |---|---|---|
 | Peak CPU temperature | 99–100 °C | **90 °C**, no thermal throttling |
-| Average CPU temperature | not measured | about 79 °C (flat for the whole session) |
+| Average CPU temperature | 90 °C | about 79 °C (flat for the whole session) |
 | Peak package power | 139 W | 73 W |
 | Peak P-core clock | 5.39 GHz | 4.69 GHz (47x) |
 
