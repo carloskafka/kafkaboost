@@ -16,6 +16,8 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
     await click('[data-view=optimizations]'); await sleep(400);
     check('windows-only panel replaces Optimizations', await visible('windowsOnly') && !(await visible('optimizations')));
     check('windows-only panel names the OS', (await q('#windowsOnlyText')).includes('Linux') || (await q('#windowsOnlyText')).includes('macOS'), await q('#windowsOnlyText'));
+    await click('[data-view=sensors]'); await sleep(400);
+    check('windows-only panel replaces Sensors', await visible('windowsOnly') && !(await visible('sensors')));
     await click('[data-view=settings]'); await sleep(400);
     check('Settings still works on this OS', await visible('settings'));
     check('Windows-only settings are hidden', !(await visible('thermalCard')));
@@ -129,6 +131,43 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
   check('cleaning reports what was freed', (await q('#cleanResult')).startsWith('Freed'), await q('#cleanResult'));
   check('last cleanup time is saved', !!settings.get().lastCleanup);
   check('sizes read zero after cleaning', (await js(win, "document.querySelector('.clean-row[data-id=user-temp] .clean-size').textContent")).startsWith('0'));
+
+  // sensors (demo: canned readings; support starts as not installed so the consent card can be exercised)
+  const rows = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
+  const reads = () => js(win, 'KB.sensorReads || 0');
+  const wasMin = win.isMinimized(); if (wasMin) { win.restore(); await sleep(600); }   // a minimized page is hidden, and a hidden page does not poll
+  await click('[data-view=sensors]'); await sleep(1200);
+  check('Sensors asks for consent before anything is downloaded', await visible('sensorsGet') && !(await visible('sensorsMain')) && (await js(win, "document.getElementById('sensorsGetBtn').disabled")) === true, await q('#sensorsGetWhat'));
+  check('the consent text names the license, the fingerprint and the download folder', (await q('#sensorsGetWhat')).includes('MPL-2.0') && (await q('#sensorsGetDetails')).includes('SHA-256') && (await q('#sensorsGetDetails')).includes('LegionTuning'), await q('#sensorsGetDetails'));
+  check('the intro says LatencyMon is still needed and the driver note names PawnIO', (await q('#sensors .page-head p')).includes('LatencyMon') && (await visible('sensorsDriver')) && (await q('#sensorsDriver p')).includes('PawnIO'));
+  await click('#sensorsConsent'); await sleep(200);
+  check('ticking the checkbox enables the download button', (await js(win, "document.getElementById('sensorsGetBtn').disabled")) === false);
+  await click('#sensorsGetBtn'); await sleep(2600);
+  check('after the download the live cards appear', await visible('sensorsMain') && !(await visible('sensorsGet')) && (await rows('.sensors-group')) === 5, await rows('.sensors-group'));
+  check('sensors are grouped: CPU, graphics card, board, memory, disks', (await js(win, "[...document.querySelectorAll('.sensors-group')].map((e) => e.textContent).join('|')")) === 'CPU|Graphics card|Motherboard and fans|Memory|Disks');
+  check('demo data is labelled as not from this PC', await visible('sensorsDemo'));
+  const tempNow = () => js(win, "document.querySelector('.srow[data-type=Temperature] .sval').textContent");
+  const t0 = await tempNow();
+  check('temperatures show degrees and the min/max columns are filled', t0.includes('°C') && (await js(win, "document.querySelector('.srow[data-type=Temperature] .smin').textContent")).includes('°C'), t0);
+  await sleep(4200);
+  check('the values refresh by themselves', (await tempNow()) !== t0, t0 + ' -> ' + (await tempNow()));
+  check('a warm or hot temperature carries a word, not only a color', (await js(win, "[...document.querySelectorAll('.srow.t-warm .sval, .srow.t-hot .sval')].every((e) => /warm|hot/.test(e.textContent))")) === true);
+  await click('#sensorsPause'); await sleep(300);
+  const paused = await reads(); await sleep(3500);
+  check('Pause stops the readings', (await reads()) === paused && (await q('#sensorsPause')) === 'Resume', paused);
+  await click('#sensorsPause'); await sleep(2800);
+  check('Resume reads again', (await reads()) > paused);
+  await click('#sensorsCopy'); await sleep(500);
+  check('Copy snapshot confirms', (await q('#sensorsResult')).includes('copied'), await q('#sensorsResult'));
+  await click('#sensorsSave'); await sleep(500);
+  check('Save snapshot confirms with a file name', (await q('#sensorsResult')).includes('kafkaboost-sensors.json'), await q('#sensorsResult'));
+  await click('[data-view=settings]'); await sleep(400);
+  const away = await reads(); await sleep(3500);
+  check('leaving the Sensors screen stops the readings', (await reads()) === away, away);
+  await click('[data-view=sensors]'); await sleep(2800);
+  check('coming back starts reading again', (await reads()) > away);
+  await click('[data-view=settings]'); await sleep(300);
+  if (wasMin) win.minimize();
 
   // apps manager (demo: a fake winget with 7 installed apps, 9 removable Store apps)
   const cardBtn = (id) => `document.querySelector('.app-card[data-id="${id}"] .btn')`;

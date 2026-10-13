@@ -34,6 +34,8 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     await js(win, "document.querySelector('.tweaks-head').scrollIntoView({ block: 'start' }); 0"); await sleep(300); await shot(win, out('tweaks'));
     await click('[data-view=cleanup]'); await sleep(1500); await shot(win, out('cleanup'));
     await click('[data-view=apps]'); for (let i = 0; i < 50 && (await js(win, "document.getElementById('apps').hidden")); i++) await sleep(100); await sleep(2200); await shot(win, out('apps'));
+    demo.state.sensorsInstalled = true;          // the consent card is covered by the UI test; the shot shows the live cards
+    await click('[data-view=sensors]'); for (let i = 0; i < 50 && (await js(win, "document.getElementById('sensorsMain').hidden || !document.querySelector('#sensorsGroups .srow')")); i++) await sleep(100); await sleep(600); await shot(win, out('sensors'));
     await click('[data-view=optimizations]'); await sleep(400);
     await click('#openThrottle'); await sleep(900);
     const ids = ['detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify'];
