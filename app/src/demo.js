@@ -280,6 +280,32 @@ function demoStep(step, opts = {}, configDir) {
   return STEP[step] || { logs: [], res: { ok: false, message: 'Not available in demo mode: ' + step } };
 }
 
+// Update flow (demo): kind = 'installed' (electron-updater path) | 'clone' (download + checksum ok) | 'clone-mismatch' | 'clone-nosums' | 'noinstaller'.
+// Nothing is downloaded or started; the flags record what the UI asked for (the UI test reads them).
+function resetUpdate(kind) { state.update = { kind: kind || 'clone', installerStarted: false, restarted: false, folderShown: false, downloads: 0 }; }
+resetUpdate('clone');
+function updateCheck() {
+  const k = state.update.kind;
+  const r = {
+    ok: true, current: '1.0.0', latest: '1.1.0', newer: true, url: 'https://github.com/carloskafka/legion-14900hx-throttlestop/releases/tag/v1.1.0',
+    releases: [{ version: '1.1.0', name: 'v1.1.0', date: '2026-10-20T00:00:00Z', notes: [{ type: 'h', text: "What's new" }, { type: 'li', text: 'A demo release note' }] }],
+    canInstall: k === 'installed', mode: k === 'installed' ? 'auto' : k === 'noinstaller' ? 'manual' : 'download',
+    explain: k === 'installed' ? [] : k === 'noinstaller' ? ['update.why.source', 'update.why.noInstaller', 'update.why.clone'] : ['update.why.source', 'update.why.clone'],
+    installer: k === 'noinstaller' ? null : { name: 'KafkaBoost-Setup-1.1.0.exe', size: 98 * 1048576 }, checksum: k !== 'noinstaller' && k !== 'clone-nosums'
+  };
+  return r;
+}
+async function updateDownload(send, sleep, signal) {
+  const k = state.update.kind; state.update.downloads++;
+  for (let p = 0; p <= 100; p += 10) {
+    if (signal && signal.aborted) return { ok: false, state: 'cancelled' };
+    send({ stage: 'downloading', percent: p }); await sleep(200);
+  }
+  if (k === 'clone-mismatch') return { ok: false, state: 'mismatch', name: 'KafkaBoost-Setup-1.1.0.exe' };
+  if (k === 'clone-nosums') return { ok: true, state: 'nochecksum', name: 'KafkaBoost-Setup-1.1.0.exe' };
+  return { ok: true, state: 'verified', name: 'KafkaBoost-Setup-1.1.0.exe' };
+}
+
 const { appsService, demoAppsFile } = require('./demo-apps');
 
-module.exports = { demoStep, state, appsService, demoAppsFile, resetCs2, CS2_DEMO_EXE };
+module.exports = { demoStep, state, updateCheck, updateDownload, resetUpdate, appsService, demoAppsFile, resetCs2, CS2_DEMO_EXE };

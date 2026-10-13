@@ -291,3 +291,12 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 .cf-body h4.cf-h { margin: 16px 0 4px; font-size: 14.5px; color: var(--text); }
 .cf-body .cf-meta { margin: 4px 0 6px; font-size: 12.5px; color: var(--muted); }
 .cf-body pre.cf-mono { margin: 6px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--text-soft); font: 12.5px/1.5 Consolas, "Cascadia Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---- update panel (Settings and the changelog dialog) ---- */
+.upd { margin-top: 10px; }
+.upd-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.upd-text { flex: 1 1 220px; font-weight: 600; }
+.upd-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.upd-why p { margin: 6px 0 0; color: var(--text-soft); font-size: 13px; }
+.upd-bar { width: 100%; height: 8px; margin-top: 10px; }
+.upd .result { margin-top: 10px; }

@@ -34,10 +34,10 @@
   }
 
   async function checkNow() {
-    const btn = $('checkUpdate'); btn.disabled = true; KB.showResult($('updateResult'), '', ''); $('updateActions').hidden = true;
+    const btn = $('checkUpdate'); btn.disabled = true; KB.showResult($('updateResult'), '', ''); $('updatePanel').hidden = true;
     const r = await window.kb.checkUpdate(); btn.disabled = false;
     if (!r.ok) { KB.showResult($('updateResult'), 'fail', t('settings.updateFailed', { error: r.error })); return; }
-    if (r.newer) { KB.showResult($('updateResult'), 'warn', t('settings.newer', { latest: r.latest, current: r.current })); $('updateActions').hidden = false; $('openRelease').dataset.url = r.url; KB.updates.banner(r); KB.updates.open(r, 'available'); }
+    if (r.newer) { KB.updates.reset(); KB.updates.mount($('updatePanel'), r); KB.updates.banner(r); }      // version text with its Download button on the right
     else KB.showResult($('updateResult'), 'ok', t('settings.upToDate', { version: r.current }));
   }
 
@@ -61,7 +61,6 @@
     $('sAutostart').addEventListener('change', () => applyAutostart($('sAutostart').checked));
     $('sCheckDaily').addEventListener('change', () => save({ checkForUpdates: $('sCheckDaily').checked }));
     $('checkUpdate').addEventListener('click', checkNow);
-    $('openRelease').addEventListener('click', () => window.kb.openExternal($('openRelease').dataset.url));
 
     $('mLogs').addEventListener('click', () => window.kb.openPath('logs'));
     $('mBackups').addEventListener('click', async () => { const r = await window.kb.openInstallDir(); if (!r.ok) maint('fail', t('common.failed')); });

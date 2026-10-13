@@ -486,7 +486,7 @@
             <label class="switch"><input type="checkbox" id="sCheckDaily"><span class="slider"></span></label>
           </div>
           <div id="updateResult" class="result" hidden></div>
-          <div class="actions left" id="updateActions" hidden><button id="openRelease" class="btn small" type="button" data-i18n="settings.download"></button></div>
+          <div id="updatePanel" class="upd" hidden></div>
         </div>
 
         <div class="card">
@@ -540,11 +540,9 @@
 <dialog id="changelog" class="dialog" aria-labelledby="clTitle">
 <h2 class="h2" id="clTitle"></h2>
 <div id="clBody" class="cl-body"></div>
-<div id="clProgress" class="result" hidden></div>
+<div id="clPanel" class="upd" hidden></div>
 <div class="actions">
 <button id="clLater" class="btn small" type="button" data-i18n="update.later"></button>
-<button id="clOpen" class="btn small" type="button" data-i18n="settings.download"></button>
-<button id="clInstall" class="btn small primary" type="button" data-i18n="update.install"></button>
 </div>
 </dialog>
 <script src="js/core.js"></script>
@@ -564,7 +562,8 @@
 <script src="js/hwinfologic.js"></script>
 <script src="js/hwinfo.js"></script>
 <script src="js/settings.js"></script>
-<script src="js/updates.js"></script>
+<script src="js/updatelogic.js"></script>
+  <script src="js/updates.js"></script>
   <script src="js/boot.js"></script>
 </body>
 </html>

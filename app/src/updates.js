@@ -14,7 +14,8 @@ const clean = (r) => ({
   name: String(r.name || r.tag_name || ''),
   date: r.published_at || r.created_at || null,
   body: String(r.body || '').slice(0, 20000),
-  url: r.html_url || ''
+  url: r.html_url || '',
+  assets: Array.isArray(r.assets) ? r.assets.filter((a) => a && typeof a.name === 'string').map((a) => ({ name: a.name, browser_download_url: a.browser_download_url, size: a.size })) : []
 });
 
 // Releases (GitHub API shape) -> the ones newer than `current`, newest first, drafts and pre-releases skipped.

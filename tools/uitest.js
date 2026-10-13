@@ -126,7 +126,7 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   check('no notice while the readings work', !(await visible('tilesNotice')));
   const tt0 = await tileTemp(); let tt1 = tt0;
   await until(async () => (tt1 = await tileTemp()) !== tt0);
-  check('the live tiles refresh by themselves', tt1 !== tt0, tt0 + ' -> ' + tt1);
+  check('the live tiles refresh by themselves', tt1 !== tt0, tt0 + ' -> ' + tt1 + ' | hidden=' + await js(win, 'document.hidden') + ' focus=' + await js(win, 'document.hasFocus()'));
   check('hardware cards: CPU, graphics, memory, storage, system', (await js(win, "document.querySelectorAll('.hw-card').length")) === 5 && (await q('.hw-card:nth-child(2)')).includes('RTX 4090') && (await q('.hw-card:nth-child(4)')).includes('NVMe') && (await q('.hw-card:nth-child(4)')).includes('1 TB'), await js(win, "[...document.querySelectorAll('.hw-card h3')].map((e) => e.textContent).join('|')"));
   check('no serial number on the hardware cards', !/serial/i.test(await js(win, "document.getElementById('hwCards').textContent")));
   await waitFor("/%$/.test(document.getElementById('levelPct').textContent)");
@@ -407,6 +407,58 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   await js(win, "document.querySelector('#bloatList .clean-row .btn').click(); 0"); await sleep(300); await click('#cfOk'); await sleep(1800);
   check('confirming removes that one app only', (await js(win, "document.querySelectorAll('#bloatList .clean-row').length")) === 8);
 
+  // ---- updates (demo: nothing is downloaded or installed; the flags in demo.state.update record what the UI asked for) ----
+  const upd = () => demo.state.update;
+  const panelText = () => js(win, "document.getElementById('updatePanel').textContent");
+  const hasBtn = (id) => js(win, `!!document.getElementById('updatePanel-${id}')`);
+  const checkNow = async (kind) => {
+    demo.resetUpdate(kind); await click('[data-view=settings]'); await sleep(200);
+    await js(win, "document.getElementById('updatePanel').hidden = true; document.getElementById('updatePanel').textContent = ''; 0");
+    await click('#checkUpdate'); await waitFor("!document.getElementById('updatePanel').hidden && document.getElementById('updatePanel').textContent.length > 0");
+  };
+  const dlgOpen = () => js(win, "document.getElementById('confirmDlg').open");
+
+  await checkNow('clone');
+  check('Check for updates shows the new version with its Download and install button, version text first', (await panelText()).includes('Version 1.1.0 is available (you have 1.0.0)') && (await hasBtn('download')), await panelText());
+  check('the Download button sits to the RIGHT of the version text, on the same row', await js(win, "(()=>{const t=document.querySelector('#updatePanel .upd-text').getBoundingClientRect(),b=document.getElementById('updatePanel-download').getBoundingClientRect();return b.left>=t.left+Math.min(t.width,100)&&b.top<t.bottom&&b.bottom>t.top&&b.left>t.left})()"));
+  check('it says plainly why there is no automatic update, and how to update a clone', (await panelText()).includes('source folder') && (await panelText()).includes('Automatic updates only exist in the installed version') && (await panelText()).includes('git pull') && (await panelText()).includes('separate installed copy'), await panelText());
+  check('there is no git pull button', !(await js(win, "[...document.querySelectorAll('#updatePanel button')].some((b) => /git/i.test(b.textContent))")));
+  check('the update banner is shown too', await visible('updateBanner'));
+  await click('#updatePanel-download');
+  await waitFor("!!document.querySelector('#updatePanel progress.upd-bar') && !!document.getElementById('updatePanel-cancel')");
+  check('while downloading: a progress bar, the percent and a Cancel button (nothing else to press)', (await panelText()).includes('Downloading the update') && !(await hasBtn('download')) && (await hasBtn('cancel')), await panelText());
+  await click('#updatePanel-cancel'); await waitFor("document.getElementById('updatePanel').textContent.includes('Download cancelled')");
+  check('Cancel stops it, says the partial file was deleted and installs nothing', (await panelText()).includes('partly downloaded file was deleted') && !upd().installerStarted && !(await dlgOpen()) && (await hasBtn('download')), await panelText());
+  await click('#updatePanel-download'); await waitFor("document.getElementById('confirmDlg').open");
+  const cbody = await q('#cfBody');
+  check('after a verified download a confirmation is asked first: closes the window, admin permission, SmartScreen, clone is a separate copy', cbody.includes('closes this window') && cbody.includes('administrator permission') && cbody.includes('SmartScreen') && cbody.includes('separate installed copy') && (await q('#cfTitle')).includes('1.1.0') && !upd().installerStarted, cbody);
+  await click('#cfCancel'); await waitFor("document.getElementById('updatePanel').textContent.includes('Nothing was installed')");
+  check('declining installs nothing and says the downloaded file was deleted', !upd().installerStarted && (await panelText()).includes('downloaded file was deleted') && (await hasBtn('download')), await panelText());
+  await click('#updatePanel-download'); await waitFor("document.getElementById('confirmDlg').open"); await click('#cfOk');
+  await until(async () => upd().installerStarted);
+  check('accepting starts the installer exactly once (a fake here) and says so', upd().installerStarted === true && (await panelText()).includes('Starting the installer') && upd().downloads === 3, 'downloads=' + upd().downloads);
+
+  await checkNow('clone-mismatch'); await click('#updatePanel-download');
+  await waitFor("document.getElementById('updatePanel').textContent.includes('does not match')");
+  check('checksum mismatch: the file is deleted, an error is shown, no confirmation, nothing started', (await panelText()).includes('does not match the release') && (await panelText()).includes('deleted') && !(await dlgOpen()) && !upd().installerStarted && (await hasBtn('download')), await panelText());
+
+  await checkNow('clone-nosums'); await click('#updatePanel-download');
+  await waitFor("document.getElementById('updatePanel').textContent.includes('no usable checksum file')");
+  check('no checksum file: says it could not verify, will not run it, offers the folder and the release page, no install button', (await panelText()).includes('KafkaBoost will not run it') && (await panelText()).includes('SmartScreen') && (await hasBtn('folder')) && (await hasBtn('release')) && !(await hasBtn('download')) && !(await dlgOpen()) && !upd().installerStarted, await panelText());
+  await click('#updatePanel-folder'); await until(async () => upd().folderShown);
+  check('Show in folder asks the app to reveal the file (still nothing started)', upd().folderShown === true && !upd().installerStarted);
+
+  await checkNow('noinstaller');
+  check('release without an installer: no download button, the reason, the git pull hint and the release page', !(await hasBtn('download')) && (await hasBtn('release')) && (await panelText()).includes('no installer file attached yet') && (await panelText()).includes('git pull'), await panelText());
+
+  await checkNow('installed');
+  check('installed build: "Download the update", no explanation of why it cannot update', (await hasBtn('install')) && !(await hasBtn('download')) && !(await panelText()).includes('git pull'), await panelText());
+  await click('#updatePanel-install'); await waitFor("!!document.getElementById('updatePanel-restart')");
+  check('installed build: after the download the button becomes "Restart and update"', (await q('#updatePanel-restart')) === 'Restart and update' && (await panelText()).includes('downloaded and checked'), await panelText());
+  await click('#updatePanel-restart'); await until(async () => upd().restarted);
+  check('Restart and update asks the updater to restart (one path), nothing else is started', upd().restarted === true && !upd().installerStarted);
+  demo.resetUpdate('clone');
+
   await click('#openThrottle'); await sleep(900);
   check('wizard opens on step 0', await visible('wizard') && (await q('#title')) === 'Detect your hardware', await q('#title'));
   check('Optimizations stays highlighted in the sidebar while in the wizard', (await js(win, "document.querySelector('.nav-btn.active').dataset.view")) === 'optimizations');
@@ -416,7 +468,7 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   await sleep(300);
   check('changelog dialog opens with the version title', (await q('#clTitle')).includes('0.2.0'), await q('#clTitle'));
   check('changelog renders bullets and keeps HTML inert', (await js(win, "document.querySelectorAll('#clBody li').length")) === 1 && (await js(win, "document.querySelectorAll('#clBody img, #clBody b').length")) === 0 && !(await js(win, 'window.__pwned')));
-  check('install button hidden when the build cannot self-update', (await js(win, "document.getElementById('clInstall').hidden")) === true);
+  check('the dialog carries the same update panel: for a build without an installer only the release page button', (await js(win, "[...document.querySelectorAll('#clPanel button')].map((b) => b.dataset.act).join(',')")) === 'release' && !(await js(win, "document.getElementById('clPanel').hidden")));
   await click('#clLater'); await sleep(200);
   check('changelog closes', (await js(win, "document.getElementById('changelog').open")) === false);
 
