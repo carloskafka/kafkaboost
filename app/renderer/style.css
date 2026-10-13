@@ -273,3 +273,14 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 .hw-card h3 { margin: 0 0 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
 .hw-card .hw-main { font-weight: 600; overflow-wrap: anywhere; }
 .hw-card .hw-sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; overflow-wrap: anywhere; }
+
+/* ---- Counter-Strike 2 preset ---- */
+.cs2-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.cs2-head .h2 { margin: 0; }
+.view > .back { align-self: flex-start; }
+.cs2-path { overflow-wrap: anywhere; word-break: break-all; }
+.clean-text code { align-self: flex-start; }
+.chip.tier-suggested { color: var(--ok); }
+.chip.tier-disputed { color: var(--warn); }
+.chip.tier-placebo { color: var(--muted); }
+.offscreen { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; }

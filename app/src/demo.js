@@ -99,6 +99,54 @@ function sensorStep(step) {
   return ok('msg.sensors.ok', {}, 'demo', { installed: true, admin: true, pawnio: true, cpuTemperature: true, count, source: 'Demo data', takenAt: new Date().toISOString().slice(0, 19), demo: true, groups });
 }
 
+// Counter-Strike 2 (demo): found through "Steam", a user autoexec.cfg already exists (so the backup path is exercised), nothing is written to disk.
+// state.cs2.found = false shows the "not found" screen. Messages carry the same codes and args as scripts/lib/Cs2.ps1.
+const CS2_DEMO_EXE = 'D:\\SteamLibrary\\steamapps\\common\\Counter-Strike Global Offensive\\game\\bin\\win64\\cs2.exe';
+const CS2_DEMO_CFG = 'D:\\SteamLibrary\\steamapps\\common\\Counter-Strike Global Offensive\\game\\csgo\\cfg';
+function resetCs2() { state.cs2 = { found: true, gpuHigh: false, exists: true, ours: false, backups: 0, hasOriginal: false }; }
+resetCs2();
+function cs2Catalog(configDir) { const c = JSON.parse(require('fs').readFileSync(require('path').join(configDir, 'cs2.json'), 'utf8')); return { autoexec: c.autoexec, launch: c.launch }; }
+function cs2Overview(opts, configDir) {
+  const c = state.cs2; const user = !!opts.cs2Exe;
+  const catalog = cs2Catalog(configDir);
+  if (!c.found && !user) return { found: false, source: 'steam', exe: null, others: [], steamPath: 'c:\\program files (x86)\\steam', libraryCount: 2, cfgDir: null, userExeInvalid: false, gpu: null, autoexec: null, catalog };
+  return {
+    found: true, source: user ? 'user' : 'steam', exe: opts.cs2Exe || CS2_DEMO_EXE, others: [], steamPath: user ? null : 'c:\\program files (x86)\\steam', libraryCount: user ? 0 : 2, cfgDir: CS2_DEMO_CFG, userExeInvalid: false,
+    gpu: { pref: c.gpuHigh ? 2 : null, high: c.gpuHigh, entry: true, recorded: c.gpuHigh, data: c.gpuHigh ? 'AppStatus=0;AutoHDREnable=2097;GpuPreference=2;' : 'AppStatus=0;AutoHDREnable=2097;' },
+    autoexec: { available: true, exists: c.exists, ours: c.ours, foreign: c.exists && !c.ours, backups: c.backups, hasOriginal: c.hasOriginal, file: CS2_DEMO_CFG + '\\autoexec.cfg' },
+    catalog
+  };
+}
+function cs2Step(step, opts, configDir) {
+  const c = state.cs2;
+  const res = (ok, code, args, message, data) => ({ logs: [code], res: { ok, code, args: args || {}, message, data } });
+  if (step === 'cs2-state') { const o = cs2Overview(opts, configDir); return res(true, o.found ? 'msg.cs2.found' : 'msg.cs2.notFound', {}, 'demo', o); }
+  if (!c.found && !opts.cs2Exe) return res(false, 'msg.cs2.badExe', {}, 'Choose the cs2.exe file.', null);
+  if (step === 'cs2-gpu') {
+    if (opts.cs2Mode === 'off') {
+      if (!c.gpuHigh) return res(false, 'msg.cs2.gpuNotOurs', {}, 'not ours', cs2Overview(opts, configDir).gpu);
+      c.gpuHigh = false; return res(true, 'msg.cs2.gpuReverted', {}, 'reverted', cs2Overview(opts, configDir).gpu);
+    }
+    if (c.gpuHigh) return res(true, 'msg.cs2.gpuAlready', {}, 'already', cs2Overview(opts, configDir).gpu);
+    c.gpuHigh = true; return res(true, 'msg.cs2.gpuApplied', {}, 'applied', cs2Overview(opts, configDir).gpu);
+  }
+  // cs2-autoexec
+  if (opts.cs2Mode === 'off') {
+    if (c.exists && !c.ours) return res(false, 'msg.cs2.autoexecNotOurs', {}, 'not ours', cs2Overview(opts, configDir).autoexec);
+    if (c.hasOriginal) { c.ours = false; c.exists = true; return res(true, 'msg.cs2.autoexecRestored', { backup: 'autoexec.cfg.bak_20261012_101500' }, 'restored', cs2Overview(opts, configDir).autoexec); }
+    if (c.exists) { c.exists = false; c.ours = false; return res(true, 'msg.cs2.autoexecRemoved', {}, 'removed', cs2Overview(opts, configDir).autoexec); }
+    return res(true, 'msg.cs2.autoexecNothing', {}, 'nothing', cs2Overview(opts, configDir).autoexec);
+  }
+  const cat = cs2Catalog(configDir).autoexec;
+  const ids = String(opts.cs2Options || '').split(',').filter(Boolean);
+  const bad = !ids.length || ids.some((id) => !cat.find((o) => o.id === id)) || (ids.includes('fpsmax') && !(Number(opts.cs2FpsMax) >= 30 && Number(opts.cs2FpsMax) <= 1000));
+  if (bad) return res(false, 'msg.cs2.badOptions', { detail: 'Choose at least one valid option.' }, 'bad options', null);
+  const backup = c.exists ? 'autoexec.cfg.bak_20261012_101500' : null;
+  if (c.exists) { c.backups++; if (!c.ours) c.hasOriginal = true; }
+  c.exists = true; c.ours = true;
+  return res(true, backup ? 'msg.cs2.autoexecWrittenBackup' : 'msg.cs2.autoexecWritten', { backup }, 'written', cs2Overview(opts, configDir).autoexec);
+}
+
 // Returns { logs, res } for a step.
 // Tweaks in demo mode: the real catalog, with a believable starting state (most recommended ones already on).
 const tweakState = {};
@@ -161,6 +209,7 @@ function demoStep(step, opts = {}, configDir) {
     const l = healthReport().live;
     return { logs: [], res: { ok: true, code: 'msg.telemetry.ok', args: {}, message: 'read', data: { available: true, takenAt, live: { ...l, packageTempC: l.packageTempC + (telemetryTick % 4) } } } };
   }
+  if (step.startsWith('cs2-')) return cs2Step(step, opts, configDir);
   if (step.startsWith('sensors-')) return sensorStep(step);
   if (step.startsWith('hwinfo-')) return hwinfoStep(step, opts);
   if (step === 'restore-list') return { logs: [], res: { ok: true, code: 'msg.restore.listed', args: { count: restorePoints.length }, message: 'ok', data: { admin: true, points: restorePoints.slice() } } };
@@ -203,4 +252,4 @@ function demoStep(step, opts = {}, configDir) {
 
 const { appsService, demoAppsFile } = require('./demo-apps');
 
-module.exports = { demoStep, state, appsService, demoAppsFile };
+module.exports = { demoStep, state, appsService, demoAppsFile, resetCs2, CS2_DEMO_EXE };

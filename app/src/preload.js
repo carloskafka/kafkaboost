@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('kb', {
     copy: (snapshot) => ipcRenderer.invoke('sensors:copy', snapshot),
     save: (snapshot) => ipcRenderer.invoke('sensors:save', snapshot)
   },
+  cs2: {
+    pickExe: () => ipcRenderer.invoke('dialog:cs2exe')
+  },
   pickFolder: () => ipcRenderer.invoke('dialog:folder'),
   relaunchAdmin: () => ipcRenderer.invoke('app:relaunchAdmin'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url)

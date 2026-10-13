@@ -14,7 +14,8 @@ const DEFAULTS = Object.freeze({
   installDir: '',             // ThrottleStop folder ('' = automatic)
   checkForUpdates: true,      // look at GitHub Releases every few hours (a lookup only; nothing downloads without a click)
   lastSeenVersion: '',        // version whose "what's new" was already shown
-  lastCleanup: null           // ISO time of the last cleanup run
+  lastCleanup: null,          // ISO time of the last cleanup run
+  cs2Exe: ''                  // a cs2.exe the user picked when Steam did not reveal it ('' = detect through Steam)
 });
 
 const isBool = (v) => typeof v === 'boolean';
@@ -28,7 +29,9 @@ const RULES = Object.freeze({
   installDir: (v) => typeof v === 'string' && v.length <= 260,
   checkForUpdates: isBool,
   lastSeenVersion: (v) => typeof v === 'string' && v.length <= 40,
-  lastCleanup: (v) => v === null || (typeof v === 'string' && v.length <= 40)
+  lastCleanup: (v) => v === null || (typeof v === 'string' && v.length <= 40),
+  // a drive path ending in cs2.exe, no ".." / "." parts, no wildcard characters (PowerShell validates it again)
+  cs2Exe: (v) => v === '' || (typeof v === 'string' && v.length <= 260 && /^[A-Za-z]:[\\/](?:[^\[\]*?<>|"]*[\\/])?cs2\.exe$/i.test(v) && !/(^|[\\/])\.\.?([\\/]|$)/.test(v))
 });
 
 // Keeps only known keys with valid values; everything else falls back to the default.

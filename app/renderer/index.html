@@ -165,6 +165,13 @@
             <ul class="opt-facts"><li data-i18n="opt.cpu.fact1"></li><li data-i18n="opt.cpu.fact2"></li><li data-i18n="opt.cpu.fact3"></li></ul>
             <div class="actions"><button id="openThrottle" class="btn primary" type="button" data-i18n="opt.cpu.open">Open setup</button></div>
           </article>
+          <article class="opt" id="optCs2">
+            <div class="opt-top"><span class="chip level" data-i18n="opt.cs2.level">Gaming</span><span class="chip" data-i18n="opt.cs2.optional">Optional</span></div>
+            <h3 data-i18n="opt.cs2.title">Counter-Strike 2</h3>
+            <p class="muted" data-i18n="opt.cs2.desc"></p>
+            <ul class="opt-facts"><li data-i18n="opt.cs2.fact1"></li><li data-i18n="opt.cs2.fact2"></li><li data-i18n="opt.cs2.fact3"></li></ul>
+            <div class="actions"><button id="openCs2" class="btn primary" type="button" data-i18n="opt.cs2.open">Open</button></div>
+          </article>
         </div>
               <div class="tweaks-head">
           <h2 class="h2" data-i18n="tweaks.title"></h2>
@@ -177,6 +184,69 @@
         <div id="tweakSummary" class="muted"></div>
         <div id="tweakResult" class="result" hidden></div>
         <div id="tweakGrid" class="tweak-grid"></div>
+      </section>
+
+      <!-- ===== Counter-Strike 2 preset (opened from Optimizations) ===== -->
+      <section id="cs2" class="view" hidden>
+        <button id="backFromCs2" class="btn small ghost back" type="button" data-i18n="wizard.back">‹ Optimizations</button>
+        <div class="page-head">
+          <div>
+            <div class="kicker" data-i18n="cs2.kicker">Gaming</div>
+            <h1 data-i18n="cs2.title">Counter-Strike 2</h1>
+            <p class="muted" data-i18n="cs2.intro"></p>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="h2" data-i18n="cs2.honest.title"></h2>
+          <ul class="changes">
+            <li data-i18n="cs2.honest.1"></li><li data-i18n="cs2.honest.2"></li><li data-i18n="cs2.honest.3"></li><li data-i18n="cs2.honest.4"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h2 class="h2" data-i18n="cs2.loc.title"></h2>
+          <p id="cs2Loc" class="muted"></p>
+          <p><code id="cs2Exe" class="cs2-path"></code></p>
+          <div id="cs2LocResult" class="result" hidden></div>
+          <div class="actions left">
+            <button id="cs2Pick" class="btn small" type="button" data-i18n="cs2.loc.pick"></button>
+            <button id="cs2Rescan" class="btn small ghost" type="button" data-i18n="cs2.loc.rescan"></button>
+            <button id="cs2Forget" class="btn small ghost" type="button" data-i18n="cs2.loc.forget" hidden></button>
+          </div>
+        </div>
+        <div id="cs2Gpu" class="card" hidden>
+          <div class="cs2-head"><h2 class="h2" data-i18n="cs2.gpu.title"></h2><span id="cs2GpuStatus" class="chip status"></span></div>
+          <p class="muted" data-i18n="cs2.gpu.desc"></p>
+          <p class="muted" data-i18n="cs2.gpu.where"></p>
+          <div id="cs2GpuResult" class="result" hidden></div>
+          <div class="actions left">
+            <button id="cs2GpuApply" class="btn primary" type="button" data-i18n="cs2.gpu.apply"></button>
+            <button id="cs2GpuRevert" class="btn" type="button" data-i18n="cs2.gpu.revert"></button>
+          </div>
+        </div>
+        <div id="cs2Cfg" class="card" hidden>
+          <div class="cs2-head"><h2 class="h2" data-i18n="cs2.cfg.title"></h2><span id="cs2CfgStatus" class="chip status"></span></div>
+          <p class="muted" data-i18n="cs2.cfg.desc"></p>
+          <p><code id="cs2CfgPath" class="cs2-path"></code></p>
+          <div id="cs2CfgList" class="clean-list"></div>
+          <p class="muted" data-i18n="cs2.cfg.loadNote"></p>
+          <div id="cs2CfgResult" class="result" hidden></div>
+          <div class="actions left">
+            <button id="cs2CfgWrite" class="btn primary" type="button" data-i18n="cs2.cfg.write"></button>
+            <button id="cs2CfgRestore" class="btn" type="button" data-i18n="cs2.cfg.restore"></button>
+          </div>
+        </div>
+        <div id="cs2Launch" class="card" hidden>
+          <h2 class="h2" data-i18n="cs2.launch.title"></h2>
+          <p class="muted" data-i18n="cs2.launch.desc"></p>
+          <div id="cs2LaunchList" class="clean-list"></div>
+          <div class="inline wide">
+            <input id="cs2LaunchStr" class="field grow" type="text" readonly data-i18n-title="cs2.launch.string">
+            <button id="cs2Copy" class="btn primary" type="button" data-i18n="cs2.launch.copy"></button>
+          </div>
+          <div id="cs2CopyResult" class="result" hidden></div>
+          <p class="muted" data-i18n="cs2.launch.where"></p>
+          <p class="muted" data-i18n="cs2.launch.noVdf"></p>
+        </div>
       </section>
 
       <!-- ===== CPU thermal tuning wizard (opened from Optimizations) ===== -->
@@ -477,6 +547,8 @@
   <script src="js/wizard.js"></script>
   <script src="js/restore.js"></script>
   <script src="js/optimizations.js"></script>
+<script src="js/cs2logic.js"></script>
+<script src="js/cs2.js"></script>
 <script src="js/cleanup.js"></script>
   <script src="js/apps.js"></script>
 <script src="js/sensorlogic.js"></script>
