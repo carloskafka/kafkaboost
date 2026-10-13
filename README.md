@@ -217,4 +217,8 @@ local/                 git-ignored: backups, evidence, experiments
 
 ## License
 
-No license has been chosen yet, so all rights are reserved by default. Open an issue if you want to reuse the code.
+KafkaBoost is open source under the [MIT License](LICENSE), copyright (c) 2026 carloskafka. The licence covers only the code in this repository.
+
+### Third-party software
+
+ThrottleStop, HWiNFO (proprietary, free for non-commercial use only) and LibreHardwareMonitor (MPL-2.0) are **not** part of this repository. KafkaBoost never bundles them; the app downloads them on demand from their official sources, and each keeps its own licence and terms.
