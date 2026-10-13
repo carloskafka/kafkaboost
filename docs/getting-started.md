@@ -50,6 +50,7 @@ Tick **Settings > Start with Windows** to have it start hidden at every logon. T
 - **Cleanup** measures temp files, Prefetch, Windows Update downloads, the thumbnail cache and the Recycle Bin first, and deletes
   only what you tick. Emptying the Recycle Bin cannot be undone and asks twice.
 - **Restore** shows your Windows restore points and can create one. The app makes one before your first tweak (Windows allows one per 24 hours).
+- **Counter-Strike 2** (open it from the card in *Optimizations*) has three optional parts: use the high-performance GPU for `cs2.exe` (Windows' own Graphics setting, undone with one click), a small `autoexec.cfg` (an existing one is backed up first and *Restore previous* puts it back), and launch options to copy into Steam. The page finds the game through Steam, or you pick `cs2.exe`. No FPS is promised and we did not test how any anti-cheat reacts to these settings; no game file is touched except `autoexec.cfg`.
 - **Updates:** the app checks GitHub Releases (a lookup only) and shows a banner with the changelog when a newer version exists.
   Turn it off in Settings.
 ## 4. After a Windows update

@@ -179,6 +179,25 @@ There is **no pinned hash**: HWiNFO ships a new build every few weeks, so a hash
 
 **Third-party note.** HWiNFO is proprietary freeware by REALiX ("FREEWARE for Non-Commercial use only" on its download page). KafkaBoost neither bundles nor redistributes it: the file comes from hwinfo.com on your click, and the only network request before that is the one page read when you press *Check*. We could not confirm on the official pages any limit on how long the free edition may share sensors in one session, so none is stated here; if HWiNFO stops sharing, the card shows it and *Start* restarts it.
 
+## Counter-Strike 2 preset (`config/cs2.json`): what is written where
+| Field | Meaning |
+|---|---|
+| `exeName`, `steamAppId`, `defaultFolder` | `cs2.exe`, 730 and `Counter-Strike Global Offensive`: used to find `steamapps\common\<folder>\game\bin\win64\cs2.exe` in every Steam library (the folder comes from `appmanifest_730.acf` when it is there) |
+| `autoexecMarker` | `// Written by KafkaBoost`: the first line of every file we write; restore acts only while it is present |
+| `autoexec` | the console lines the user can tick: `id`, `line`, a one-line `comment` that is written above it, and for `fps_max` a `param` with its bounds (30 to 1000). The page explains each in both languages (`cs2.cfg.opt.<id>`) |
+| `launch` | the launch options the page can show: `id`, `text`, `tier` (`suggested`, `disputed`, `placebo`) and whether it is ticked by default (only `+exec autoexec`) |
+
+**Everything the preset writes.** Nothing else is created, changed or deleted.
+| Where | What | Undo |
+|---|---|---|
+| `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, value named after the full path of `cs2.exe` | `GpuPreference=2;` (High performance) added to the existing data, other fields kept | *Put the previous setting back*: the recorded previous data is written back, or the value is removed if there was none. A value we did not write is never touched on revert |
+| `%ProgramData%\LegionTuning\state.json`, section `cs2` | the previous registry data, so the revert is exact | removed on revert |
+| `<game>\csgo\cfg\autoexec.cfg` | the chosen lines, UTF-8 without BOM, first line the marker | *Restore previous*: the newest backup that is not ours is copied back, or our file is deleted when there was none |
+| `<game>\csgo\cfg\autoexec.cfg.bak_<yyyyMMdd_HHmmss>` | a copy of the file that was there, made before every write | kept (nothing deletes backups) |
+| `userData/settings.json` `cs2Exe` | a `cs2.exe` the user picked when Steam did not reveal the game | *Use the location from Steam* |
+
+Steam is only read (`HKCU\Software\Valve\Steam`, `libraryfolders.vdf`, `appmanifest_730.acf`). Launch options are never written anywhere: the page builds a string and copies it, and the user pastes it into Steam; Steam's `localconfig.vdf` is not touched. Which lines were included, and why: `cl_showfps 1` (a frame counter, useful to see stutter next to the Sensors page) and `fps_max <n>` (the same limit as the Video menu; a limit the PC can hold steadily lowers CPU and GPU load and heat). Console variables we were not sure exist in CS2 were left out on purpose. Launch options: `+exec autoexec` and `-console` are harmless and suggested; `-high` and `-vulkan` are disputed (no reliable gain shown; try and compare yourself); `-novid` and `-nojoy` are listed as placebo (reported to do nothing in CS2, or a negligible saving). None of this is a performance promise, and we did not test any anti-cheat with it.
+
 ## App settings (`userData/settings.json`)
 `theme` (system|dark|light), `language` (auto|en|pt-BR), `closeToTray`, `startHidden`, `notifications`, `checkIntervalMin` (5-1440),
-`installDir` (ThrottleStop folder, empty = automatic), `checkForUpdates` (default on), `lastSeenVersion`, `lastCleanup`. Invalid values are rejected.
+`installDir` (ThrottleStop folder, empty = automatic), `checkForUpdates` (default on), `lastSeenVersion`, `lastCleanup`, `cs2Exe` (a cs2.exe the user picked: a drive path ending in `cs2.exe`, empty = detect through Steam). Invalid values are rejected.
