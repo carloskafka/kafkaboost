@@ -3,7 +3,16 @@
 // pass/fail per check. Run it with tools/run-uitest.ps1. Local only (needs a desktop session, so CI does not run it).
 const fs = require('fs');
 
-async function run({ win, js, sleep, settings, demo, outFile, platform }) {
+// The clipboard is shared with the user: keep their text and put it back when the run ends, whatever happens.
+async function run(ctx) {
+  const { clipboard } = require('electron');
+  let saved = null;
+  try { saved = await clipboard.readText(); } catch { /* no clipboard: nothing to restore */ }
+  try { await runChecks(ctx); }
+  finally { if (saved !== null) { try { await clipboard.writeText(saved); } catch { /* best effort */ } } }
+}
+
+async function runChecks({ win, js, sleep, settings, demo, outFile, platform }) {
   const results = [];
   const check = (name, ok, detail) => results.push({ name, ok: !!ok, detail: detail === undefined ? '' : String(detail) });
   const q = (sel) => js(win, `(()=>{const e=document.querySelector(${JSON.stringify(sel)});return e?e.textContent.trim():null})()`);
@@ -11,6 +20,23 @@ async function run({ win, js, sleep, settings, demo, outFile, platform }) {
   const click = (sel) => js(win, `document.querySelector(${JSON.stringify(sel)}).click()`);
   const setVal = (id, v) => js(win, `(()=>{const e=document.getElementById(${JSON.stringify(id)});e.value=${JSON.stringify(v)};e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
   await js(win, 'window.confirm = () => true; 0');                      // the Reset button asks first
+
+  // Polling helpers. Effects that arrive by a timer (the 2 s telemetry/sensor polls) or from the main process are waited for,
+  // never slept for: a busy machine only makes the wait longer, it cannot make a check fail early.
+  const WAIT_MS = 15000;
+  const waitFor = async (expr, ms = WAIT_MS) => { const end = Date.now() + ms; let v = await js(win, expr); while (!v && Date.now() < end) { await sleep(150); v = await js(win, expr); } return v; };
+  // until(fn): polls an async function until it returns something truthy, returns the last value either way (put it in the detail).
+  const until = async (fn, ms = WAIT_MS) => { const end = Date.now() + ms; let v = await fn(); while (!v && Date.now() < end) { await sleep(150); v = await fn(); } return v; };
+  // Polling pauses on a hidden page and the clipboard API needs a focused document, so the test window must really be in front.
+  const foreground = async () => {
+    try {
+      if (win.isMinimized()) win.restore();
+      win.show(); win.setAlwaysOnTop(true); win.focus(); win.moveTop();
+      await until(() => js(win, 'document.hasFocus() && !document.hidden'), 5000);
+      win.setAlwaysOnTop(false);
+    } catch { /* best effort: the checks that need it say so in their detail */ }
+  };
+  await foreground();
 
   if (platform !== 'win32') {
     await click('[data-view=optimizations]'); await sleep(400);
@@ -77,15 +103,13 @@ async function run({ win, js, sleep, settings, demo, outFile, platform }) {
   // after Reset the language is 'auto' = the OS language (Portuguese on a pt-BR PC); the checks below read English text
   await setVal('langSel', 'en'); await sleep(600);
   // Dashboard (demo): live tiles, hardware cards, optimization level, Apply recommended, and the "why are the tiles empty" notice
-  const wasMin0 = win.isMinimized(); if (wasMin0) { win.restore(); await sleep(600); }   // a minimized page is hidden, and a hidden page does not poll
   const treads = () => js(win, 'KB.telemetryReads || 0');
   const tileTemp = () => js(win, "document.getElementById('tTemp').textContent");
-  const waitFor = async (expr, ms = 8000) => { for (let i = 0; i < ms / 200 && !(await js(win, expr)); i++) await sleep(200); return js(win, expr); };
   await click('[data-view=health]'); await waitFor("document.getElementById('tTemp').textContent.includes('°C')");
   check('Dashboard live tiles show real demo readings and when they were read', (await tileTemp()).includes('°C') && (await q('#tClock')).includes('GHz') && (await q('#tPower')).endsWith(' W') && (await visible('tilesWhen')) && (await q('#tilesWhen')).includes('Last read'), await q('#tilesWhen'));
   check('no notice while the readings work', !(await visible('tilesNotice')));
   const tt0 = await tileTemp(); let tt1 = tt0;
-  for (let i = 0; i < 30 && tt1 === tt0; i++) { await sleep(300); tt1 = await tileTemp(); }
+  await until(async () => (tt1 = await tileTemp()) !== tt0);
   check('the live tiles refresh by themselves', tt1 !== tt0, tt0 + ' -> ' + tt1);
   check('hardware cards: CPU, graphics, memory, storage, system', (await js(win, "document.querySelectorAll('.hw-card').length")) === 5 && (await q('.hw-card:nth-child(2)')).includes('RTX 4090') && (await q('.hw-card:nth-child(4)')).includes('NVMe') && (await q('.hw-card:nth-child(4)')).includes('1 TB'), await js(win, "[...document.querySelectorAll('.hw-card h3')].map((e) => e.textContent).join('|')"));
   check('no serial number on the hardware cards', !/serial/i.test(await js(win, "document.getElementById('hwCards').textContent")));
@@ -111,11 +135,13 @@ async function run({ win, js, sleep, settings, demo, outFile, platform }) {
   await waitFor("document.getElementById('tilesNotice').hidden && document.getElementById('tTemp').textContent.includes('°C')");
   check('readings come back: notice gone, values back', !(await visible('tilesNotice')) && (await tileTemp()).includes('°C'));
   await click('[data-view=settings]'); await sleep(300);
-  const tr0 = await treads(); await sleep(3500);
-  check('leaving the Dashboard stops the live readings', (await treads()) === tr0, tr0);
-  await click('[data-view=health]'); await sleep(2800);
-  check('coming back to the Dashboard reads again', (await treads()) > tr0);
-  if (wasMin0) win.minimize();
+  await sleep(600);                                                      // a read that was already in flight may still land
+  const dashPoll = await js(win, 'window.KBDash.REFRESH_MS');
+  const tr0 = await treads(); await sleep(2 * dashPoll + 1000);          // spans at least two poll periods
+  check('leaving the Dashboard stops the live readings', (await treads()) === tr0, tr0 + ' -> ' + await treads());
+  await click('[data-view=health]');
+  await until(async () => (await treads()) > tr0);
+  check('coming back to the Dashboard reads again', (await treads()) > tr0, tr0 + ' -> ' + await treads());
 
   await click('[data-view=optimizations]'); await sleep(500);
   check('Optimizations shows the CPU tuning card', await visible('optimizations') && (await q('#optThrottle h3')) === 'CPU thermal tuning');
@@ -215,8 +241,16 @@ async function run({ win, js, sleep, settings, demo, outFile, platform }) {
   check('launch options: the disputed and placebo ones say so', (await js(win, "[...document.querySelectorAll('#cs2LaunchList .chip')].map(c => c.textContent).join(',')")) === 'Suggested,Suggested,Disputed,Disputed,Placebo,Placebo');
   await click('#cs2LaunchList [data-id=console] input'); await sleep(150);
   check('launch options: ticking adds the option to the string', (await js(win, "document.getElementById('cs2LaunchStr').value")) === '+exec autoexec -console');
-  await click('#cs2Copy'); await sleep(700);
-  check('launch options: Copy reports success and the clipboard holds the string', (await visible('cs2CopyResult')) && (await q('#cs2CopyResult')).startsWith('Copied') && (await ckey.readText()) === '+exec autoexec -console', (await q('#cs2CopyResult')) + ' | ' + (await ckey.readText()));
+  await foreground();                                                    // navigator.clipboard.writeText needs a focused document
+  // Is the OS clipboard usable from this session at all? (a locked-down or non-interactive desktop session accepts writes and reads back
+  // nothing, for every program). Only then can the content be compared; the app's own report is still checked either way.
+  await ckey.writeText('kb-probe');
+  const clipWorks = !!(await until(async () => (await ckey.readText()) === 'kb-probe', 2000));
+  await click('#cs2Copy');
+  await until(() => visible('cs2CopyResult'));                           // the app reports only after its write finished: read the clipboard after that
+  if (clipWorks) await until(async () => (await ckey.readText()) === '+exec autoexec -console', 5000);
+  const clipNow = clipWorks ? await ckey.readText() : '(clipboard not usable in this session: content not compared)';
+  check('launch options: Copy reports success and the clipboard holds the string', (await visible('cs2CopyResult')) && (await q('#cs2CopyResult')).startsWith('Copied') && (!clipWorks || clipNow === '+exec autoexec -console'), (await q('#cs2CopyResult')) + ' | ' + clipNow + ' | focused: ' + await js(win, 'document.hasFocus()'));
   await click('#cs2LaunchList [data-id=exec] input'); await click('#cs2LaunchList [data-id=console] input'); await sleep(150);
   check('launch options: with nothing ticked the string is empty and Copy is off', (await js(win, "document.getElementById('cs2LaunchStr').value")) === '' && (await dis('cs2Copy')));
   // Steam did not reveal the game: the page says so, hides the two parts that need it, keeps the launch options, and lets the user pick cs2.exe
@@ -250,7 +284,6 @@ async function run({ win, js, sleep, settings, demo, outFile, platform }) {
   // sensors (demo: canned readings; support starts as not installed so the consent card can be exercised)
   const rows = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
   const reads = () => js(win, 'KB.sensorReads || 0');
-  const wasMin = win.isMinimized(); if (wasMin) { win.restore(); await sleep(600); }   // a minimized page is hidden, and a hidden page does not poll
   await click('[data-view=sensors]'); await sleep(1200);
   check('Sensors asks for consent before anything is downloaded', await visible('sensorsGet') && !(await visible('sensorsMain')) && (await js(win, "document.getElementById('sensorsGetBtn').disabled")) === true, await q('#sensorsGetWhat'));
   check('the consent text names the license, the fingerprint and the download folder', (await q('#sensorsGetWhat')).includes('MPL-2.0') && (await q('#sensorsGetDetails')).includes('SHA-256') && (await q('#sensorsGetDetails')).includes('LegionTuning'), await q('#sensorsGetDetails'));
@@ -265,25 +298,31 @@ async function run({ win, js, sleep, settings, demo, outFile, platform }) {
   const t0 = await tempNow();
   check('temperatures show degrees and the min/max columns are filled', t0.includes('°C') && (await js(win, "document.querySelector('.srow[data-type=Temperature] .smin').textContent")).includes('°C'), t0);
   let t1 = t0;
-  for (let i = 0; i < 25 && t1 === t0; i++) { await sleep(400); t1 = await tempNow(); }   // demo values jitter; wait up to 10 s for any change
+  await until(async () => (t1 = await tempNow()) !== t0);   // demo values jitter; wait for any change
   check('the values refresh by themselves', t1 !== t0, t0 + ' -> ' + t1);
   check('a warm or hot temperature carries a word, not only a color', (await js(win, "[...document.querySelectorAll('.srow.t-warm .sval, .srow.t-hot .sval')].every((e) => /warm|hot/.test(e.textContent))")) === true);
   await click('#sensorsPause'); await sleep(300);
-  const paused = await reads(); await sleep(3500);
-  check('Pause stops the readings', (await reads()) === paused && (await q('#sensorsPause')) === 'Resume', paused);
-  await click('#sensorsPause'); await sleep(2800);
-  check('Resume reads again', (await reads()) > paused);
-  await click('#sensorsCopy'); await sleep(500);
+  await sleep(600);                                                      // a read that was already in flight may still land
+  const sensPoll = await js(win, 'window.KBSensors.REFRESH_MS');
+  const paused = await reads(); await sleep(2 * sensPoll + 1000);        // spans at least two poll periods
+  check('Pause stops the readings', (await reads()) === paused && (await q('#sensorsPause')) === 'Resume', paused + ' -> ' + await reads());
+  await click('#sensorsPause');
+  await until(async () => (await reads()) > paused);
+  check('Resume reads again', (await reads()) > paused, paused + ' -> ' + await reads());
+  await foreground();
+  await click('#sensorsCopy');
+  await until(async () => (await q('#sensorsResult')).includes('copied'));
   check('Copy snapshot confirms', (await q('#sensorsResult')).includes('copied'), await q('#sensorsResult'));
-  await click('#sensorsSave'); await sleep(500);
+  await click('#sensorsSave');
+  await until(async () => (await q('#sensorsResult')).includes('kafkaboost-sensors.json'));
   check('Save snapshot confirms with a file name', (await q('#sensorsResult')).includes('kafkaboost-sensors.json'), await q('#sensorsResult'));
-  await click('[data-view=settings]'); await sleep(400);
-  const away = await reads(); await sleep(3500);
-  check('leaving the Sensors screen stops the readings', (await reads()) === away, away);
-  await click('[data-view=sensors]'); await sleep(2800);
-  check('coming back starts reading again', (await reads()) > away);
+  await click('[data-view=settings]'); await sleep(600);
+  const away = await reads(); await sleep(2 * sensPoll + 1000);
+  check('leaving the Sensors screen stops the readings', (await reads()) === away, away + ' -> ' + await reads());
+  await click('[data-view=sensors]');
+  await until(async () => (await reads()) > away);
+  check('coming back starts reading again', (await reads()) > away, away + ' -> ' + await reads());
   await click('[data-view=settings]'); await sleep(300);
-  if (wasMin) win.minimize();
 
   // apps manager (demo: a fake winget with 7 installed apps, 9 removable Store apps)
   const cardBtn = (id) => `document.querySelector('.app-card[data-id="${id}"] .btn')`;

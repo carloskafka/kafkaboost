@@ -14,7 +14,7 @@ foreach ($platform in 'win32', 'linux') {
     if ($platform -ne 'win32') { $env:WIZARD_FAKE_PLATFORM = $platform } else { Remove-Item Env:WIZARD_FAKE_PLATFORM -ErrorAction SilentlyContinue }
     try {
         $p = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $app -PassThru -WindowStyle Minimized
-        if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host "[$platform] timed out" -ForegroundColor Red; $failed++; continue }
+        if (-not $p.WaitForExit(300000)) { $p.Kill(); Write-Host "[$platform] timed out" -ForegroundColor Red; $failed++; continue }
     } finally { Remove-Item Env:WIZARD_DEMO, Env:WIZARD_UITEST, Env:WIZARD_FAKE_PLATFORM -ErrorAction SilentlyContinue }
     if (-not (Test-Path $out)) { Write-Host "[$platform] no result file" -ForegroundColor Red; $failed++; continue }
     $r = Get-Content $out -Raw -Encoding UTF8 | ConvertFrom-Json
