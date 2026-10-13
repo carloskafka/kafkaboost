@@ -54,7 +54,11 @@ Tick **Settings > Start with Windows** to have it start hidden at every logon. T
 - **Restore** shows your Windows restore points and can create one. The app makes one before your first tweak (Windows allows one per 24 hours).
 - **Counter-Strike 2** (open it from the card in *Optimizations*) has three optional parts: use the high-performance GPU for `cs2.exe` (Windows' own Graphics setting, undone with one click), a small `autoexec.cfg` (an existing one is backed up first and *Restore previous* puts it back), and launch options to copy into Steam. The page finds the game through Steam, or you pick `cs2.exe`. No FPS is promised and we did not test how any anti-cheat reacts to these settings; no game file is touched except `autoexec.cfg`.
 - **Updates:** the app checks GitHub Releases (a lookup only) and shows a banner with the changelog when a newer version exists.
-  Turn it off in Settings.
+  Turn it off in Settings. The installed app updates itself (*Download the update*, then *Restart and update*). A copy run from a
+  source folder, or the portable exe, cannot: the app says why. If the release has an installer it offers *Download and install*
+  (checked against the release checksum, and it asks you before it starts; Windows asks for administrator permission and
+  SmartScreen may warn because the installer is not code-signed). That makes a separate installed copy and leaves the clone folder
+  alone; to update a clone, run `git pull` in the repository folder.
 ## 4. After a Windows update
 Open **Dashboard** again. If it is amber or red, read the list (a Windows update can reset settings or switch VBS back on) and
 press **Fix it**. VBS is only turned off again if you tick the box.

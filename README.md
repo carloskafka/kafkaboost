@@ -132,8 +132,14 @@ Light and dark theme, English and Brazilian Portuguese.
 
 <img src="docs/assets/apps.png" alt="Apps: curated catalog with install and remove buttons, search, export and import" width="560">
 
-- **Updates:** the app looks at this repo's GitHub Releases and shows the changelog when a newer version exists; the installed
-  Windows build can update in place. It needs a published release with an installer (no release workflow yet).
+- **Updates:** the app looks at this repo's GitHub Releases and shows the changelog when a newer version exists. *Check for
+  updates* in Settings shows the new version with its button on the right. The **installed** Windows build downloads the update
+  and offers *Restart and update*. A **source clone or the portable exe cannot update itself**; the app says so, and when the
+  release has `KafkaBoost-Setup-X.Y.Z.exe` it offers *Download and install*: the file goes to a private temp folder, its SHA-256 is
+  checked against the release's `SHA256SUMS.txt` (no checksum file, or a mismatch, means it is never run), and only after you
+  confirm does the installer start (Windows asks for administrator permission and, because the installer is not code-signed,
+  SmartScreen may warn; neither is bypassed) and KafkaBoost closes. For a clone this makes a separate installed copy; the clone
+  folder is not changed (update it with `git pull`). Leftover downloads are removed at the next start.
 
 - **Counter-Strike 2** (Windows; *Optimizations > Counter-Strike 2*) is the one game-specific page, three optional parts, each explained and undoable. It makes **no FPS promise** and no anti-cheat claim: these are standard Windows and game settings, the only game file written is `autoexec.cfg`, nothing is patched or injected, and **we did not test how VAC or any other anti-cheat reacts**. (1) *GPU preference*: finds `cs2.exe` read-only through Steam (`HKCU\Software\Valve\Steam`, every library in `libraryfolders.vdf`; or you pick the file) and sets Windows' per-app *High performance* (`HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, the same switch as Settings > Display > Graphics). The previous data is recorded and put back exactly (or the entry is removed if there was none); a preference you set yourself is never reverted by us. (2) *autoexec.cfg*: two suggested lines you tick (`cl_showfps 1`, and `fps_max` with your own number), written to `game\csgo\cfg` after copying any existing file to `autoexec.cfg.bak_<time>`; *Restore previous* puts the original back, or removes our file when there was none, and only while the file still carries our `// Written by KafkaBoost` line. We could not verify from outside the game whether CS2 runs `autoexec.cfg` by itself, so the page says to check in game (`exec autoexec`, or the `+exec autoexec` launch option). (3) *Launch options*: a string you copy into Steam, with each option explained and marked suggested, disputed or placebo; Steam's `localconfig.vdf` is never edited. **Verified on the real PC:** only the read-only detection (it found the game in a second Steam library); the GPU preference and `autoexec.cfg` writes were run only against sandbox folders and registry keys, and **not in game**.
 
@@ -211,7 +217,7 @@ KafkaBoost.cmd/.command/.lnk  launchers for the app
 app/                   Electron app: src/ (main, preload, settings, updates, i18n, tray, demo), renderer/, build/ (icons), test/ (node tests)
 config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog), sensors.json (pinned sensor library), hwinfo.json (official HWiNFO page, signer)
 scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore, Sensors, Hwinfo), monitoring/, maintenance/
-tests/                 Pester tests for the library (128)
+tests/                 Pester tests for the library (138)
 tools/                 make-icons.js, make-shots.ps1, run-uitest.ps1 (UI checks)
 docs/                  GitHub Pages site (index.html landing, about-app.html docs hub, compare/download/faq/privacy/terms, pt-br/ mirror, site.css, site.js, assets/) and the reference documents
 local/                 git-ignored: backups, evidence, experiments

@@ -44,8 +44,24 @@ app: version list page, then the download form, validated as a zip containing `T
   and notifications use the same files.
 - `src/updates.js`: update logic on the GitHub Releases API (`newerReleases`, `releaseFor`, `parseNotes`, `canSelfUpdate`). `main.js`
   looks for a newer release after start and every few hours, shows the changelog (rendered with `textContent` only) and, for the
-  installed (non-portable, packaged) Windows build, installs through `electron-updater`. Other builds get a link to the release.
-  The lookup sends no personal data; nothing downloads without a click. It needs a published release with an installer and
+  installed (non-portable, packaged) Windows build, installs through `electron-updater` (`autoInstallOnAppQuit` is off and the only
+  install path is the *Restart and update* button, `app:restartUpdate` -> `quitAndInstall`; the updater's own pending-download cache
+  is cleaned by electron-updater, which was not verified on a real install). The lookup sends no personal data; nothing downloads
+  without a click.
+- `src/updatedl.js` (pure Node, seams for fetch / fs / spawn, unit tested without network): the update path for builds that cannot
+  update themselves (a source clone, the portable exe). `check` finds the `KafkaBoost-Setup-X.Y.Z.exe` and `SHA256SUMS.txt` assets of
+  the newest release (`pickAssets`); `main.js` keeps their URLs, the page never supplies one (`app:downloadUpdate` takes no argument).
+  Only `https://github.com/carloskafka/legion-14900hx-throttlestop/releases/download/...` is fetched; redirects are followed by hand and
+  each hop must be that path or GitHub's release CDN hosts (`objects` / `release-assets` / `github-releases.githubusercontent.com`);
+  300 MB cap; the file is streamed to `<temp>/KafkaBoost-update/<name>.part`, hashed on the way and renamed when whole; a mismatch
+  with the release's `SHA256SUMS.txt` deletes it, a missing checksum keeps it but the app never runs it. After a verified download the
+  page asks (`update.confirm*`); on yes `app:installDownloaded` starts the installer with `spawn(file, [], { detached, stdio:
+  'ignore', shell: false })` (falling back to `shell.openPath` when CreateProcess refuses an installer that needs elevation) and quits;
+  no silent flag is used because the NSIS config is `oneClick: false`, so the user sees the installer. Cancel and a declined
+  confirmation delete the file; on every start `cleanupDir` removes older `KafkaBoost-Setup-*.exe(.part)` / `SHA256SUMS.txt` files
+  from that private folder only (plain files, never links). The panel (`renderer/js/updates.js`, pure model in `updatelogic.js`) is
+  drawn in Settings and in the changelog dialog. The copy that is not installed also shows why it cannot update itself and that a
+  clone is updated with `git pull`. The real installer was never started in any test, and the spawn / UAC path is **not verified**. It needs a published release with an installer and
   `latest.yml`, which the release workflow publishes (see Releasing below).
 - `src/packages/` (the Apps manager, no Electron code, unit-tested with a fake runner): `ids.js` (strict id/query patterns), `runner.js` (the only place that starts a process: `execFile` with an args array, never a shell), `base.js` (shared provider shape and result codes), `winget.js` (parses the localized table by header position), `brew.js` (casks + formulae; tries `/opt/homebrew/bin` and `/usr/local/bin` because apps started from the Finder get no shell PATH), `linux.js` (`flatpak` per user, `apt`/`dnf`/`pacman` through `pkexec`), `catalog.js` (loads and validates `config/apps.json`), `bloat.js` (Windows inbox Store apps: allow-list only, current user, via PowerShell), `index.js` (`createService`: picks the provider for the OS, flags what is installed, builds the export file and the import plan). Every provider has the same interface: `available, list, search, install, uninstall, exportList, importList`. IPC `apps:*` in `main.js` re-validates every argument; import is two calls (pick and validate, then run only the validated plan). The macOS and Linux providers were never run on real systems.
 - Sensors screen: `renderer/js/sensors.js` (view) and `renderer/js/sensorlogic.js` (pure logic shared with the main process and the tests: thresholds, formatting, `sanitizeSnapshot`). The page runs `sensors-state`, shows the consent box when the library is missing, then repeats `sensors-read` about every 2 s (the next read is scheduled only after the previous one ends) **only while it is the visible screen and the window is visible** (`onHide` in `core.js`, `visibilitychange`). Each read starts a short Windows PowerShell and opens the library, so the interval is "2 s after the previous read". Min/max are tracked by the page over what it has seen, because the library is reopened for every read. IPC `sensors:copy` / `sensors:save` rebuild the snapshot with `sanitizeSnapshot` before it reaches the clipboard or a file. A step is spawned per read (no long-running process), which keeps the "thin UI" rule.
@@ -84,7 +100,7 @@ demo mode.
 1. Raise `version` in `app/package.json` (and merge it); the tag must be exactly `v<version>`.
 2. Push the tag `vX.Y.Z`. `.github/workflows/release.yml` then runs on `windows-latest`: it fails if the tag and the version differ, runs the Node tests, the Pester tests and the site check, and builds with `npm run dist` (electron-builder: NSIS installer and portable exe).
 3. A second job, the only one with `contents: write`, creates the GitHub Release with `KafkaBoost-Setup-X.Y.Z.exe`, its `.blockmap`, `KafkaBoost-Portable-X.Y.Z.exe`, `SHA256SUMS.txt` and `latest.yml`. A tag with a dash (`v0.2.0-rc1`) becomes a pre-release, which the app ignores.
-4. Installed copies find the release through `app/src/updates.js` and update through `electron-updater` (it reads `latest.yml`); the portable exe and source checkouts only get a link. The Download page reads the same release.
+4. Installed copies find the release through `app/src/updates.js` and update through `electron-updater` (it reads `latest.yml`); the portable exe and source checkouts get *Download and install* (see `src/updatedl.js` above) or, when the release has no installer, only the release page. The Download page reads the same release.
 
 Release notes are generated from the commit subjects since the previous tag, in the only format `parseNotes` renders: `#` headings, `- ` bullets and plain paragraphs (no links, bold or code, because the app shows them as text). Conventional-commit subjects therefore double as the changelog.
 
