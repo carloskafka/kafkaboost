@@ -7,10 +7,15 @@
   let tweaks = [], admin = true, cat = ALL, query = '', busy = false;
 
   // ---- confirmation dialog (promise based) ----------------------------------------------------------------------
-  KB.confirm = ({ title, paragraphs, ok, danger }) => new Promise((resolve) => {
+  // `blocks` (optional) are the detailed blocks of KBTweakPreview.buildBlocks: h, p, meta and mono (a monospace block). Everything is
+  // rendered with textContent. The body scrolls, and `wide` gives the monospace lines more room.
+  KB.confirm = ({ title, paragraphs = [], blocks = [], ok, danger, wide }) => new Promise((resolve) => {
     $('cfTitle').textContent = title;
-    const body = $('cfBody'); body.textContent = '';
+    const body = $('cfBody'); body.textContent = ''; body.scrollTop = 0;
+    $('confirmDlg').classList.toggle('wide', !!wide);
     paragraphs.forEach((p) => { const el = document.createElement('p'); el.textContent = p; body.appendChild(el); });
+    const TAG = { h: 'h4', p: 'p', meta: 'p', mono: 'pre' };
+    blocks.forEach((b) => { const el = document.createElement(TAG[b.kind] || 'p'); el.className = 'cf-' + b.kind; el.textContent = b.text; body.appendChild(el); });
     const okBtn = $('cfOk'); okBtn.textContent = ok; okBtn.className = 'btn small ' + (danger ? 'danger-fill' : 'primary');
     const dlg = $('confirmDlg');
     let settled = false;
@@ -24,6 +29,23 @@
 
   const title = (id) => t(`tweak.${id}.title`);
   const desc = (id) => t(`tweak.${id}.desc`);
+  const notice = (id) => { const k = `tweak.${id}.notice`; const v = t(k); return v === k ? '' : v; };
+
+  // Read-only preview of what the given tweaks would change on this PC (the tweak-preview step). Resolves detailed dialog blocks,
+  // or null when the values could not be read (the caller then falls back to names only and says so).
+  async function previewBlocks(ids, { intro, closing }) {
+    let res = null;
+    try { res = await window.kb.runStep('tweak-preview', { tweakIds: ids.join(',') }); } catch { res = null; }
+    const list = res && res.ok && res.data && Array.isArray(res.data.tweaks) ? res.data.tweaks : null;
+    if (!list || !list.length) return null;
+    return {
+      count: list.length,
+      blocks: KBTweakPreview.buildBlocks(list, {
+        t, title, desc, notice, appAdmin: !!res.data.admin, intro: intro ? intro(list.length) : '', closing,
+        riskLabel: (r) => t(`opt.level.${r}`)
+      })
+    };
+  }
   const matches = (x) => {
     if (cat !== ALL && x.category !== cat) return false;
     if (!query) return true;
@@ -90,12 +112,15 @@
     const enable = cb.checked;
     cb.checked = !enable;                                   // the real state is applied after the script answers
     if (enable) {
+      // the same exact-changes detail as in Apply recommended; the existing confirmations are kept as they were
+      const pv = x.risk === 'safe' ? null : await previewBlocks([x.id], { closing: [] });
+      const detail = pv ? { blocks: pv.blocks.slice(2), wide: true } : {};   // without the heading and the description: the dialog already shows those
       if (x.risk === 'advanced') {
-        const ok = await KB.confirm({ title: title(x.id), paragraphs: [desc(x.id), t('tweaks.confirmAdvanced')], ok: t('tweaks.apply') });
+        const ok = await KB.confirm({ title: title(x.id), paragraphs: [desc(x.id), t('tweaks.confirmAdvanced')], ok: t('tweaks.apply'), ...detail });
         if (!ok) return;
       }
       if (x.risk === 'risky') {
-        const first = await KB.confirm({ title: title(x.id), paragraphs: [desc(x.id), t('tweaks.riskyWarn1'), t('tweaks.riskyWarn2')], ok: t('tweaks.riskyContinue'), danger: true });
+        const first = await KB.confirm({ title: title(x.id), paragraphs: [desc(x.id), t('tweaks.riskyWarn1'), t('tweaks.riskyWarn2')], ok: t('tweaks.riskyContinue'), danger: true, ...detail });
         if (!first) return;
         const second = await KB.confirm({ title: t('tweaks.finalTitle'), paragraphs: [t('tweaks.finalBody', { name: title(x.id) })], ok: t('tweaks.riskyApply'), danger: true });
         if (!second) return;
@@ -114,18 +139,23 @@
     await load();
   }
 
-  // "Apply recommended" for any screen (Optimizations and the Dashboard): lists what will change, asks, then runs the tweaks-recommended
-  // step (restore point first, safe tweaks only). Resolves { status: 'none' | 'cancelled' | 'done', res }.
+  // "Apply recommended" for any screen (Optimizations and the Dashboard): shows EXACTLY what will change (every tweak with what it does, what
+  // you may notice and the registry values now/new/after turning off), asks, then runs the tweaks-recommended step (restore point first,
+  // safe tweaks only). Resolves { status: 'none' | 'cancelled' | 'done', res }.
   KB.applyRecommended = async (list) => {
-    const todo = (list || tweaks).filter((x) => x.risk === 'safe' && x.recommended && x.status === 'inactive');
+    const todo = (list || tweaks).filter((x) => x.risk === 'safe' && x.recommended && (x.status === 'inactive' || x.status === 'partial'));
     if (!todo.length) return { status: 'none' };
-    const ok = await KB.confirm({ title: t('tweaks.recommended'), paragraphs: [t('tweaks.recommendedBody', { count: todo.length }), ...todo.map((x) => '• ' + title(x.id)), t('tweaks.recommendedNote')], ok: t('tweaks.apply') });
+    const pv = await previewBlocks(todo.map((x) => x.id), { intro: (n) => t('tweaks.pv.intro', { count: n }), closing: [t('tweaks.pv.closing'), t('tweaks.pv.closing2')] });
+    const dlg = pv
+      ? { blocks: pv.blocks, wide: true }
+      : { paragraphs: [t('tweaks.recommendedBody', { count: todo.length }), ...todo.map((x) => '• ' + title(x.id)), t('tweaks.pv.unavailable'), t('tweaks.pv.closing')] };
+    const ok = await KB.confirm({ title: t('tweaks.recommended'), ok: t('tweaks.apply'), ...dlg });
     if (!ok) return { status: 'cancelled' };
     return { status: 'done', res: await window.kb.runStep('tweaks-recommended', {}) };
   };
 
   async function applyRecommended() {
-    if (!tweaks.some((x) => x.risk === 'safe' && x.recommended && x.status === 'inactive')) { KB.showResult($('tweakResult'), 'ok', t('tweaks.recommendedNone')); return; }
+    if (!tweaks.some((x) => x.risk === 'safe' && x.recommended && (x.status === 'inactive' || x.status === 'partial'))) { KB.showResult($('tweakResult'), 'ok', t('tweaks.recommendedNone')); return; }
     busy = true; render(); KB.showResult($('tweakResult'), '', '');
     const r = await KB.applyRecommended();
     busy = false;

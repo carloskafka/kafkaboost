@@ -133,11 +133,18 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   const pct0 = await q('#levelPct');
   check('optimization level shows a percentage, "X of Y" and the formula', /^\d+%$/.test(pct0) && /\d+ of \d+ recommended tweaks active/.test(await q('#levelLine')) && (await q('#levelFormula')).includes('÷'), pct0 + ' | ' + await q('#levelLine'));
   check('Apply recommended is offered while some safe recommended tweaks are off', (await js(win, "document.getElementById('applyReco').disabled")) === false);
-  await click('#applyReco'); await sleep(300);
-  check('Apply recommended on the Dashboard asks first (same dialog, lists the tweaks)', (await js(win, 'document.getElementById("confirmDlg").open')) && (await js(win, 'document.getElementById("cfBody").textContent')).includes('•'));
+  await click('#applyReco'); await waitFor("document.getElementById('confirmDlg').open");
+  const reco = await js(win, 'document.getElementById("cfBody").textContent');
+  check('Apply recommended on the Dashboard asks first (same dialog), with one heading per tweak', (await js(win, 'document.getElementById("confirmDlg").open')) && (await js(win, 'document.querySelectorAll("#cfBody h4").length')) >= 3, await js(win, 'document.querySelectorAll("#cfBody h4").length'));
+  check('the dialog shows the registry path, the value name, the current value ("not set" or a number) and the new value', /HK(CU|LM)\\[A-Za-z]+\\/.test(reco) && /\w+ \(DWord\): (not set|\d+) → \d+/.test(reco), reco.slice(0, 400));
+  check('it says what turning off restores ("deleted again" or "set back to")', reco.includes('turning it off: the value is deleted again') || reco.includes('turning it off: set back to'));
+  check('it says whether administrator rights and a restart are needed, per tweak', (reco.match(/Administrator rights: (needed|not needed)/g) || []).length >= 3 && reco.includes('Restart: not needed'));
+  check('it says a restore point is tried first (one per 24 h) and that nothing is installed or deleted', reco.includes('restore point') && reco.includes('24 hours') && reco.includes('Nothing is installed and nothing is deleted'));
+  check('it has a "you may notice" sentence for the tweaks and the technical lines are in a monospace block', reco.includes('You may notice:') && (await js(win, 'document.querySelectorAll("#cfBody pre.cf-mono").length')) >= 3 && (await js(win, 'getComputedStyle(document.querySelector("#cfBody pre.cf-mono")).fontFamily')).toLowerCase().includes('mono'));
+  check('the body scrolls inside the dialog and the dialog stays on screen', (await js(win, '(()=>{const b=document.getElementById("cfBody"),d=document.getElementById("confirmDlg").getBoundingClientRect();return getComputedStyle(b).overflowY==="auto" && b.scrollHeight>b.clientHeight && d.top>=0 && d.bottom<=innerHeight})()')));
   await click('#cfCancel'); await sleep(400);
   check('cancelling changes nothing', (await q('#levelPct')) === pct0 && (await js(win, "document.getElementById('applyReco').disabled")) === false);
-  await click('#applyReco'); await sleep(300); await click('#cfOk');
+  await click('#applyReco'); await waitFor("document.getElementById('confirmDlg').open"); await click('#cfOk');
   await waitFor("document.getElementById('levelPct').textContent === '100%'");
   check('confirming applies them: level 100% and the button is off', (await q('#levelPct')) === '100%' && (await js(win, "document.getElementById('applyReco').disabled")) === true && (await visible('levelResult')), await q('#levelPct') + ' ' + await q('#levelResult'));
   // why the tiles are empty
@@ -198,23 +205,26 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   const before = await isOn('transparency-off');
   await js(win, "document.querySelector('.tweak[data-id=\"transparency-off\"] input').click(); 0"); await sleep(900);
   check('a safe tweak toggles at once (no confirmation)', (await isOn('transparency-off')) === !before && !(await js(win, 'document.getElementById("confirmDlg").open')));
-  await js(win, "document.querySelector('.tweak[data-id=\"sysmain-off\"] input').click(); 0"); await sleep(300);
+  await js(win, "document.querySelector('.tweak[data-id=\"sysmain-off\"] input').click(); 0"); await waitFor("document.getElementById('confirmDlg').open");
   check('an advanced tweak asks first', await js(win, 'document.getElementById("confirmDlg").open'));
+  check('the advanced tweak dialog also shows the exact change (service start type) and what turning off restores', (await q('#cfBody')).includes('Service SysMain: start type Auto → Disabled') && (await q('#cfBody')).includes('turning it off: start type set back to Auto'), await q('#cfBody'));
   await click('#cfCancel'); await sleep(300);
   check('cancelling leaves the advanced tweak off', (await isOn('sysmain-off')) === false);
-  await js(win, "document.querySelector('.tweak[data-id=\"defender-realtime-off\"] input').click(); 0"); await sleep(300);
-  await click('#cfOk'); await sleep(300);
+  await js(win, "document.querySelector('.tweak[data-id=\"defender-realtime-off\"] input').click(); 0"); await waitFor("document.getElementById('confirmDlg').open");
+  check('the risky tweak dialog shows Defender now -> off and the existing warnings', (await q('#cfBody')).includes('real-time protection: on → off') && (await q('#cfBody')).includes('lowers your PC'), await q('#cfBody'));
+  await click('#cfOk'); await waitFor("document.getElementById('cfTitle').textContent === 'Final confirmation'");
   check('a risky tweak asks a second, final time', (await js(win, 'document.getElementById("confirmDlg").open')) && (await q('#cfTitle')).length > 0 && (await js(win, 'document.getElementById("cfTitle").textContent')) === 'Final confirmation', await q('#cfTitle'));
   await click('#cfCancel'); await sleep(300);
   check('stopping at the second risky confirmation changes nothing', (await isOn('defender-realtime-off')) === false);
-  await js(win, "document.querySelector('.tweak[data-id=\"defender-realtime-off\"] input').click(); 0"); await sleep(300);
-  await click('#cfOk'); await sleep(300); await click('#cfOk'); await sleep(1200);
+  await js(win, "document.querySelector('.tweak[data-id=\"defender-realtime-off\"] input').click(); 0"); await waitFor("document.getElementById('confirmDlg').open");
+  await click('#cfOk'); await waitFor("document.getElementById('cfTitle').textContent === 'Final confirmation'"); await click('#cfOk'); await sleep(1200);
   check('a risky tweak applies after both confirmations', (await isOn('defender-realtime-off')) === true);
   await js(win, "document.querySelector('.tweak[data-id=\"defender-realtime-off\"] input').click(); 0"); await sleep(900);
   check('a risky tweak reverts without confirmation', (await isOn('defender-realtime-off')) === false);
   await click('#tweakRecommended'); await sleep(300);
-  const recoOpen = await js(win, 'document.getElementById("confirmDlg").open');
-  if (recoOpen) { await click('#cfOk'); await sleep(900); }
+  const recoOpen = await waitFor("document.getElementById('confirmDlg').open || document.getElementById('tweakResult').textContent.length > 0", 6000);
+  if (await js(win, 'document.getElementById("confirmDlg").open')) { await click('#cfOk'); await sleep(900); }
+  void recoOpen;
   check('after Apply recommended the safe recommended ones are on', await js(win, "['fast-startup-off','background-apps-off','game-dvr-off','mouse-accel-off','advertising-id-off'].every(id => document.querySelector('.tweak[data-id=' + id + '] input').checked)"));
 
   // restore points

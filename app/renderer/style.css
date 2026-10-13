@@ -284,3 +284,10 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 .chip.tier-disputed { color: var(--warn); }
 .chip.tier-placebo { color: var(--muted); }
 .offscreen { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; }
+
+/* ---- confirmation dialog: exact changes of a tweak ---- */
+.dialog.wide { width: min(860px, calc(100vw - 32px)); }
+.cf-body { max-height: 58vh; overflow: auto; padding-right: 6px; }
+.cf-body h4.cf-h { margin: 16px 0 4px; font-size: 14.5px; color: var(--text); }
+.cf-body .cf-meta { margin: 4px 0 6px; font-size: 12.5px; color: var(--muted); }
+.cf-body pre.cf-mono { margin: 6px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--text-soft); font: 12.5px/1.5 Consolas, "Cascadia Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }

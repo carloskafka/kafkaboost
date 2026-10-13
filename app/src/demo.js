@@ -162,6 +162,31 @@ function tweakList(configDir) {
   });
 }
 
+// tweak-preview (demo): the same shape as scripts/lib/Tweaks.ps1 Get-TweakPreview. Current values are invented but believable: the value the
+// tweak undoes (its catalog "off"), or "not set" when the catalog off is null.
+function tweakPreview(ids, configDir) {
+  const cat = catalog(configDir); tweakList(configDir);
+  const want = ids.length ? ids : cat.filter((t) => t.risk === 'safe' && t.recommended && !tweakState[t.id]).map((t) => t.id);
+  return want.map((id) => cat.find((t) => t.id === id)).filter(Boolean).map((t) => ({
+    id: t.id, risk: t.risk, recommended: !!t.recommended, needsReboot: !!t.needsReboot,
+    needsAdmin: t.actions.some((a) => a.path ? a.path.startsWith('HKLM') : a.type !== 'powerplan' && a.type !== 'regkey'),
+    status: tweakState[t.id] ? 'active' : 'inactive',
+    actions: t.actions.map((a) => {
+      if (a.type === 'registry') {
+        const set = a.off !== null && a.off !== undefined; const u = (v) => String(Number(v) >>> 0);
+        return { type: 'registry', path: a.path, name: a.name, kind: a.kind, currentSet: set, current: set ? (a.kind === 'DWord' ? u(a.off) : String(a.off)) : null,
+          new: a.kind === 'DWord' ? u(a.on) : String(a.on), alreadyInPlace: false, restoreDeletes: !set, restore: set ? (a.kind === 'DWord' ? u(a.off) : String(a.off)) : null };
+      }
+      if (a.type === 'regkey') return { type: 'regkey', path: a.path, currentSet: false, alreadyInPlace: false, restoreDeletes: true };
+      if (a.type === 'service') return { type: 'service', name: a.name, found: true, current: 'Auto', running: true, new: a.on, restore: 'Auto' };
+      if (a.type === 'powerplan') return { type: 'powerplan', current: 'Balanced', currentGuid: '381b4222-f694-41f0-9685-ff5bb260df2e', new: 'Ultimate Performance / High performance', restore: 'Balanced' };
+      if (a.type === 'dns') return { type: 'dns', servers: a.servers.join(', '), adapters: [{ name: 'Ethernet', current: '', restoreAutomatic: true }] };
+      if (a.type === 'defender') return { type: 'defender', currentOn: true };
+      return { type: 'vbs', currentOn: false };
+    })
+  }));
+}
+
 const cleanState = { 'user-temp': [428e6, 1224], 'win-temp': [64e6, 310], prefetch: [38e6, 212], 'update-cache': [1.6e9, 41], thumbnails: [11e6, 15], 'recycle-bin': [1.2e6, 57] };
 function cleanTargets() { return Object.entries(cleanState).map(([id, [bytes, files]]) => ({ id, danger: id === 'recycle-bin', bytes, files })); }
 
@@ -225,6 +250,11 @@ function demoStep(step, opts = {}, configDir) {
     return { logs: ids.map((i) => i + ': cleaned'), res: { ok: true, code: 'msg.cleanup.done', args: { mb: Math.round(bytes / 104857.6) / 10, files, skipped: 0 }, message: 'ok', data: { bytes, files, skipped: 0 } } };
   }
   if (step === 'tweaks-list') { const l = tweakList(configDir); return { logs: [], res: { ok: true, code: 'msg.tweaks.listed', args: { count: l.length }, message: l.length + ' tweaks.', data: { tweaks: l, admin: true, build: 26300 } } }; }
+  if (step === 'tweak-preview') {
+    if (state.previewFails) return { logs: [], res: { ok: false, code: null, args: {}, message: 'preview failed' } };
+    const ids = String(opts.tweakIds || '').split(',').filter(Boolean); const l = tweakPreview(ids, configDir);
+    return { logs: [], res: { ok: true, code: 'msg.tweaks.previewed', args: { count: l.length }, message: l.length + ' previewed.', data: { tweaks: l, admin: true, build: 26300 } } };
+  }
   if (step === 'tweak-set') {
     const t = catalog(configDir).find((x) => x.id === opts.tweakId);
     if (!t) return { logs: [], res: { ok: false, code: 'tweak.error.unknown', args: { id: opts.tweakId }, message: 'Unknown tweak' } };
