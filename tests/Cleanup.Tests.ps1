@@ -1,15 +1,5 @@
 # Pester tests for scripts\lib\Cleanup.ps1. Everything runs in sandbox folders (CleanupMap), never on the real temp folders.
 
-function New-CleanSandbox {
-    $root = Join-Path ([IO.Path]::GetTempPath()) ('kb_clean_' + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Force $root | Out-Null
-    return $root
-}
-function Add-File([string]$Path, [int]$Bytes) {
-    New-Item -ItemType Directory -Force (Split-Path -Parent $Path) | Out-Null
-    [IO.File]::WriteAllBytes($Path, (New-Object byte[] $Bytes))
-}
-
 Describe 'Cleanup (sandbox folders)' {
     BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1'); . (Join-Path $PSScriptRoot '..\scripts\lib\Cleanup.ps1') }
     AfterEach { $script:CleanupMap = $null; if ($script:sb -and (Test-Path $script:sb)) { Remove-Item $script:sb -Recurse -Force -ErrorAction SilentlyContinue } }

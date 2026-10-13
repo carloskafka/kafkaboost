@@ -1,44 +1,6 @@
 # Pester tests for scripts\lib\Tweaks.ps1 (the tweak engine) and config\tweaks.json (the catalog).
 # The engine runs against a SANDBOX registry key and a temp state file, never the real keys. Plain `throw` assertions (Pester 3.4 and 5).
 
-function New-TweakSandbox {
-    $key = "KafkaBoostTest_" + [guid]::NewGuid().ToString('N')
-    $script:SbRoot = "HKCU:\Software\$key"
-    New-Item -Path $script:SbRoot -Force | Out-Null
-    $script:RegMap = @{ HKLM = $script:SbRoot; HKCU = $script:SbRoot }
-    $script:TweakStatePath = Join-Path ([IO.Path]::GetTempPath()) ("kb_state_" + [guid]::NewGuid().ToString('N') + '.json')
-    $cat = Join-Path ([IO.Path]::GetTempPath()) ("kb_cat_" + [guid]::NewGuid().ToString('N') + '.json')
-    $json = @'
-{ "version": 1, "categories": ["general"], "tweaks": [
-  { "id": "t-dword", "category": "general", "risk": "safe", "recommended": true, "needsReboot": false,
-    "actions": [ { "type": "registry", "path": "HKCU:\\A\\B", "name": "V", "kind": "DWord", "on": 0, "off": 1 } ] },
-  { "id": "t-policy", "category": "general", "risk": "safe", "recommended": true, "needsReboot": false,
-    "actions": [ { "type": "registry", "path": "HKCU:\\Pol", "name": "P", "kind": "DWord", "on": 2, "off": null } ] },
-  { "id": "t-big", "category": "general", "risk": "advanced", "recommended": false, "needsReboot": false,
-    "actions": [ { "type": "registry", "path": "HKCU:\\Big", "name": "N", "kind": "DWord", "on": 4294967295, "off": 10 } ] },
-  { "id": "t-string", "category": "general", "risk": "safe", "recommended": false, "needsReboot": false,
-    "actions": [ { "type": "registry", "path": "HKCU:\\Mouse", "name": "S", "kind": "String", "on": "0", "off": "1" } ] },
-  { "id": "t-key", "category": "general", "risk": "safe", "recommended": false, "needsReboot": false,
-    "actions": [ { "type": "regkey", "path": "HKCU:\\Classes\\Menu\\Inproc" } ] },
-  { "id": "t-multi", "category": "general", "risk": "safe", "recommended": false, "needsReboot": false,
-    "actions": [ { "type": "registry", "path": "HKCU:\\M", "name": "One", "kind": "DWord", "on": 1, "off": null },
-                 { "type": "bogus" } ] },
-  { "id": "t-risky", "category": "general", "risk": "risky", "recommended": false, "needsReboot": false,
-    "actions": [ { "type": "registry", "path": "HKCU:\\R", "name": "X", "kind": "DWord", "on": 1, "off": null } ] },
-  { "id": "t-new", "category": "general", "risk": "safe", "recommended": false, "needsReboot": false, "minBuild": 99999,
-    "actions": [ { "type": "registry", "path": "HKCU:\\N", "name": "X", "kind": "DWord", "on": 1, "off": null } ] }
-] }
-'@
-    [IO.File]::WriteAllText($cat, $json, [Text.UTF8Encoding]::new($false))
-    return $cat
-}
-function Remove-TweakSandbox {
-    if ($script:SbRoot -and $script:SbRoot -like 'HKCU:\Software\KafkaBoostTest_*' -and (Test-Path -LiteralPath $script:SbRoot)) { Remove-Item -LiteralPath $script:SbRoot -Recurse -Force }
-    if ($script:TweakStatePath -and (Test-Path -LiteralPath $script:TweakStatePath)) { Remove-Item -LiteralPath $script:TweakStatePath -Force }
-    $script:RegMap = @{ HKLM = 'HKLM:'; HKCU = 'HKCU:' }
-}
-function Get-Sb([string]$Sub, [string]$Name) { (Get-ItemProperty -LiteralPath (Join-Path $script:SbRoot $Sub) -Name $Name -ErrorAction SilentlyContinue).$Name }
-
 Describe 'Tweak engine on a sandbox registry' {
     BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1') }
     BeforeEach { $script:cat = New-TweakSandbox }
