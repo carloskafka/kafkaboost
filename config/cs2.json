@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "exeName": "cs2.exe",
+  "steamAppId": 730,
+  "defaultFolder": "Counter-Strike Global Offensive",
+  "autoexecMarker": "// Written by KafkaBoost",
+  "autoexec": [
+    { "id": "showfps", "line": "cl_showfps 1", "comment": "Shows the frame counter in a corner of the screen, so you can see stutter while you play." },
+    { "id": "fpsmax", "line": "fps_max {value}", "comment": "Frame-rate limit (the Video menu has the same setting). A limit your PC can hold steadily keeps CPU and GPU load, and so heat, lower.", "param": { "name": "value", "min": 30, "max": 1000 } }
+  ],
+  "launch": [
+    { "id": "exec", "text": "+exec autoexec", "tier": "suggested", "default": true },
+    { "id": "console", "text": "-console", "tier": "suggested", "default": false },
+    { "id": "high", "text": "-high", "tier": "disputed", "default": false },
+    { "id": "vulkan", "text": "-vulkan", "tier": "disputed", "default": false },
+    { "id": "novid", "text": "-novid", "tier": "placebo", "default": false },
+    { "id": "nojoy", "text": "-nojoy", "tier": "placebo", "default": false }
+  ]
+}

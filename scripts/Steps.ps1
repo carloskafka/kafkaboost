@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | telemetry
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | telemetry | cs2-state | cs2-gpu | cs2-autoexec
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'telemetry')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'telemetry', 'cs2-state', 'cs2-gpu', 'cs2-autoexec')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -26,7 +26,11 @@ param(
     [switch]$NoSafetyPoint,    # tweak-set / tweaks-recommended: do not create the safety restore point first
     [switch]$Download,         # get step: fetch ThrottleStop from TechPowerUp when it is not on the PC (the user agreed in the app); hwinfo-get: the user agreed to download HWiNFO
     [string]$HwinfoVersion,    # hwinfo-get: the version the user was shown and agreed to (refused when the page offers another)
-    [switch]$UpdateIni         # hwinfo-start: turn SensorsSM=1 on in the user's own HWiNFO64.INI (a timestamped .bak is made first)
+    [switch]$UpdateIni,        # hwinfo-start: turn SensorsSM=1 on in the user's own HWiNFO64.INI (a timestamped .bak is made first)
+    [string]$Cs2Exe,           # cs2-*: a cs2.exe the user picked (otherwise Steam is searched, read-only)
+    [ValidateSet('on', 'off')][string]$Cs2Mode = 'on',   # cs2-gpu: apply / revert; cs2-autoexec: write / restore
+    [string]$Cs2Options,       # cs2-autoexec on: comma separated option ids from config\cs2.json
+    [string]$Cs2FpsMax         # cs2-autoexec on: the number for the fps_max option
 )
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -39,6 +43,7 @@ if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleSto
 . (Join-Path $root 'lib\Restore.ps1')
 . (Join-Path $root 'lib\Sensors.ps1')
 . (Join-Path $root 'lib\Hwinfo.ps1')
+. (Join-Path $root 'lib\Cs2.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -50,7 +55,7 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'telemetry') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'telemetry', 'cs2-state', 'cs2-gpu', 'cs2-autoexec') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
     if ($Step -in 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop' -and -not (Test-Admin)) { Done $false 'Administrator rights are required for this step. Restart the app as administrator.' $null 'msg.hwinfo.needsAdmin' @{}; return }
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
@@ -105,6 +110,21 @@ try {
         'telemetry' {
             $tm = Get-TelemetrySnapshot
             Done $true $(if ($tm.available) { 'HWiNFO shared memory read.' } else { 'No live readings: HWiNFO is not sharing its sensors with this process.' }) $tm $(if ($tm.available) { 'msg.telemetry.ok' } else { 'msg.telemetry.unavailable' }) @{}
+        }
+        'cs2-state' {
+            $o = Get-Cs2Overview $Cs2Exe
+            Log $(if ($o.found) { "cs2.exe: $($o.exe) ($($o.source))" } else { 'cs2.exe was not found' })
+            Done $true $(if ($o.found) { 'Counter-Strike 2 found.' } else { 'Counter-Strike 2 was not found through Steam.' }) $o $(if ($o.found) { 'msg.cs2.found' } else { 'msg.cs2.notFound' }) @{}
+        }
+        'cs2-gpu' {
+            $r = Set-Cs2GpuPreference $Cs2Exe ($Cs2Mode -eq 'on')
+            Log "$($r.code): $($r.message)"
+            Done $r.ok $r.message $r.data $r.code $r.args
+        }
+        'cs2-autoexec' {
+            $r = if ($Cs2Mode -eq 'on') { Write-Cs2Autoexec $Cs2Exe @($Cs2Options -split '[,\s]+' | Where-Object { $_ }) $Cs2FpsMax } else { Restore-Cs2Autoexec $Cs2Exe }
+            Log "$($r.code): $($r.message)"
+            Done $r.ok $r.message $r.data $r.code $r.args
         }
         'fix' {
             $l = Invoke-Fix $InstallDir $SettingsFile $TaskName -DisableVbs:$DisableVBS
