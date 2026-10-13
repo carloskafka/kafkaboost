@@ -295,6 +295,7 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 /* ---- update panel (Settings and the changelog dialog) ---- */
 .upd { margin-top: 10px; }
 .upd-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.banner .upd-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .upd-text { flex: 1 1 220px; font-weight: 600; }
 .upd-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .upd-why p { margin: 6px 0 0; color: var(--text-soft); font-size: 13px; }

@@ -423,7 +423,8 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   check('the Download button sits to the RIGHT of the version text, on the same row', await js(win, "(()=>{const t=document.querySelector('#updatePanel .upd-text').getBoundingClientRect(),b=document.getElementById('updatePanel-download').getBoundingClientRect();return b.left>=t.left+Math.min(t.width,100)&&b.top<t.bottom&&b.bottom>t.top&&b.left>t.left})()"));
   check('it says plainly why there is no automatic update, and how to update a clone', (await panelText()).includes('source folder') && (await panelText()).includes('Automatic updates only exist in the installed version') && (await panelText()).includes('git pull') && (await panelText()).includes('separate installed copy'), await panelText());
   check('there is no git pull button', !(await js(win, "[...document.querySelectorAll('#updatePanel button')].some((b) => /git/i.test(b.textContent))")));
-  check('the update banner is shown too', await visible('updateBanner'));
+  const bannerBtns = () => js(win, "[...document.querySelectorAll('#updateBanner button')].filter((b) => !b.hidden).map((b) => b.textContent.trim()).join(' | ')");
+  check('the banner has exactly: Download and install, See what is new, Later (no download-page button)', (await visible('updateBanner')) && (await bannerBtns()) === 'Download and install | See what is new | Later', await bannerBtns());
   await click('#updatePanel-download');
   await waitFor("!!document.querySelector('#updatePanel progress.upd-bar') && !!document.getElementById('updatePanel-cancel')");
   check('while downloading: a progress bar, the percent and a Cancel button (nothing else to press)', (await panelText()).includes('Downloading the update') && !(await hasBtn('download')) && (await hasBtn('cancel')), await panelText());
@@ -449,10 +450,14 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   check('Show in folder asks the app to reveal the file (still nothing started)', upd().folderShown === true && !upd().installerStarted);
 
   await checkNow('noinstaller');
+  check('banner for a release without an installer: says so, only See what is new and Later', (await q('#updateBannerText')).includes('no installer file attached yet') && (await bannerBtns()) === 'See what is new | Later', await q('#updateBannerText') + ' / ' + await bannerBtns());
   check('release without an installer: no download button, the reason, the git pull hint and the release page', !(await hasBtn('download')) && (await hasBtn('release')) && (await panelText()).includes('no installer file attached yet') && (await panelText()).includes('git pull'), await panelText());
 
   await checkNow('installed');
   check('installed build: "Download the update", no explanation of why it cannot update', (await hasBtn('install')) && !(await hasBtn('download')) && !(await panelText()).includes('git pull'), await panelText());
+  check('banner of the installed build: Update and restart, See what is new, Later', (await bannerBtns()) === 'Update and restart | See what is new | Later', await bannerBtns());
+  await click('#updateBannerLater');
+  check('Later hides the banner', !(await visible('updateBanner')));
   await click('#updatePanel-install'); await waitFor("!!document.getElementById('updatePanel-restart')");
   check('installed build: after the download the button becomes "Restart and update"', (await q('#updatePanel-restart')) === 'Restart and update' && (await panelText()).includes('downloaded and checked'), await panelText());
   await click('#updatePanel-restart'); await until(async () => upd().restarted);

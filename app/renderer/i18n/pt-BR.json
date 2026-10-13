@@ -225,7 +225,6 @@
   "settings.upToDate": "Você está com a versão mais recente ({version}).",
   "settings.newer": "A versão {latest} está disponível (você tem a {current}).",
   "settings.updateFailed": "Não foi possível verificar atualizações: {error}",
-  "settings.download": "Abrir a página de download",
   "settings.maintenance": "Manutenção",
   "settings.openLogs": "Abrir a pasta de logs",
   "settings.openBackups": "Abrir a pasta do ThrottleStop (backups)",

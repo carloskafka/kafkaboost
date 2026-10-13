@@ -83,6 +83,7 @@
     });
   }
 
+  const act1 = (id, r) => act(id, r);
   async function act(id, r) {
     if (id === 'release') { if (r.url) window.kb.openExternal(r.url); return; }
     if (id === 'folder') { await window.kb.showDownloaded(); return; }
@@ -119,10 +120,16 @@
     const dlg = $('changelog'); if (!dlg.open) dlg.showModal();
   }
 
+  // The banner: the action button (installed build: Update and restart; other builds: Download and install), See what is new, Later.
+  // A release without an installer has nothing to install: the banner says so and keeps only See what is new and Later.
   function banner(r) {
     $('updateBanner').hidden = false;
-    $('updateBannerText').textContent = t('update.available', { latest: r.latest, current: r.current });
+    $('updateBannerText').textContent = t('update.available', { latest: r.latest, current: r.current }) + (r.mode === 'manual' ? ' ' + t('update.why.noInstaller') : '');
+    const act = $('updateBannerAct'); const id = r.mode === 'auto' ? 'install' : r.mode === 'download' ? 'download' : null;
+    act.hidden = !id;
+    if (id) { act.textContent = t(id === 'install' ? 'update.install' : 'update.btn.download'); act.onclick = () => { open(r, 'available'); act1(id, r); }; }
     $('updateBannerBtn').onclick = () => open(r, 'available');
+    $('updateBannerLater').onclick = () => { $('updateBanner').hidden = true; };
   }
 
   // A fresh check starts from a clean state (reopening the same panel from the banner keeps what happened).

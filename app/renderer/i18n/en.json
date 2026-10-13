@@ -225,7 +225,6 @@
   "settings.upToDate": "You have the latest version ({version}).",
   "settings.newer": "Version {latest} is available (you have {current}).",
   "settings.updateFailed": "Could not check for updates: {error}",
-  "settings.download": "Open the download page",
   "settings.maintenance": "Maintenance",
   "settings.openLogs": "Open the logs folder",
   "settings.openBackups": "Open the ThrottleStop folder (backups)",
