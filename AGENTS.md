@@ -1,7 +1,9 @@
-# AGENTS.md — Legion Tuning (ThrottleStop tuning for the Lenovo Legion 83DE)
+# AGENTS.md — KafkaBoost (CPU thermal tuning with ThrottleStop for the Lenovo Legion 83DE)
 
 Read this first, then `docs/TROUBLESHOOTING.md` before you change anything. This file is the current state and the rules; the
 reasoning and history live in `docs/` and in git (the old plan files were folded into the docs).
+
+The product is called **KafkaBoost**. The GitHub repository (`legion-14900hx-throttlestop`), the app id, the scheduled task names, the `%ProgramData%\LegionTuning` folder and the package name keep their historical names on purpose: renaming them would break existing installs and auto-update.
 
 ## What this repository is
 A guided, reversible ThrottleStop tuning for a Lenovo Legion 83DE (i9-14900HX, RTX 4090 Laptop, Windows 11), the scripts that apply

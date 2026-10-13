@@ -2,13 +2,15 @@
 > about the app <https://carloskafka.github.io/legion-14900hx-throttlestop/about-app.html#/overview>
 > (walkthrough screenshot by screenshot, from the hardware check to the last step). The links work once the site is pushed and published.
 
-<p align="center"><img src="docs/apple-touch-icon.png" alt="Legion Tuning icon: a CPU chip with a gauge needle in the green zone" width="96"></p>
+<p align="center"><img src="docs/apple-touch-icon.png" alt="KafkaBoost icon: a CPU chip with a gauge needle in the green zone" width="96"></p>
 
-# Legion Tuning — keep a gaming laptop under 100 °C
+# KafkaBoost — keep a gaming laptop under 100 °C
 
 A guided, reversible [ThrottleStop](https://www.techpowerup.com/download/techpowerup-throttlestop/) tuning for the **Lenovo Legion 83DE
 (Intel Core i9-14900HX)**: undervolt, boost-clock caps and power limits, a one-click installer, an always-on watchdog, and an
 Electron app whose **Dashboard** screen tells you whether the optimization is still in place after a Windows update.
+
+> The product is called **KafkaBoost**. The GitHub repository (`legion-14900hx-throttlestop`), the app id, the scheduled task names, the `%ProgramData%\LegionTuning` folder and the package name keep their historical names on purpose: renaming them would break existing installs and auto-update.
 
 ## Live pages
 
