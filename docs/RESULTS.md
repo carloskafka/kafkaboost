@@ -5,7 +5,7 @@ from HWiNFO/HWMonitor screenshots taken during the original sessions, so they ar
 
 | Configuration | Peak temp | Avg temp | Peak package power | Peak P clock | Thermal-throttle samples | WHEA |
 |---|---|---|---|---|---|---|
-| Stock (Lenovo limits), no undervolt | 99-100 C | n/a | 139 W | 5.39 GHz | frequent | 1 corrected |
+| Stock (Lenovo limits), no undervolt | 99-100 C | 91 C | 139 W | 5.39 GHz | frequent | 1 corrected |
 | -100/-100/-90 mV, P 49x / E 36x, PL 65/85 W | 92 C | about 80 C | 82 W | 4.89 GHz | 6 (about 12 s in 19 min) | 0 |
 | **Current:** same, **P 47x** | **90 C** | about 79 C | 73 W | 4.69 GHz | **0** (19 min) | 0 |
 
