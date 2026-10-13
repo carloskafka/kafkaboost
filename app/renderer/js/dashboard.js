@@ -78,7 +78,7 @@
   }
 
   KB.runHealth = runHealth;
-  KB.registerView('health', { onShow() { if (!KB.featureOn('optimizations')) renderBasic(); } });
+  KB.registerView('health', { onShow() { if (!KB.featureOn('optimizations')) renderBasic(); else if (KB.hwinfoRefresh) KB.hwinfoRefresh(); } });
 
   document.addEventListener('DOMContentLoaded', () => {
     $('check').addEventListener('click', runHealth);

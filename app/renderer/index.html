@@ -79,6 +79,29 @@
           <div class="tile"><div class="tile-v" id="tPower">–</div><div class="tile-l" data-i18n="dashboard.tile.power">Package power</div></div>
         </div>
 
+        <div id="hwCard" class="card" hidden>
+          <h2 class="h2" data-i18n="hwinfo.title"></h2>
+          <p id="hwStatus"></p>
+          <p id="hwSource" class="muted"></p>
+          <p class="muted" data-i18n="hwinfo.why"></p>
+          <div id="hwGet" hidden>
+            <p id="hwRelease" class="prewrap"></p>
+            <p id="hwDetails" class="muted"></p>
+            <p><button class="btn small" type="button" data-link="https://www.hwinfo.com/download/" data-i18n="hwinfo.page"></button></p>
+            <label class="check"><input id="hwConsent" type="checkbox"> <span id="hwConsentText"></span></label>
+          </div>
+          <label id="hwIniRow" class="check" hidden><input id="hwIniConsent" type="checkbox"> <span data-i18n="hwinfo.ini.consent"></span></label>
+          <div id="hwResult" class="result" hidden></div>
+          <div class="clean-foot"><span id="hwNote" class="muted"></span>
+            <span class="tweaks-tools">
+              <button id="hwCheck" class="btn" type="button" data-i18n="hwinfo.check.button" hidden></button>
+              <button id="hwPick" class="btn small" type="button" data-i18n="hwinfo.pick" hidden></button>
+              <button id="hwGetBtn" class="btn primary" type="button" data-i18n="hwinfo.get.button" hidden disabled></button>
+              <button id="hwStart" class="btn primary" type="button" data-i18n="hwinfo.start" hidden></button>
+              <button id="hwStop" class="btn" type="button" data-i18n="hwinfo.stop" hidden></button>
+            </span></div>
+        </div>
+
         <div class="card">
           <h2 class="h2" data-i18n="dashboard.checksTitle">What I checked</h2>
           <ul id="checks" class="checks"></ul>
@@ -434,6 +457,8 @@
   <script src="js/apps.js"></script>
 <script src="js/sensorlogic.js"></script>
 <script src="js/sensors.js"></script>
+<script src="js/hwinfologic.js"></script>
+<script src="js/hwinfo.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/updates.js"></script>
   <script src="js/boot.js"></script>

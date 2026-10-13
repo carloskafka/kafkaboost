@@ -118,8 +118,40 @@ const restorePoints = [
   { id: 11, description: 'Windows Update', created: '2026-10-08T03:12:00', type: 'install' }
 ];
 
+// HWiNFO on demand (demo): nothing is downloaded or started. The card walks through missing -> checked -> installed -> running.
+state.hwinfo = { installed: false, running: false };
+const HW_DIR = 'C:\\ProgramData\\LegionTuning\\hwinfo\\8.54';
+function hwinfoStep(step, opts) {
+  const ok = (code, args, message, data) => ({ logs: [], res: { ok: true, code, args: args || {}, message, data } });
+  const h = state.hwinfo;
+  if (step === 'hwinfo-state') {
+    return ok(h.installed ? 'msg.hwinfo.state.installed' : 'msg.hwinfo.state.missing', { version: '8.54-6090' }, 'demo', {
+      installed: h.installed, source: h.installed ? 'own' : null, dir: h.installed ? HW_DIR : null, version: h.installed ? '8.54-6090' : null,
+      running: h.running, runningHere: h.running, sharedMemory: h.running, ini: h.installed ? (h.iniOff ? 'noSharedMemory' : 'ok') : 'none',
+      name: 'HWiNFO', homepage: 'https://www.hwinfo.com/', downloadPage: 'https://www.hwinfo.com/download/', signer: 'REALiX',
+      license: 'Freeware for non-commercial use (proprietary)', installRoot: 'C:\\ProgramData\\LegionTuning\\hwinfo'
+    });
+  }
+  if (step === 'hwinfo-check') {
+    return ok('msg.hwinfo.checked', { version: '8.54' }, 'demo', { name: 'HWiNFO', version: '8.54', url: 'https://www.hwinfo.com/files/hwi_854.zip', source: 'https://www.hwinfo.com/download/', signer: 'REALiX', license: 'Freeware for non-commercial use (proprietary)' });
+  }
+  if (step === 'hwinfo-get') {
+    if (!opts.download && !opts.zipPath) return { logs: [], res: { ok: false, code: 'msg.hwinfo.consentNeeded', args: {}, message: 'consent needed', data: null } };
+    h.installed = true;
+    return { logs: ['downloading HWiNFO (demo: nothing is downloaded)', 'signature OK (REALiX, s.r.o.)'], res: ok('msg.hwinfo.installed', { version: '8.54' }, 'demo', { dir: HW_DIR, version: '8.54' }).res };
+  }
+  if (step === 'hwinfo-start') {
+    if (h.iniOff && !opts.updateIni) return { logs: [], res: { ok: false, code: 'msg.hwinfo.iniNoSharedMemory', args: {}, message: 'ini', data: null } };
+    h.iniOff = false; h.running = true;
+    return ok('msg.hwinfo.started', {}, 'demo', { dir: HW_DIR });
+  }
+  h.running = false;
+  return ok('msg.hwinfo.stopped', {}, 'demo', { stopped: 1 });
+}
+
 function demoStep(step, opts = {}, configDir) {
   if (step.startsWith('sensors-')) return sensorStep(step);
+  if (step.startsWith('hwinfo-')) return hwinfoStep(step, opts);
   if (step === 'restore-list') return { logs: [], res: { ok: true, code: 'msg.restore.listed', args: { count: restorePoints.length }, message: 'ok', data: { admin: true, points: restorePoints.slice() } } };
   if (step === 'restore-create') {
     const id = restorePoints[0].id + 1; restorePoints.unshift({ id, description: String(opts.restoreName || 'KafkaBoost'), created: new Date().toISOString().slice(0, 19), type: 'settings' });

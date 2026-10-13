@@ -235,6 +235,10 @@ code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--pane
 .app-card.busy { opacity: .6; }
 .apps-bloat-hint { font-size: 12.5px; color: var(--muted); }
 
+/* ---- Dashboard: live telemetry source (HWiNFO) ---- */
+.prewrap { white-space: pre-line; }
+#hwCard .clean-foot { flex-wrap: wrap; gap: 10px; }
+
 /* ---- sensors ---- */
 .sensors-legend { margin: 6px 0 0; font-size: 12.5px; }
 .sensors-group { margin: 22px 0 10px; }
