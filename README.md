@@ -91,12 +91,12 @@ Light and dark theme, English and Brazilian Portuguese.
   (verify).
 - **Cleanup** measures first (temp files, Prefetch, Windows Update downloads, thumbnail cache, Recycle Bin) and deletes only what
   you tick; locked files are skipped, junctions are never followed, and the Recycle Bin (permanent) asks twice.
-- **Restore** undoes the CPU tuning (startup task, INI backup, optionally VBS). **Settings** has theme, language, tray options,
+- **Restore** lists your Windows restore points, creates one on demand and opens Windows System Restore. KafkaBoost also creates one before your first tweak or *Apply recommended* (Windows allows one per 24 hours; if it declines, the app says so and still applies the tweak). It also undoes the CPU tuning (startup task, INI backup, optionally VBS). **Settings** has theme, language, tray options,
   start with Windows, check interval, ThrottleStop folder and the update check. **Help** has short answers and the documentation links.
 - **Updates:** the app looks at this repo's GitHub Releases and shows the changelog when a newer version exists; the installed
   Windows build can update in place. It needs a published release with an installer (no release workflow yet).
 
-Not built yet: System Restore point management, an Apps installer/uninstaller, CS2 preset, the new landing site.
+Not built yet: an Apps installer/uninstaller, CS2 preset, the new landing site.
 
 Every screen is in the [live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/#/walkthrough). Screenshots come from
 demo mode (`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
@@ -167,8 +167,8 @@ install.cmd            one-click installer (self-elevates)
 KafkaBoost.cmd/.command/.lnk  launchers for the app
 app/                   Electron app: src/ (main, preload, settings, updates, i18n, tray, demo), renderer/, build/ (icons), test/ (node tests)
 config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog)
-scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup), monitoring/, maintenance/
-tests/                 Pester tests for the library (51)
+scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore), monitoring/, maintenance/
+tests/                 Pester tests for the library (57)
 tools/                 make-icons.js, make-shots.ps1, run-uitest.ps1 (UI checks)
 docs/                  GitHub Pages site (index.html, assets/, favicons) and the reference documents
 local/                 git-ignored: backups, evidence, experiments

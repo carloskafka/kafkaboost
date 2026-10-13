@@ -45,6 +45,7 @@ Tick **Settings > Start with Windows** to have it start hidden at every logon. T
   the value it had before.
 - **Cleanup** measures temp files, Prefetch, Windows Update downloads, the thumbnail cache and the Recycle Bin first, and deletes
   only what you tick. Emptying the Recycle Bin cannot be undone and asks twice.
+- **Restore** shows your Windows restore points and can create one. The app makes one before your first tweak (Windows allows one per 24 hours).
 - **Updates:** the app checks GitHub Releases (a lookup only) and shows a banner with the changelog when a newer version exists.
   Turn it off in Settings.
 ## 4. After a Windows update

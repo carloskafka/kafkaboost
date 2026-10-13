@@ -42,11 +42,11 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 | `config/` | `ThrottleStop.settings.ini` (the tuning), `HWiNFO64.INI` (shared memory on), `defaults.json` (install dir + task name, read by PowerShell **and** Node), `tweaks.json` (tweak catalog, 30 entries) |
 | `scripts/lib/Tuning.ps1` | merge INI, register task, unpack ThrottleStop, VBS, verify, rollback, FIVR/V-F encoders, `Get-Defaults` |
 | `scripts/lib/Health.ps1` | health check (`Get-HealthReport`, `Compare-IniSettings`, `Get-Verdict`), Windows-build baseline, live telemetry, `Invoke-Fix` |
-| `scripts/lib/Tweaks.ps1`, `Cleanup.ps1` | tweak engine (declarative actions, state in `%ProgramData%\LegionTuning\state.json`, sandboxable in tests) and disk cleanup (allow-list, dry run first) |
-| `scripts/Steps.ps1` | runs ONE step (detect, backup, get [-Download], vbs, apply, task, verify, health, fix, autostart, rollback, paths, cleanbackups, tweaks-list, tweak-set, tweaks-recommended, cleanup-scan, cleanup-run), prints `LOG:` / `RESULT:` lines |
+| `scripts/lib/Tweaks.ps1`, `Cleanup.ps1`, `Restore.ps1` | tweak engine (declarative actions, state in `%ProgramData%\LegionTuning\state.json`, sandboxable in tests) disk cleanup (allow-list, dry run first) and System Restore points (list/create via an injectable provider; safety point before the first tweak, never blocks it) |
+| `scripts/Steps.ps1` | runs ONE step (detect, backup, get [-Download], vbs, apply, task, verify, health, fix, autostart, rollback, paths, cleanbackups, tweaks-list, tweak-set, tweaks-recommended, cleanup-scan, cleanup-run, restore-list, restore-create, restore-open), prints `LOG:` / `RESULT:` lines |
 | `scripts/Create-Shortcut.ps1` | desktop + Start Menu shortcut with the icon and the run-as-administrator flag |
 | `scripts/monitoring/`, `scripts/maintenance/` | loggers (output to `logs/`), `restore_vbs.ps1` |
-| `tests/` | Pester tests (51; `Setup.ps1` shared, plain `throw` assertions: runs on Pester 3.4 and 5) |
+| `tests/` | Pester tests (57; `Setup.ps1` shared, plain `throw` assertions: runs on Pester 3.4 and 5) |
 | `tools/` | `make-icons.js` (all icon sizes from `app/renderer/icon.svg`), `make-shots.ps1` (docs screenshots from demo mode; not yet regenerated for the new screens), `run-uitest.ps1` + `uitest.js` (UI checks in demo mode), `run-traytest.ps1` |
 | `docs/` | GitHub Pages site (`index.html`, `assets/`, favicons) + `getting-started`, `ARCHITECTURE`, `CONFIGURATION`, `TESTING`, `TROUBLESHOOTING`, `RESULTS` |
 | `.github/workflows/` | `ci.yml` (tests + syntax on Windows), `pages.yml` (publishes `docs/`) |
@@ -54,9 +54,9 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 
 ## Commands
 ```powershell
-Invoke-Pester tests                                                   # unit tests (51)
+Invoke-Pester tests                                                   # unit tests (57)
 cd app; node --test "test/*.test.js"                                  # node tests (25)
-powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (46 + 5)
+powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (48 + 5)
 powershell -File scripts\Steps.ps1 -Step health -InstallDir "<dir>"   # read-only verdict + live telemetry (no admin needed)
 powershell -File scripts\Create-Shortcut.ps1                          # shortcut with the app icon
 cd app; npm install; npm start                                        # the app (needs admin for changes)
@@ -75,8 +75,8 @@ cd app; npx electron ..\tools\make-icons.js                           # regenera
 - Test installer changes in a throwaway directory (`-InstallDir <temp> -NoTask -NoStart`), never against the live ThrottleStop.
 
 ## Roadmap and open items
-- **Built since the first version:** Settings + theme + pt-BR, tweak engine and catalog UI, Cleanup, update check with changelog, ThrottleStop on-click download, root launchers.
-  **Planned, not built** (approved plan in `~/.claude/plans/`): Restore points (a System Restore point before the first tweak), Apps manager (winget/brew/flatpak...), Dashboard hardware cards + optimization level, CS2 preset, the full rename to KafkaBoost (repo, package ids and task names stay), a landing site on GitHub Pages (today's docs hub moves to `about-app.html`), a release workflow (installer + `latest.yml`, required for in-app updates to work), CI on 3 OSes. The `docs/` screenshots predate the new screens.
+- **Built since the first version:** Settings + theme + pt-BR, tweak engine and catalog UI, Cleanup, Restore points, update check with changelog, ThrottleStop on-click download, root launchers.
+  **Planned, not built** (approved plan in `~/.claude/plans/`): Apps manager (winget/brew/flatpak...), Dashboard hardware cards + optimization level, CS2 preset, the full rename to KafkaBoost (repo, package ids and task names stay), a landing site on GitHub Pages (today's docs hub moves to `about-app.html`), a release workflow (installer + `latest.yml`, required for in-app updates to work), CI on 3 OSes. The `docs/` screenshots predate the new screens.
 - **Menu names are provisional.** The sections follow the flow the TogsBoost site describes for a typical optimizer (system analysis,
   preparation, optimizations, restore). The reference video could not be analyzed (YouTube blocks automated access), so adjust the
   labels in `app/renderer/index.html` once the exact tab names are known. The old disabled placeholder cards were replaced by the tweak catalog.- **Presets with a recommendation score** (not built): named tunings per CPU family; each with requirements (CPU generation, hybrid

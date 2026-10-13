@@ -43,7 +43,7 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
       await click('#next'); await sleep(450);
     }
     await shot(win, out('finish'));
-    await click('[data-view=restore]'); await sleep(600); await shot(win, out('restore'));
+    await click('[data-view=restore]'); await sleep(1500); await shot(win, out('restore'));
     await click('[data-view=settings]'); await sleep(900); await shot(win, out('settings'));
     await click('[data-view=help]'); await sleep(600); await js(win, "document.querySelector('.faq details').open = true"); await shot(win, out('help'));
     // back to the first screen for the next variant

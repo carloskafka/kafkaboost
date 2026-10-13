@@ -3,7 +3,7 @@
 Three layers, one source of truth for the logic:
 
 ```
-app/ (Electron UI)  ──spawn──▶  scripts/Steps.ps1  ──dot-source──▶  scripts/lib/Tuning.ps1 + Health.ps1 + Tweaks.ps1 + Cleanup.ps1
+app/ (Electron UI)  ──spawn──▶  scripts/Steps.ps1  ──dot-source──▶  scripts/lib/Tuning.ps1 + Health.ps1 + Tweaks.ps1 + Cleanup.ps1 + Restore.ps1
 install.cmd ─────────────────▶  scripts/Install-Tuning.ps1 ───────────────────▲
                                          config/{ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json}
 ```
@@ -16,6 +16,7 @@ install.cmd ─────────────────▶  scripts/Inst
 
 | `Tweaks.ps1` | The tweak engine, driven by `config/tweaks.json` (30 tweaks, 7 categories, risk `safe`/`advanced`/`risky`). A tweak is a list of declarative actions (`registry`, `regkey`, `service`, `powerplan`, `dns`, `defender`, `vbs`). `Set-Tweak` is all-or-nothing: it records the previous value in `%ProgramData%\LegionTuning\state.json`, applies, and rolls back if an action fails; turning a tweak off restores the recorded value. Risky tweaks need `-AllowRisky`; `minBuild` hides tweaks the Windows build does not support. `Set-RecommendedTweaks` applies only the safe ones marked `recommended`. |
 | `Cleanup.ps1` | Disk cleanup: a fixed allow-list of targets (user temp, Windows temp, Prefetch `*.pf`, Windows Update downloads, thumbnail cache, Recycle Bin). `Get-CleanupSizes` is a dry run; `Invoke-Cleanup` deletes only the contents of the chosen ids, never follows junctions or symlinks, skips locked files and counts them, and leaves the target folder itself. The Recycle Bin is the one irreversible target. |
+| `Restore.ps1` | System Restore points: `Get-KbRestorePoints` (newest first, needs admin), `New-KbRestorePoint` (checks that Windows really made one, because `Checkpoint-Computer` only warns when it declines; reports `created` / `skipped` / `failed`), `Test-FirstTweak`. `tweak-set` (on) and `tweaks-recommended` make a safety point first unless `-NoSafetyPoint`; a declined or failed point never blocks the tweak. Windows' 24-hour limit and System Protection are never changed, and there is no single-point delete (the app opens `rstrui.exe` instead). Tests use `$script:RestoreProvider`. |
 
 The files are pure functions plus side effects behind clearly named functions, so the logic can be unit-tested with a sandbox
 (`tests/`): `Tweaks.ps1` reads a `$script:RegMap` / `$script:TweakStatePath` override, `Cleanup.ps1` a `$script:CleanupMap`, so
@@ -23,7 +24,7 @@ tests never touch real registry keys or folders.
 
 ## Step runner (`scripts/Steps.ps1`)
 Runs **one** step (`detect`, `backup`, `get`, `vbs`, `apply`, `task`, `verify`, `health`, `fix`, `autostart`, `rollback`, `paths`,
-`cleanbackups`, `tweaks-list`, `tweak-set`, `tweaks-recommended`, `cleanup-scan`, `cleanup-run`) and prints a protocol the
+`cleanbackups`, `tweaks-list`, `tweak-set`, `tweaks-recommended`, `cleanup-scan`, `cleanup-run`, `restore-list`, `restore-create`, `restore-open`) and prints a protocol the
 app parses: `LOG: <text>` lines and one final `RESULT: {"ok":…,"message":…,"code":…,"args":…,"data":…}`. `code` + `args` are a
 language-neutral message key (`msg.*`, `tweak.*`, `check.*`) the UI translates; `message` is the English fallback. Steps that
 change the system refuse to run without administrator rights; the read-only ones (`detect`, `verify`, `health`, `paths`,
