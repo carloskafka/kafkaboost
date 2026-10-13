@@ -68,3 +68,6 @@ cd app; npx electron ..\tools\make-icons.js                           # regenera
 
 ## Roadmap and open items (short)
 Not built or never run: guided before/after test session, presets per CPU family, fresh-Windows release test, Linux/macOS runs, real winget installs, CS2 GPU/autoexec writes in game, elevated sensor and HWiNFO installs. FPS was never measured. Details: `docs/AGENT-DETAILS.md#roadmap-and-open-items`.
+
+## Delegation (saves quota)
+Size each request first. Trivial: do it. Otherwise split into steps: mechanical + verifiable (searches, log reading, test runs, renames) go to the Haiku agents in `.claude/agents/` (`scout`, `log-digester`, `test-runner`, `worker`) with exact paths and a short reply; design, judgment and risky steps (rules 1-14, undervolt, registry, deletes) stay in the main session, and `diff-verifier` checks delegated edits. Keep one model and effort per session. Skills: `.claude/skills/` (`model-routing`, `token-hygiene`, `subagent-brief`, `land-a-change`, ...). Install for other projects: `tools/Install-ClaudeSetup.ps1`.
