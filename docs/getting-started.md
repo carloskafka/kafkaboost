@@ -9,7 +9,7 @@ supported: the app and the scripts refuse to apply the tuning to them.
   fetches it from <https://www.techpowerup.com/download/techpowerup-throttlestop/> (only after you agree). If you already have it, the
   zip in `Downloads` or an extracted copy in `Downloads`, `Desktop` or `Documents` is found and used in place.
 - Optional: [Node.js](https://nodejs.org) 20+ to run the app from a clone (`npm install` runs once, from `app/`).
-- Optional: HWiNFO64 (sensors only) to watch temperatures while you play.
+- Optional: HWiNFO64 (sensors only) to watch temperatures while you play. The app can get and start it for you from the Dashboard card (*Live telemetry source*), after you agree; it is proprietary freeware and is never bundled.
 
 ## 2. Install
 Pick one way; both call the same code (`scripts/lib/Tuning.ps1`).
@@ -53,7 +53,7 @@ Open **Dashboard** again. If it is amber or red, read the list (a Windows update
 press **Fix it**. VBS is only turned off again if you tick the box.
 
 ## 5. Watch the temperatures (optional)
-1. Put `config\HWiNFO64.INI` next to `HWiNFO64.exe` (it sets `SensorsOnly=1` and `SensorsSM=1`) and start HWiNFO **without
+1. (The Dashboard card does this for you.) Put `config\HWiNFO64.INI` next to `HWiNFO64.exe` (it sets `SensorsOnly=1` and `SensorsSM=1`) and start HWiNFO **without
    command-line arguments**.
 2. `powershell -File scripts\monitoring\hwinfo_logger.ps1 -Minutes 20` writes `logs\hwinfo_log.csv` while you play.
 3. Compare peak temperature, package power and throttle flags with `docs/RESULTS.md`.

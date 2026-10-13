@@ -92,6 +92,16 @@ Light and dark theme, English and Brazilian Portuguese.
 
 - **Dashboard** compares the settings, the startup task, VBS and the Windows build with the moment you set it up, shows live
   temperature, clock and power (when HWiNFO sensors are available) and offers **Fix it**, which re-applies only what drifted.
+  Under the tiles, the **Live telemetry source (HWiNFO)** card gets HWiNFO for you: *Check what will be downloaded* reads the official
+  [download page](https://www.hwinfo.com/download/) and shows the version, the source address and the expected signer; after you tick
+  the consent box, *Download and install* fetches the portable zip, requires `HWiNFO64.exe` inside it and a **valid digital signature
+  from REALiX**, and unpacks only that exe (plus `config\HWiNFO64.INI`, sensors-only with shared memory on) under
+  `%ProgramData%\LegionTuning\hwinfo\<version>`. An HWiNFO you already have (Downloads, Desktop, Documents, `C:\Tools`, Program Files) is
+  reused: its INI is never overwritten (turning shared memory on in it asks first and keeps a timestamped `.bak`). *Start* never passes
+  arguments to HWiNFO and never starts a second copy; *Stop* only ends the process that runs from that exact file. Installing, starting
+  and stopping need administrator rights. HWiNFO is proprietary freeware for non-commercial use and is **not** in this repository.
+  If the site answers with a protection page instead of the zip, the card says so and lets you pick a zip you downloaded yourself
+  (same checks). **Not run on the PC yet:** the elevated install, start and stop (see `docs/TESTING.md`).
 - **System analysis** is a read-only look at the PC (model, CPU, GPU, RAM, Windows, power plan, VBS) and whether the tuning can be applied.
 - **Optimizations** is a catalog of 30 tweaks (performance, GPU, gaming, network, privacy, appearance) with search, category
   filters and a risk badge on each (`safe`, `advanced`, `risky`). Toggle one on and the previous value is saved, so toggling it
@@ -105,6 +115,8 @@ Light and dark theme, English and Brazilian Portuguese.
   start with Windows, check interval, ThrottleStop folder and the update check. **Help** has short answers and the documentation links.
 - **Sensors** (Windows) shows live temperatures, clocks, voltages, power, fans and load for the CPU, GPU, board, disks and memory, refreshed about every 2 s while the screen is open, with a pause button, session min/max, generic warm (80 C) and hot (90 C) highlights and a copy/save of the snapshot as JSON. It is a viewer of the HWMonitor kind; it does **not** measure DPC/ISR latency, so it does not replace LatencyMon. The sensor library is [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) (MPL-2.0). It is not bundled: when you tick the consent box and click *Get sensor support* the app downloads the pinned release from GitHub, refuses it if its SHA-256 differs from the one in `config/sensors.json`, unpacks only the DLLs under `%ProgramData%\LegionTuning\sensors` and deletes the zip. CPU temperature, clocks and power additionally need the third-party **PawnIO** driver, which the app does not install (without it they are shown as missing, not zero); disks and board sensors need administrator rights. We did not test any anti-cheat with that driver. Verified on a real PC: the download and hash check and a non-elevated read; **an elevated read was not run**.
 - **Apps** installs and removes a short list of popular apps (browsers, Steam, Discord, VLC, OBS, 7-Zip and more) with the package manager your system already has: winget on Windows, Homebrew on macOS, Flatpak (or apt, dnf, pacman through a password prompt) on Linux. It works on all three systems, bundles nothing, and removing an app asks first. You can also search the package manager, export the installed list to a JSON file and import it on another PC (the app shows the list and asks before installing anything). On Windows it can also remove pre-installed Store apps (News, Solitaire, Clipchamp and others) from a fixed list, one at a time; each can be reinstalled from the Microsoft Store. The ids were checked against the package sites, but only the read-only Windows parts (`winget list`, `winget search`, the Store-app list) were run on a real machine: **installing and removing with winget was not run for real, and the macOS and Linux code was never run at all**; it is covered by unit tests with a fake command runner.
+
+<img src="docs/assets/hwinfo-consent.png" alt="Dashboard: the live telemetry source card shows the version, source and signer before the download is confirmed (demo data)" width="560">
 
 <img src="docs/assets/sensors.png" alt="Sensors: live CPU temperatures with min and max (demo data)" width="560">
 
@@ -146,7 +158,7 @@ The installer registers the task `ThrottleStop_Autostart`: at logon, highest pri
 ## Monitoring
 
 - `config\HWiNFO64.INI` turns on HWiNFO shared memory (`SensorsSM=1`). Never launch HWiNFO with command-line arguments (the free
-  version shows an error).
+  version shows an error). The Dashboard card does all of this for you (see above); by hand, put the INI next to `HWiNFO64.exe`.
 - `scripts\monitoring\hwinfo_logger.ps1` logs temperatures, clocks, power and throttle flags every 2 s to `logs\hwinfo_log.csv`.
 - `scripts\monitoring\perf_logger.ps1` logs CPU frequency / memory counters (UTF-8 BOM, pt-BR counter names).
 
@@ -161,7 +173,7 @@ while it is on; the boost and power caps are separate and may still apply.
   watchdog (no duplicates, restarts when closed), the health check and the demo UI. Not tested: the changing wizard steps through
   the UI, the Windows installer package (`npm run dist` is configured, not built), a real in-app update, an elevated apply/revert of the tweaks on a real PC (they are tested against a sandbox registry), macOS and Linux.
 - Tweaks change Windows settings; the risky ones lower security. Use at your own risk.
-- ThrottleStop is not redistributed here: the app downloads it from TechPowerUp when you agree. HWiNFO is optional and yours to download. The Sensors screen downloads LibreHardwareMonitor (MPL-2.0) from its official GitHub release only when you agree; nothing of it is in this repository.
+- ThrottleStop is not redistributed here: the app downloads it from TechPowerUp when you agree. HWiNFO (proprietary freeware, non-commercial use only) is optional and is never bundled or redistributed: the Dashboard card downloads it from hwinfo.com only after you read the version and source and tick the consent box, and refuses it unless the exe carries a valid REALiX signature. The Sensors screen downloads LibreHardwareMonitor (MPL-2.0) from its official GitHub release only when you agree; nothing of it is in this repository.
 - Model-specific: Lenovo Legion type 83DE (HWiNFO calls it "Legion Pro 7 16IRX9H"). Other models need their own limits.
 - Changing CPU voltages can cause instability. Use at your own risk.
 
@@ -183,8 +195,8 @@ while it is on; the boost and power caps are separate and may still apply.
 install.cmd            one-click installer (self-elevates)
 KafkaBoost.cmd/.command/.lnk  launchers for the app
 app/                   Electron app: src/ (main, preload, settings, updates, i18n, tray, demo), renderer/, build/ (icons), test/ (node tests)
-config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog), sensors.json (pinned sensor library)
-scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore, Sensors), monitoring/, maintenance/
+config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog), sensors.json (pinned sensor library), hwinfo.json (official HWiNFO page, signer)
+scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore, Sensors, Hwinfo), monitoring/, maintenance/
 tests/                 Pester tests for the library (70)
 tools/                 make-icons.js, make-shots.ps1, run-uitest.ps1 (UI checks)
 docs/                  GitHub Pages site (index.html landing, about-app.html docs hub, compare/download/faq/privacy/terms, pt-br/ mirror, site.css, site.js, assets/) and the reference documents

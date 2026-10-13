@@ -160,6 +160,25 @@ The exported list (`kafkaboost-apps.json`) is `{ "app": "KafkaBoost", "format": 
 
 **Scope.** Temperatures, clocks, voltages, power, fans and load, like HWMonitor. It does **not** measure DPC/ISR latency (use LatencyMon for that). The warm (80 C) and hot (90 C) temperature colors are generic and not specific to any chip or disk.
 
+## HWiNFO on demand (`config/hwinfo.json`)
+| Field | Meaning |
+|---|---|
+| `downloadPage` | `https://www.hwinfo.com/download/`: the only page read to find the current build |
+| `filePrefix` | `https://www.hwinfo.com/files/`: the portable zip link must start with it and be named `hwi_<version without the dot>.zip` (8.54 is `hwi_854.zip`); anything else is refused |
+| `exe`, `ini` | `HWiNFO64.exe` (the only file unpacked) and `HWiNFO64.INI` (the template is `config/HWiNFO64.INI`: `SensorsOnly=1`, `SensorsSM=1`) |
+| `signer` | `REALiX`: the signer name the Authenticode signature of `HWiNFO64.exe` must contain (and the status must be Valid) |
+| `license` | text shown in the consent box |
+
+There is **no pinned hash**: HWiNFO ships a new build every few weeks, so a hash would go stale. The checks are the official address, a real zip that holds `HWiNFO64.exe`, and the vendor signature. If the page layout changes the app says so (`msg.hwinfo.pageChanged`) instead of guessing.
+
+**What is downloaded and where.** Nothing is in this repository. The *Live telemetry source (HWiNFO)* card on the Dashboard first reads the download page (button *Check what will be downloaded*) and shows version, source address and signer. After the user ticks the consent box and clicks *Download and install* (as administrator) the zip goes to a fresh folder in `%TEMP%`, is checked, only `HWiNFO64.exe` is extracted and signature-checked, then moved to `%ProgramData%\LegionTuning\hwinfo\<version>\` (ACL: administrators and SYSTEM write, users read) with the INI template next to it, and the temp folder is deleted. The page is fetched with `curl.exe` and an honest user agent; if the site answers with a protection page the app does not try to get around it: the reply is not a zip, so it says `msg.hwinfo.blocked` and offers *I downloaded the zip myself...* (the zip you pick goes through the same checks).
+
+**An HWiNFO you already have** (found in Downloads, Desktop, Documents, `C:\Tools`, `C:\HWiNFO` or Program Files, two levels deep) is used instead of downloading. Its `HWiNFO64.INI` is never overwritten: if there is none, the template is copied; if it lacks `SensorsSM=1` the card asks, and only then sets that one key after making `HWiNFO64.INI.bak_<timestamp>`.
+
+**Start and stop.** The exe is started with no arguments (the free version shows an error otherwise), its signature is checked again first, and nothing is started when an HWiNFO64 is already running. Stop ends only processes whose `Path` is exactly the resolved `HWiNFO64.exe` (it asks the window to close, then ends it after 4 s).
+
+**Third-party note.** HWiNFO is proprietary freeware by REALiX ("FREEWARE for Non-Commercial use only" on its download page). KafkaBoost neither bundles nor redistributes it: the file comes from hwinfo.com on your click, and the only network request before that is the one page read when you press *Check*. We could not confirm on the official pages any limit on how long the free edition may share sensors in one session, so none is stated here; if HWiNFO stops sharing, the card shows it and *Start* restarts it.
+
 ## App settings (`userData/settings.json`)
 `theme` (system|dark|light), `language` (auto|en|pt-BR), `closeToTray`, `startHidden`, `notifications`, `checkIntervalMin` (5-1440),
 `installDir` (ThrottleStop folder, empty = automatic), `checkForUpdates` (default on), `lastSeenVersion`, `lastCleanup`. Invalid values are rejected.

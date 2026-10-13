@@ -26,7 +26,7 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     demo.state.scenario = 'ok'; demo.state.fixed = false;
     demo.state.hwinfo = { installed: false, running: false };
     const until = async (expr) => { for (let i = 0; i < 60 && !(await js(win, expr)); i++) await sleep(100); };
-    const top = "document.querySelector('main, .main, body').scrollTop = 0; window.scrollTo(0, 0); 0";
+    const top = "document.getElementById('hero').scrollIntoView({ block: 'start' }); 0";
     await click('[data-view=health]'); await until("!document.getElementById('hwCard').hidden && !document.getElementById('hwCheck').hidden"); await sleep(900);
     await click('#hwCheck'); await until("!document.getElementById('hwGet').hidden"); await sleep(300);
     await js(win, "document.getElementById('hwCard').scrollIntoView({ block: 'center' }); 0"); await sleep(300); await shot(win, out('hwinfo-consent'));
