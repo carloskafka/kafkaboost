@@ -55,8 +55,8 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 ## Commands
 ```powershell
 Invoke-Pester tests                                                   # unit tests (57)
-cd app; node --test "test/*.test.js"                                  # node tests (25)
-powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (48 + 5)
+cd app; node --test "test/*.test.js"                                  # node tests (52)
+powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (64 + 9)
 powershell -File scripts\Steps.ps1 -Step health -InstallDir "<dir>"   # read-only verdict + live telemetry (no admin needed)
 powershell -File scripts\Create-Shortcut.ps1                          # shortcut with the app icon
 cd app; npm install; npm start                                        # the app (needs admin for changes)
