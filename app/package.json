@@ -12,7 +12,7 @@
         "demo": "node -e \"process.env.WIZARD_DEMO=1;require('child_process').spawn(require('electron'),['.'],{stdio:'inherit',env:process.env})\"",
         "icons": "electron ../tools/make-icons.js",
         "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/Create-Shortcut.ps1",
-        "dist": "electron-builder --win",
+        "dist": "electron-builder --win --publish never",
         "test": "node --test \"test/*.test.js\""
     },
     "build": {
@@ -48,7 +48,8 @@
             "oneClick": false,
             "allowToChangeInstallationDirectory": true,
             "createDesktopShortcut": true,
-            "createStartMenuShortcut": true
+            "createStartMenuShortcut": true,
+            "artifactName": "KafkaBoost-Setup-${version}.${ext}"
         },
         "publish": [
             {
@@ -56,10 +57,17 @@
                 "owner": "carloskafka",
                 "repo": "legion-14900hx-throttlestop"
             }
-        ]
+        ],
+        "portable": {
+            "artifactName": "KafkaBoost-Portable-${version}.${ext}"
+        },
+        "directories": {
+            "output": "dist"
+        }
     },
     "devDependencies": {
-        "electron": "^44.7.0"
+        "electron": "^44.7.0",
+        "electron-builder": "^26.15.3"
     },
     "dependencies": {
         "electron-updater": "^6.8.9"

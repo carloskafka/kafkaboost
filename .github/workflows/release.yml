@@ -1,0 +1,135 @@
+name: Release
+
+# Pushing a tag like v0.2.0 builds the Windows installer and publishes a GitHub Release with it.
+# That release is what the Download page links to and what the app's update check (app/src/updates.js,
+# electron-updater) reads: it needs the installer, its .blockmap and latest.yml, all attached below.
+#
+# Nothing is signed: there is no code-signing certificate, so Windows SmartScreen warns on first run.
+#
+# Release notes: the app shows them with parseNotes() (headings "#", bullets "- ", plain paragraphs; no links,
+# bold or code). They are the subjects of the commits since the previous tag, as bullets. See docs/ARCHITECTURE.md.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# The build job only reads. Only the release job may write (create the release).
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: The tag must match the version in app/package.json
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          if ($tag -ne "v$version") {
+            Write-Host "::error::Tag $tag does not match app/package.json version $version. Fix the version (or the tag) and tag again."
+            exit 1
+          }
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install the app's dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Unit tests (Node)
+        working-directory: app
+        run: node --test "test/*.test.js"
+
+      - name: Unit tests (Pester)
+        shell: pwsh
+        run: |
+          Import-Module Pester
+          Invoke-Pester -Path tests -CI -Output Detailed
+
+      - name: Check the site
+        run: node tools/check-site.js
+
+      - name: Build the installer and the portable exe
+        working-directory: app
+        run: npm run dist
+
+      - name: Write the checksums
+        shell: pwsh
+        working-directory: app/dist
+        run: |
+          Get-ChildItem KafkaBoost-*.exe | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -Encoding ascii SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
+
+      - name: Release notes from the commits since the previous tag
+        shell: bash
+        run: |
+          prev=$(git describe --tags --abbrev=0 --match 'v*' "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          range="${prev:+$prev..}${GITHUB_REF_NAME}"
+          {
+            echo "# KafkaBoost ${GITHUB_REF_NAME}"
+            echo
+            echo "## What's new"
+            # one bullet per commit subject; merge commits skipped; the commit trailer lines are not subjects
+            git log --no-merges --pretty='format:- %s' "$range"
+            echo
+            echo
+            echo "## Install"
+            echo "- KafkaBoost-Setup installs the app and updates itself later. KafkaBoost-Portable runs without installing and does not update itself."
+            echo "- The files are not code-signed, so Windows SmartScreen shows a warning on first run. SHA256SUMS.txt lists the checksums."
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Collect the files for the release job
+        shell: bash
+        run: |
+          mkdir staging
+          cp app/dist/KafkaBoost-Setup-*.exe app/dist/KafkaBoost-Setup-*.exe.blockmap app/dist/KafkaBoost-Portable-*.exe app/dist/latest.yml app/dist/SHA256SUMS.txt release-notes.md staging/
+          ls -l staging
+
+      - name: Keep the files for the release job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release
+          if-no-files-found: error
+          path: staging/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Get the files
+        uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: out
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          # a tag with a dash (v0.2.0-rc1) is a pre-release: the app ignores those
+          flag=""
+          case "$GITHUB_REF_NAME" in *-*) flag="--prerelease" ;; esac
+          cd out
+          gh release create "$GITHUB_REF_NAME" $flag \
+            --title "KafkaBoost $GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            KafkaBoost-Setup-*.exe KafkaBoost-Setup-*.exe.blockmap KafkaBoost-Portable-*.exe SHA256SUMS.txt latest.yml
