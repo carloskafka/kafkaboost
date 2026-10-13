@@ -13,6 +13,7 @@ on:
       - "config/**"
       - "app/**"
       - "tools/**"
+      - "docs/**"
       - ".github/workflows/ci.yml"
   pull_request:
   workflow_dispatch:
@@ -56,3 +57,8 @@ jobs:
           node --check src/preload.js
           node --check src/demo.js
           node --check renderer/app.js
+
+      - name: Check the site (links, anchors, EN/PT parity, facts)
+        run: |
+          node tools/check-site.js
+          node --test tools/check-site.test.js
