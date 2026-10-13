@@ -3,7 +3,7 @@
 // pass/fail per check. Run it with tools/run-uitest.ps1. Local only (needs a desktop session, so CI does not run it).
 const fs = require('fs');
 
-async function run({ win, js, sleep, settings, outFile, platform }) {
+async function run({ win, js, sleep, settings, demo, outFile, platform }) {
   const results = [];
   const check = (name, ok, detail) => results.push({ name, ok: !!ok, detail: detail === undefined ? '' : String(detail) });
   const q = (sel) => js(win, `(()=>{const e=document.querySelector(${JSON.stringify(sel)});return e?e.textContent.trim():null})()`);
@@ -29,6 +29,7 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
     check('the Windows bloatware remover is hidden on Linux', !(await visible('bloatCard')));
     await click('[data-view=health]'); await sleep(400);
     check('Dashboard shows basic system info', (await q('#heroTitle')).length > 0, await q('#heroTitle'));
+    check('Dashboard hardware cards: CPU, memory, system (no live tiles, no level)', (await js(win, "document.querySelectorAll('.hw-card').length")) === 3 && !(await visible('tiles')) && !(await visible('optLevel')) && !(await visible('tilesNotice')));
     return finish();
   }
 
@@ -73,6 +74,47 @@ async function run({ win, js, sleep, settings, outFile, platform }) {
 
   // after Reset the language is 'auto' = the OS language (Portuguese on a pt-BR PC); the checks below read English text
   await setVal('langSel', 'en'); await sleep(600);
+  // Dashboard (demo): live tiles, hardware cards, optimization level, Apply recommended, and the "why are the tiles empty" notice
+  const wasMin0 = win.isMinimized(); if (wasMin0) { win.restore(); await sleep(600); }   // a minimized page is hidden, and a hidden page does not poll
+  const treads = () => js(win, 'KB.telemetryReads || 0');
+  const tileTemp = () => js(win, "document.getElementById('tTemp').textContent");
+  const waitFor = async (expr, ms = 8000) => { for (let i = 0; i < ms / 200 && !(await js(win, expr)); i++) await sleep(200); return js(win, expr); };
+  await click('[data-view=health]'); await waitFor("document.getElementById('tTemp').textContent.includes('°C')");
+  check('Dashboard live tiles show real demo readings and when they were read', (await tileTemp()).includes('°C') && (await q('#tClock')).includes('GHz') && (await q('#tPower')).endsWith(' W') && (await visible('tilesWhen')) && (await q('#tilesWhen')).includes('Last read'), await q('#tilesWhen'));
+  check('no notice while the readings work', !(await visible('tilesNotice')));
+  const tt0 = await tileTemp(); let tt1 = tt0;
+  for (let i = 0; i < 30 && tt1 === tt0; i++) { await sleep(300); tt1 = await tileTemp(); }
+  check('the live tiles refresh by themselves', tt1 !== tt0, tt0 + ' -> ' + tt1);
+  check('hardware cards: CPU, graphics, memory, storage, system', (await js(win, "document.querySelectorAll('.hw-card').length")) === 5 && (await q('.hw-card:nth-child(2)')).includes('RTX 4090') && (await q('.hw-card:nth-child(4)')).includes('NVMe') && (await q('.hw-card:nth-child(4)')).includes('1 TB'), await js(win, "[...document.querySelectorAll('.hw-card h3')].map((e) => e.textContent).join('|')"));
+  check('no serial number on the hardware cards', !/serial/i.test(await js(win, "document.getElementById('hwCards').textContent")));
+  await waitFor("/%$/.test(document.getElementById('levelPct').textContent)");
+  const pct0 = await q('#levelPct');
+  check('optimization level shows a percentage, "X of Y" and the formula', /^\d+%$/.test(pct0) && /\d+ of \d+ recommended tweaks active/.test(await q('#levelLine')) && (await q('#levelFormula')).includes('÷'), pct0 + ' | ' + await q('#levelLine'));
+  check('Apply recommended is offered while some safe recommended tweaks are off', (await js(win, "document.getElementById('applyReco').disabled")) === false);
+  await click('#applyReco'); await sleep(300);
+  check('Apply recommended on the Dashboard asks first (same dialog, lists the tweaks)', (await js(win, 'document.getElementById("confirmDlg").open')) && (await js(win, 'document.getElementById("cfBody").textContent')).includes('•'));
+  await click('#cfCancel'); await sleep(400);
+  check('cancelling changes nothing', (await q('#levelPct')) === pct0 && (await js(win, "document.getElementById('applyReco').disabled")) === false);
+  await click('#applyReco'); await sleep(300); await click('#cfOk');
+  await waitFor("document.getElementById('levelPct').textContent === '100%'");
+  check('confirming applies them: level 100% and the button is off', (await q('#levelPct')) === '100%' && (await js(win, "document.getElementById('applyReco').disabled")) === true && (await visible('levelResult')), await q('#levelPct') + ' ' + await q('#levelResult'));
+  // why the tiles are empty
+  demo.state.telemetry = 'unavailable'; await js(win, 'KB.state.info.isAdmin = false; 0');
+  await waitFor("!document.getElementById('tilesNotice').hidden");
+  check('not elevated + no readings: the notice asks to run as administrator, with a restart button', (await visible('tilesNotice')) && (await q('#tilesNoticeText')).includes('as administrator') && (await visible('tilesRestart')) && (await q('#tTemp')) === '–' && !(await visible('tilesWhen')), await q('#tilesNoticeText'));
+  await js(win, 'KB.state.info.isAdmin = true; 0');
+  await waitFor("document.getElementById('tilesNoticeText').textContent.includes('HWiNFO card')");
+  check('elevated + no readings: the notice points to the HWiNFO card instead, no restart button', (await q('#tilesNoticeText')).includes('HWiNFO card') && !(await visible('tilesRestart')), await q('#tilesNoticeText'));
+  demo.state.telemetry = 'live';
+  await waitFor("document.getElementById('tilesNotice').hidden && document.getElementById('tTemp').textContent.includes('°C')");
+  check('readings come back: notice gone, values back', !(await visible('tilesNotice')) && (await tileTemp()).includes('°C'));
+  await click('[data-view=settings]'); await sleep(300);
+  const tr0 = await treads(); await sleep(3500);
+  check('leaving the Dashboard stops the live readings', (await treads()) === tr0, tr0);
+  await click('[data-view=health]'); await sleep(2800);
+  check('coming back to the Dashboard reads again', (await treads()) > tr0);
+  if (wasMin0) win.minimize();
+
   await click('[data-view=optimizations]'); await sleep(500);
   check('Optimizations shows the CPU tuning card', await visible('optimizations') && (await q('#optThrottle h3')) === 'CPU thermal tuning');
   // tweak catalog (demo data = the real catalog)

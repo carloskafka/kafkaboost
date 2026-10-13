@@ -32,7 +32,14 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     await js(win, "document.getElementById('hwCard').scrollIntoView({ block: 'center' }); 0"); await sleep(300); await shot(win, out('hwinfo-consent'));
     await click('#hwConsent'); await sleep(200); await click('#hwGetBtn'); await until("!document.getElementById('hwStart').hidden"); await sleep(300);
     await click('#hwStart'); await until("!document.getElementById('hwStop').hidden"); await sleep(300);
-    await js(win, top); await click('#check'); await sleep(1000); await shot(win, out('health-ok'));
+    await js(win, top); await click('#check'); await sleep(1000);
+    await until("document.getElementById('tTemp').textContent.includes('°C') && /%$/.test(document.getElementById('levelPct').textContent) && document.querySelectorAll('.hw-card').length === 5"); await sleep(300);
+    await shot(win, out('health-ok'));
+    // the tiles cannot be read and the app is not elevated: the notice asks for administrator rights
+    demo.state.telemetry = 'unavailable'; await js(win, 'KB.state.info.isAdmin = false; 0');
+    await until("!document.getElementById('tilesNotice').hidden"); await sleep(300); await shot(win, out('health-no-admin'));
+    demo.state.telemetry = 'live'; await js(win, 'KB.state.info.isAdmin = true; 0');
+    await until("document.getElementById('tilesNotice').hidden"); await sleep(300);
     demo.state.scenario = 'updated'; demo.state.fixed = false;
     await click('#check'); await sleep(900); await shot(win, out('health-attention'));
     await click('#fix'); await sleep(1300); await shot(win, out('health-fixed'));
