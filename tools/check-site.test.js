@@ -59,3 +59,7 @@ test('a wrong fact is reported', () => {
   fs.writeFileSync(path.join(dir, 'config', 'tweaks.json'), JSON.stringify({ tweaks: [{}, {}] }));
   assert.ok(check(dir).errors.some((e) => /fact "tweaks" says 99/.test(e)));
 });
+test('open source wording without a LICENSE file is reported', () => {
+  const r = check(fixture((f) => { f['docs/index.html'] = page('en', 'index.html', '<p>Open source (MIT licence)</p>'); }));
+  assert.ok(r.errors.some((e) => /no LICENSE file/.test(e)));
+});

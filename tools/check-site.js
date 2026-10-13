@@ -44,6 +44,7 @@ function check(root) {
     if (!/<title>[^<]+<\/title>/.test(html)) err(p.rel, 'empty <title>');
     if (!/<meta[^>]+name="description"/.test(html)) err(p.rel, 'meta description missing');
     for (const b of BANNED) if (b.test(html)) err(p.rel, 'banned text ' + b);
+    if (/open source|c[óo]digo aberto/i.test(html) && !fs.existsSync(path.join(root, 'LICENSE'))) err(p.rel, 'says open source but the repository has no LICENSE file');
     if (!EN_ONLY.has(p.rel) && (html.match(/<h1[\s>]/g) || []).length !== 1) err(p.rel, 'expected exactly one <h1>');
 
     // links, assets, anchors
