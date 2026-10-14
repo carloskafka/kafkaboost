@@ -395,7 +395,7 @@ function Get-ActionPreview($a) {
         'bcdedit' {
             $cur = $null; try { $cur = Get-BcdElement $a.element } catch { }
             $on = $(if ($null -eq $cur) { $null } else { ($cur.exists -and $cur.value -ieq $a.on) })
-            return [pscustomobject]@{ type = 'bcdedit'; element = $a.element; current = $(if ($cur) { $cur.value }); currentOn = $on; needsReboot = $true }
+            return [pscustomobject]@{ type = 'bcdedit'; element = $a.element; current = $(if ($cur) { $cur.value }); new = [string]$a.on; currentOn = $on; needsReboot = $true }
         }
         default { return [pscustomobject]@{ type = [string]$a.type } }
     }

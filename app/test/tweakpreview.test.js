@@ -42,6 +42,8 @@ test('non-registry actions get a readable current -> new description and what tu
   assert.match(P.actionLines({ type: 'defender', currentOn: true }, en).join('\n'), /on → off/);
   assert.match(P.actionLines({ type: 'vbs', currentOn: false }, en).join('\n'), /off → off/);
   assert.match(P.actionLines({ type: 'regkey', path: 'HKCU:\\Software\\K', currentSet: false, restoreDeletes: true }, en).join('\n'), /does not exist → created[\s\S]*deleted again/);
+  const bcd = P.actionLines({ type: 'bcdedit', element: 'disabledynamictick', current: null, new: 'yes' }, en).join('\n');
+  assert.match(bcd, /disabledynamictick: not set → yes/); assert.doesNotMatch(bcd, /read the current state/);
   assert.match(P.actionLines({ type: 'registry', error: 'boom' }, en)[0], /boom/);
 });
 

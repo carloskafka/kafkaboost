@@ -49,6 +49,8 @@
         return [t('tweaks.pv.defender', { current: state(a.currentOn) }), '  ' + t('tweaks.pv.offDefender')];
       case 'vbs':
         return [t('tweaks.pv.vbs', { current: state(a.currentOn) }), '  ' + t('tweaks.pv.offVbs')];
+      case 'bcdedit':
+        return [t('tweaks.pv.bcd', { element: a.element, current: a.current || t('tweaks.pv.notSet'), new: a.new || a.on || '?' }), '  ' + t('tweaks.pv.offBcd')];
       default:
         return [t('tweaks.pv.error', { detail: String(a.type || '?') })];
     }

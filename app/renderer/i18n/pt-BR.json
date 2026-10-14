@@ -808,6 +808,8 @@
   "tweaks.pv.offDefender": "ao desligar: a proteção em tempo real é ligada de novo",
   "tweaks.pv.vbs": "Isolamento de núcleo (hipervisor, VBS): {current} → desligado",
   "tweaks.pv.offVbs": "ao desligar: é ativado de novo (exige reiniciar)",
+  "tweaks.pv.bcd": "Configuração de boot {element}: {current} → {new}",
+  "tweaks.pv.offBcd": "ao desligar: a configuração volta como estava (exige reiniciar)",
   "tweaks.pv.on": "ligado",
   "tweaks.pv.off": "desligado",
   "tweaks.pv.unknown": "desconhecido",
