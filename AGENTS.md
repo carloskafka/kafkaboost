@@ -46,9 +46,9 @@ Root launchers and `install.cmd`; `app/` Electron UI (thin: logic in `scripts/li
 
 ## Commands
 ```powershell
-Invoke-Pester tests                                                   # unit tests (178)
-cd app; node --test "test/*.test.js"                                  # node tests (162)
-powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (198 + 14)
+Invoke-Pester tests                                                   # unit tests (181)
+cd app; node --test "test/*.test.js"                                  # node tests (163)
+powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (199 + 14)
 powershell -File scripts\Steps.ps1 -Step health -InstallDir "<dir>"   # read-only verdict + live telemetry (no admin needed)
 powershell -File scripts\Create-Shortcut.ps1                          # shortcut with the app icon
 cd app; npm install; npm start                                        # the app (needs admin for changes)

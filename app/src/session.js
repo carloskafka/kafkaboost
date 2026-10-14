@@ -30,7 +30,7 @@ function createSession({ runStep, fs, stopFile, storeFile, historyFile = null, n
     const t = num(s.packageTempC), p = num(s.packagePowerW);
     set({
       count: state.count + 1,
-      last: { t: String(s.t || ''), tempC: t, powerW: p, pClockMHz: num(s.pClockMaxMHz), eClockMHz: num(s.eClockMaxMHz) },
+      last: { t: String(s.t || ''), tempC: t, powerW: p, pClockMHz: num(s.pClockMaxMHz), eClockMHz: num(s.eClockMaxMHz), standbyBytes: num(s.standbyBytes), freeBytes: num(s.freeBytes) },
       peakTempC: t === null ? state.peakTempC : (state.peakTempC === null ? t : Math.max(state.peakTempC, t)),
       peakPowerW: p === null ? state.peakPowerW : (state.peakPowerW === null ? p : Math.max(state.peakPowerW, p))
     });

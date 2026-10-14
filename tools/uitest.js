@@ -132,6 +132,7 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   check('Insights offers the play session recorder', (await visible('sessCard')) && (await visible('sessStart')) && !(await visible('sessStop')));
   await click('#sessStart'); await waitFor("document.getElementById('sessSummary') && !document.getElementById('sessSummary').hidden");
   check('a recorded session shows duration, temperature, power and WHEA from real (demo) readings', (await q('#sessSummary')).includes('Duration') && (await q('#sessSummary')).includes('84 °C') && (await q('#sessSummary')).includes('WHEA'), await q('#sessSummary'));
+  check('the summary also shows the lowest and highest free memory and standby (819 MB free at the low point, 14.0 GB standby at the high point)', (await q('#sessSummary')).includes('Free memory') && (await q('#sessSummary')).includes('819 MB') && (await q('#sessSummary')).includes('14.0 GB') && (await q('#sessSummary')).includes('does not say a cleanup would help'), await q('#sessSummary'));
   check('the summary says throttle flags are not measured instead of claiming none', (await q('#sessSummary')).includes('does not say whether the CPU throttled'));
   check('Insights offers the boost clock advice, empty until asked', (await visible('advCard')) && !(await visible('advVerdict')));
   await click('#advAnalyze'); await waitFor("!document.getElementById('advVerdict').hidden");

@@ -989,5 +989,9 @@
   "memory.bar.label": "Memória instalada dividida em em uso, modificada, standby e livre",
   "memory.note": "Disponível = livre + standby. Standby é cache que o Windows pode descartar a qualquer momento, então um standby grande é normal. Modificada são dados esperando para serem gravados no disco. Um contador que o Windows não informa aparece como traço.",
   "memory.openRammap": "Limpeza de memória (RAMMap)",
-  "msg.memory.watched": "{samples} leitura(s)."
+  "msg.memory.watched": "{samples} leitura(s).",
+  "dashboard.session.free": "Memória livre",
+  "dashboard.session.standby": "Standby (cache)",
+  "dashboard.session.range": "mínimo {low} · máximo {high}",
+  "dashboard.session.memNote": "Memória livre que fica muito baixa durante o jogo indica pressão de memória. Um standby grande é normal: é cache que o Windows pode descartar a qualquer momento. Isto só mostra o que o Windows informou; não diz que uma limpeza ajudaria."
 }

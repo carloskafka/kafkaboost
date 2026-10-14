@@ -989,5 +989,9 @@
   "memory.bar.label": "Installed memory split into in use, modified, standby and free",
   "memory.note": "Available = free + standby. Standby is cached data Windows can drop at any time, so a large standby is normal. Modified is data waiting to be written to disk. A counter Windows does not report is shown as a dash.",
   "memory.openRammap": "Memory cleanup (RAMMap)",
-  "msg.memory.watched": "{samples} reading(s)."
+  "msg.memory.watched": "{samples} reading(s).",
+  "dashboard.session.free": "Free memory",
+  "dashboard.session.standby": "Standby (cache)",
+  "dashboard.session.range": "lowest {low} · highest {high}",
+  "dashboard.session.memNote": "Free memory that stays very low while the game runs points to memory pressure. A large standby is normal: it is cache Windows can drop at any time. This only shows what Windows reported; it does not say a cleanup would help."
 }

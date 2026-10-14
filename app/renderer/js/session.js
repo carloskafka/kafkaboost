@@ -19,9 +19,15 @@
       row(t('dashboard.session.pclock'), stat(s.pClockMHz, 'MHz')),
       row(t('dashboard.session.limits', { pl1: s.pl1W, pl2: s.pl2W }), `${L.pctText(s.pl1Pct)} / ${L.pctText(s.pl2Pct)}`)
     );
+    // standby and free memory during the session (sessions recorded before this existed have no `memory` part: no rows)
+    if (s.memory) {
+      const range = (x) => { const f = L.formatRange(x); return f ? t('dashboard.session.range', f) : '–'; };
+      host.append(row(t('dashboard.session.free'), range(s.memory.freeBytes)), row(t('dashboard.session.standby'), range(s.memory.standbyBytes)));
+    }
     const w = L.wheaKey(res.whea);
     host.append(row('WHEA', t(w.key, w.args)));
     const note = document.createElement('p'); note.className = 'muted'; note.textContent = t('dashboard.session.noFlags'); host.append(note);
+    if (s.memory) { const mnote = document.createElement('p'); mnote.className = 'muted'; mnote.textContent = t('dashboard.session.memNote'); host.append(mnote); }
     host.hidden = false;
   }
 

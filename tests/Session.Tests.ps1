@@ -58,4 +58,46 @@ Describe 'Session (summary, WHEA, recording loop)' {
         $got = Invoke-SessionRecording 10 '' 30 { [pscustomobject]@{ packageTempC = 70; packagePowerW = 60; pClockMaxMHz = 1; eClockMaxMHz = 1 } } {} { param($s) $script:clock = $script:clock.AddSeconds($s) } { $script:clock }
         Assert-Equal @($got).Count 3 'samples until the cap'
     }
+    It 'summary: the lowest and highest standby and free memory, with the other fields unchanged' {
+        $GB = 1GB
+        $s = @(
+            [pscustomobject]@{ t = '2026-10-14T20:00:00'; packageTempC = 70; packagePowerW = 60; pClockMaxMHz = 4600; eClockMaxMHz = 3500; standbyBytes = 10 * $GB; freeBytes = 6 * $GB },
+            [pscustomobject]@{ t = '2026-10-14T20:00:05'; packageTempC = 80; packagePowerW = 65; pClockMaxMHz = 4700; eClockMaxMHz = 3600; standbyBytes = 14 * $GB; freeBytes = 1 * $GB },
+            [pscustomobject]@{ t = '2026-10-14T20:00:10'; packageTempC = 90; packagePowerW = 85; pClockMaxMHz = 4700; eClockMaxMHz = 3600; standbyBytes = 12 * $GB; freeBytes = 3 * $GB })
+        $r = New-SessionSummary $s 65 85
+        Assert-Equal $r.memory.freeBytes.min (1 * $GB) 'lowest free'
+        Assert-Equal $r.memory.freeBytes.max (6 * $GB) 'highest free'
+        Assert-Equal $r.memory.standbyBytes.min (10 * $GB) 'lowest standby'
+        Assert-Equal $r.memory.standbyBytes.max (14 * $GB) 'highest standby'
+        Assert-Equal $r.memory.freeBytes.samples 3 'readings'
+        Assert-Equal $r.tempC.peak 90 'temperature unchanged'
+        Assert-Equal $r.pl1Pct 67 'PL1 share unchanged'
+        Assert-Equal $r.throttleFlags 'unknown' 'flags still never claimed'
+    }
+    It 'summary: memory counters that were never readable stay null, never 0; samples from before this existed have no memory part' {
+        $old = @([pscustomobject]@{ t = '2026-10-14T20:00:00'; packageTempC = 70; packagePowerW = 60; pClockMaxMHz = 4600; eClockMaxMHz = 3500 })
+        if ($null -ne (New-SessionSummary $old).memory) { throw 'old samples: memory must be null' }
+        $none = @([pscustomobject]@{ t = '2026-10-14T20:00:00'; packageTempC = 70; packagePowerW = 60; pClockMaxMHz = 1; eClockMaxMHz = 1; standbyBytes = $null; freeBytes = $null })
+        if ($null -ne (New-SessionSummary $none).memory) { throw 'unreadable counters: memory must be null' }
+        $half = @([pscustomobject]@{ t = '2026-10-14T20:00:00'; packageTempC = 70; packagePowerW = 60; pClockMaxMHz = 1; eClockMaxMHz = 1; standbyBytes = $null; freeBytes = 5GB })
+        $m = (New-SessionSummary $half).memory
+        if ($null -ne $m.standbyBytes) { throw 'standby must stay null when it was never readable' }
+        Assert-Equal $m.freeBytes.min (5GB) 'free is still reported'
+    }
+    It 'recording: each sample carries standby and free memory from the memory reader; a reader that fails or reports nothing leaves them null and the sensors untouched' {
+        $script:clock = [datetime]'2026-10-14T20:00:00'
+        $sleep = { param($s) $script:clock = $script:clock.AddSeconds($s) }
+        $reader = { [pscustomobject]@{ packageTempC = 70; packagePowerW = 60; pClockMaxMHz = 1; eClockMaxMHz = 1 } }
+        $good = Invoke-SessionRecording 10 '' 20 $reader {} $sleep { $script:clock } { [pscustomobject]@{ standbyBytes = 111; freeBytes = 222 } }
+        Assert-Equal $good[0].standbyBytes 111 'standby'
+        Assert-Equal $good[0].freeBytes 222 'free'
+        Assert-Equal $good[0].packageTempC 70 'sensor unchanged'
+        $script:clock = [datetime]'2026-10-14T20:00:00'
+        $bad = Invoke-SessionRecording 10 '' 20 $reader {} $sleep { $script:clock } { throw 'cim down' }
+        if ($null -ne $bad[0].standbyBytes -or $null -ne $bad[0].freeBytes) { throw 'a failing memory reader must give null' }
+        Assert-Equal $bad[0].packageTempC 70 'sensor still recorded'
+        $script:clock = [datetime]'2026-10-14T20:00:00'
+        $empty = Invoke-SessionRecording 10 '' 20 $reader {} $sleep { $script:clock } { [pscustomobject]@{ standbyBytes = $null; freeBytes = $null } }
+        if ($null -ne $empty[0].standbyBytes) { throw 'unreported counter must be null, not 0' }
+    }
 }
