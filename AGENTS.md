@@ -59,6 +59,7 @@ cd app; npx electron ..\tools\make-icons.js                           # regenera
 
 ## How to land a change here
 - **One slice per change.** A refactor, a feature and its docs are separate commits (a docs-only commit when the code did not change).
+- **One pull request per slice, merged on its own.** Never put several slices in one PR. Branch each slice from fresh `origin/main`, open its PR with a conventional-commit title, wait for CI, then **squash-merge** it before starting the next one (the next slice is cherry-picked onto the updated `origin/main`). A squash merge is one commit on `main`, so if a slice breaks something, `git revert` that one commit undoes exactly that slice and nothing else. Never merge the release-please PR as part of a slice.
 - **Branch names:** `feat/<topic>`, `fix/<topic>`, `docs/<topic>`, `refactor/<topic>`, `test/<topic>`, `chore/<topic>`.
 - **Conventional commits:** `type(scope): subject` (`feat(app): …`, `fix(scripts): …`, `docs: …`, `test: …`, `chore: …`); body says *why*.
 - **Before you open it:** `Invoke-Pester tests` passes; every `.ps1` parses and `node --check` passes (CI does both); if you
