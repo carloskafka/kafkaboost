@@ -47,6 +47,12 @@ Describe 'Session (summary, WHEA, recording loop)' {
         Remove-Item -LiteralPath $stop -ErrorAction SilentlyContinue
         Assert-Equal @($got).Count 3 'three readable samples out of four moments'
     }
+    It 'recording: output written by the OnSample callback does not end up in the returned samples' {
+        $script:clock = [datetime]'2026-10-13T20:00:00'
+        $got = Invoke-SessionRecording 10 '' 30 { [pscustomobject]@{ packageTempC = 70; packagePowerW = 60; pClockMaxMHz = 1; eClockMaxMHz = 1 } } { param($x) Write-Output 'LOG: SAMPLE' } { param($s) $script:clock = $script:clock.AddSeconds($s) } { $script:clock } 6>$null
+        Assert-Equal @($got).Count 3 'only the samples'
+        Assert-Equal ($got[0].packageTempC) 70 'first item is a sample object'
+    }
     It 'recording: ends at MaxSec even without a stop file' {
         $script:clock = [datetime]'2026-10-13T20:00:00'
         $got = Invoke-SessionRecording 10 '' 30 { [pscustomobject]@{ packageTempC = 70; packagePowerW = 60; pClockMaxMHz = 1; eClockMaxMHz = 1 } } {} { param($s) $script:clock = $script:clock.AddSeconds($s) } { $script:clock }
