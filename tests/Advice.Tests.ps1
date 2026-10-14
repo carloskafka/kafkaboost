@@ -1,9 +1,8 @@
 # Pester tests for the boost-clock advice: pure function over fake session history, nothing real is read.
 
 Describe 'Advice (boost cap headroom)' {
-    BeforeAll { . (Join-Path $PSScriptRoot 'Setup.ps1'); . (Join-Path $PSScriptRoot '..\scripts\lib\Advice.ps1') }
-
     BeforeAll {
+        . (Join-Path $PSScriptRoot 'Setup.ps1'); . (Join-Path $PSScriptRoot '..\scripts\lib\Advice.ps1')
         function New-Sess($temp = 80, $clock = 4700, $avgW = 55, $pl1 = 10, $dur = 1800, $wheaCount = 0, $has19 = $false) {
             [pscustomobject]@{ summary = [pscustomobject]@{ durationSec = $dur; tempC = [pscustomobject]@{ peak = $temp; avg = $temp - 5 }; pClockMHz = [pscustomobject]@{ peak = $clock; avg = $clock }
                     powerW = [pscustomobject]@{ peak = $avgW + 10; avg = $avgW }; pl1Pct = $pl1 }
