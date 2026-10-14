@@ -111,7 +111,7 @@ test('i18n: every key the Dashboard uses exists in en and pt-BR', () => {
 
 test('the telemetry step is wired: Steps.ps1 (read-only) and no serial number field anywhere in the hardware info', () => {
   const ps = fs.readFileSync(path.join(__dirname, '..', '..', 'scripts', 'Steps.ps1'), 'utf8');
-  assert.ok(ps.includes("'telemetry')][string]$Step") && /\$readOnly = [^\n]*'telemetry'/.test(ps));
+  assert.ok(/'telemetry'[^)]*\)\]\[string\]\$Step/.test(ps) && /\$readOnly = [^\n]*'telemetry'/.test(ps));
   const hw = JSON.stringify(demo.demoStep('detect', {}, configDir).res.data);
   assert.ok(!/serial/i.test(hw));
   const tun = fs.readFileSync(path.join(__dirname, '..', '..', 'scripts', 'lib', 'Tuning.ps1'), 'utf8');

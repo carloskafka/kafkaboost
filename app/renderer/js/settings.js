@@ -16,11 +16,11 @@
       const on = b.dataset.themeValue === s.theme; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
     });
     $('langSel').value = s.language;
-    $('sStartHidden').checked = s.startHidden; $('sStartHwinfo').checked = s.startHwinfoWithApp; $('sCloseToTray').checked = s.closeToTray; $('sNotifications').checked = s.notifications;
+    $('sStartHidden').checked = s.startHidden; $('sStartHwinfo').checked = s.startHwinfoWithApp; $('sAutoRecord').checked = s.autoRecord; $('sCloseToTray').checked = s.closeToTray; $('sNotifications').checked = s.notifications;
     $('sInterval').value = s.checkIntervalMin; $('sInstallDir').value = s.installDir; $('sCheckDaily').checked = s.checkForUpdates;
     setText($('versionLine'), t('settings.version', { version: (KB.state.info || {}).version || '' }));
     const win = KB.featureOn('optimizations');
-    $('thermalCard').hidden = !win; $('sStartHwinfoRow').hidden = !win; $('mBackups').hidden = !win; $('mDelBackups').hidden = !win;
+    $('thermalCard').hidden = !win; $('sStartHwinfoRow').hidden = !win; $('sAutoRecordRow').hidden = !win; $('mBackups').hidden = !win; $('mDelBackups').hidden = !win;
   }
 
   async function refreshAutostart() { const r = await window.kb.autostart('status'); $('sAutostart').checked = !!(r && r.enabled); }
@@ -47,6 +47,7 @@
     document.querySelectorAll('#themeSeg [data-theme-value]').forEach((b) => b.addEventListener('click', () => save({ theme: b.dataset.themeValue })));
     $('langSel').addEventListener('change', () => save({ language: $('langSel').value }));
     $('sStartHwinfo').addEventListener('change', () => save({ startHwinfoWithApp: $('sStartHwinfo').checked }));
+    $('sAutoRecord').addEventListener('change', () => save({ autoRecord: $('sAutoRecord').checked }));
     $('sCloseToTray').addEventListener('change', () => save({ closeToTray: $('sCloseToTray').checked }));
     $('sNotifications').addEventListener('change', () => save({ notifications: $('sNotifications').checked }));
     $('sStartHidden').addEventListener('change', async () => {

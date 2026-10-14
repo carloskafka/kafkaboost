@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-preview | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | cs2-state | cs2-gpu | cs2-autoexec | telemetry
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-preview | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | cs2-state | cs2-gpu | cs2-autoexec | telemetry | session | advice
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'cs2-state', 'cs2-gpu', 'cs2-autoexec', 'telemetry')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'cs2-state', 'cs2-gpu', 'cs2-autoexec', 'telemetry', 'session', 'advice')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -31,7 +31,11 @@ param(
     [string]$Cs2Exe,           # cs2-*: a cs2.exe the user picked (otherwise Steam is searched, read-only)
     [ValidateSet('on', 'off')][string]$Cs2Mode = 'on',   # cs2-gpu: apply / revert; cs2-autoexec: write / restore
     [string]$Cs2Options,       # cs2-autoexec on: comma separated option ids from config\cs2.json
-    [string]$Cs2FpsMax         # cs2-autoexec on: the number for the fps_max option
+    [string]$Cs2FpsMax,        # cs2-autoexec on: the number for the fps_max option
+    [string]$SessionStopFile,  # session: recording ends when this file appears
+    [int]$SessionIntervalSec = 5,
+    [int]$SessionMaxSec = 21600,
+    [string]$AdviceHistoryFile # advice: JSON array of finished session results (written by the app)
 )
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -45,6 +49,8 @@ if (-not $SettingsFile) { $SettingsFile = Join-Path $root '..\config\ThrottleSto
 . (Join-Path $root 'lib\Sensors.ps1')
 . (Join-Path $root 'lib\Hwinfo.ps1')
 . (Join-Path $root 'lib\Cs2.ps1')
+. (Join-Path $root 'lib\Session.ps1')
+. (Join-Path $root 'lib\Advice.ps1')
 $defaults = Get-Defaults
 if (-not $InstallDir) { $InstallDir = $defaults.installDir }
 if (-not $TaskName)   { $TaskName   = $defaults.taskName }
@@ -56,7 +62,7 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 }
 
 try {
-    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'telemetry', 'cs2-state', 'cs2-gpu', 'cs2-autoexec') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
+    $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'telemetry', 'session', 'advice', 'cs2-state', 'cs2-gpu', 'cs2-autoexec') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
     if ($Step -in 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop' -and -not (Test-Admin)) { Done $false 'Administrator rights are required for this step. Restart the app as administrator.' $null 'msg.hwinfo.needsAdmin' @{}; return }
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
@@ -111,6 +117,23 @@ try {
         'telemetry' {
             $tm = Get-TelemetrySnapshot
             Done $true $(if ($tm.available) { 'HWiNFO shared memory read.' } else { 'No live readings: HWiNFO is not sharing its sensors with this process.' }) $tm $(if ($tm.available) { 'msg.telemetry.ok' } else { 'msg.telemetry.unavailable' }) @{}
+        }
+        'session' {
+            if (-not (Get-TelemetrySnapshot).available) { Done $false 'No live readings: HWiNFO is not sharing its sensors with this process.' $null 'msg.session.noSensors' @{}; return }
+            $started = Get-Date
+            $smp = Invoke-SessionRecording ([math]::Max(1, [math]::Min(60, $SessionIntervalSec))) $SessionStopFile ([math]::Max(10, $SessionMaxSec)) -OnSample { param($x) Write-Output ('LOG: SAMPLE ' + ($x | ConvertTo-Json -Compress)) }
+            $sum = New-SessionSummary $smp
+            $wh = Get-WheaSince $started
+            $data = @{ summary = $sum; whea = $wh; startedAt = $started.ToString('s'); endedAt = (Get-Date).ToString('s') }
+            Done $true 'Session recorded.' $data 'msg.session.done' @{ samples = $sum.samples }
+        }
+        'advice' {
+            $hist = @()
+            if ($AdviceHistoryFile -and (Test-Path -LiteralPath $AdviceHistoryFile)) { try { $hist = @(Get-Content -LiteralPath $AdviceHistoryFile -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { $hist = @() } }
+            $cap = Get-TurboCapMHz (Get-Content -LiteralPath $SettingsFile)
+            $a = Get-BoostAdvice $hist ([int]$cap)
+            Log "advice: $($a.verdict) ($($a.reason)), $($a.loadedSessions) loaded session(s)"
+            Done $true "Advice: $($a.verdict)." $a ('msg.advice.' + $a.verdict) @{ reason = $a.reason }
         }
         'cs2-state' {
             $o = Get-Cs2Overview $Cs2Exe

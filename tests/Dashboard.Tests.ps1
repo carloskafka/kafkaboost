@@ -74,7 +74,7 @@ Describe 'Dashboard (telemetry snapshot, disks, memory)' {
 
     It 'Steps.ps1 knows the telemetry step and treats it as read-only (no administrator check)' {
         $src = Get-Content -Raw (Join-Path $PSScriptRoot '..\scripts\Steps.ps1')
-        if ($src -notmatch "'telemetry'\)\]\[string\]\`$Step") { throw 'telemetry is not in the ValidateSet' }
+        if ($src -notmatch "'telemetry'[^)]*\)\]\[string\]\`$Step") { throw 'telemetry is not in the ValidateSet' }
         if ($src -notmatch "\`$readOnly = \(\`$Step -in [^\r\n]*'telemetry'") { throw 'telemetry is not in the read-only list' }
     }
 }

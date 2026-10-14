@@ -10,6 +10,7 @@ const DEFAULTS = Object.freeze({
   closeToTray: true,          // closing the window hides it to the tray instead of quitting
   startHidden: false,         // when started with Windows: stay in the tray, do not show the window
   startHwinfoWithApp: false,  // start HWiNFO (installed, shared memory already on in its INI) once after the app starts, so the Dashboard tiles fill in
+  autoRecord: false,          // check every 10 minutes whether a game loads the CPU and record that play session by itself (sensors are only read)
   notifications: true,        // toast when the optimization gets worse
   checkIntervalMin: 30,       // background health check
   installDir: '',             // ThrottleStop folder ('' = automatic)
@@ -26,6 +27,7 @@ const RULES = Object.freeze({
   closeToTray: isBool,
   startHidden: isBool,
   startHwinfoWithApp: isBool,
+  autoRecord: isBool,
   notifications: isBool,
   checkIntervalMin: (v) => Number.isInteger(v) && v >= 5 && v <= 1440,
   installDir: (v) => typeof v === 'string' && v.length <= 260,
