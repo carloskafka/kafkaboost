@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/carloskafka/legion-14900hx-throttlestop/compare/v1.1.1...v1.2.0) (2026-10-14)
+
+
+### Features
+
+* dynamic-tick tweak and cs2_video.txt tuning ([33a6315](https://github.com/carloskafka/legion-14900hx-throttlestop/commit/33a6315a081bbcfc89a183874046004ccda53a15))
+* **scripts,app:** dynamic-tick tweak and cs2_video.txt tuning ([f0e8b86](https://github.com/carloskafka/legion-14900hx-throttlestop/commit/f0e8b8681f4a48e13823a13c14888a61aa82033e))
+
 ## [1.1.1](https://github.com/carloskafka/legion-14900hx-throttlestop/compare/v1.1.0...v1.1.1) (2026-10-14)
 
 
