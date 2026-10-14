@@ -1,0 +1,68 @@
+name: Release PR
+
+# Conventional commits on main decide the next version (feat = minor, fix = patch, docs/test/chore alone = no release).
+# 1. release-please opens (and keeps up to date) ONE pull request "chore(main): release X.Y.Z" that bumps app/package.json and
+#    app/package-lock.json and writes CHANGELOG.md. Nothing is released until a person merges that pull request.
+# 2. When that pull request is merged, the version on main has no tag yet: the "tag" job creates vX.Y.Z and starts release.yml
+#    for it. release.yml stays the only thing that builds the installer and publishes the GitHub Release
+#    (release-please is told NOT to create a release itself: skip-github-release in release-please-config.json).
+#
+# Why the tag job starts release.yml by hand: a tag created with the default GITHUB_TOKEN does not trigger other workflows,
+# but "gh workflow run" does. No personal access token is needed.
+# Why the tag job also relabels the merged release pull request: release-please marks it "autorelease: tagged" only when it
+# creates the release itself. Left "pending", it refuses to open the next release pull request.
+# The tag job runs first, so release-please always sees a consistent state.
+#
+# One repository setting is needed once: Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
+# A pull request opened with GITHUB_TOKEN does not start ci.yml; release.yml runs the same tests before it builds anything.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Tag and release when the version on main has no tag yet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          version=$(node -p "require('./app/package.json').version")
+          tag="v$version"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "$tag already exists: nothing to release."
+            exit 0
+          fi
+          echo "$tag has no tag yet: creating it at $GITHUB_SHA and starting the release."
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA"
+          gh workflow run release.yml --ref "$tag"
+          # tell release-please that its merged release pull request has been tagged
+          for pr in $(gh pr list --state merged --label "autorelease: pending" --json number --jq '.[].number'); do
+            gh pr edit "$pr" --remove-label "autorelease: pending" --add-label "autorelease: tagged"
+          done
+
+  release-pr:
+    needs: tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

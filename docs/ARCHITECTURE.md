@@ -97,6 +97,10 @@ task name for PowerShell and Node alike; `HWiNFO64.INI` enables shared-memory lo
 demo mode.
 
 ## Releasing
+**Automatic path (default).** `.github/workflows/release-please.yml` runs on every push to `main`. release-please reads the conventional commits since the last tag (`feat` = minor, `fix` = patch; `docs`, `test` and `chore` alone make no release) and keeps ONE pull request open, "chore(main): release X.Y.Z", that bumps `app/package.json` and `app/package-lock.json` and writes `CHANGELOG.md`. Nothing is released until a person merges that pull request. After the merge the `tag` job sees a version with no tag, creates `vX.Y.Z`, relabels the merged pull request `autorelease: tagged` (otherwise release-please refuses to open the next one) and starts `release.yml` with `gh workflow run` (a tag made with `GITHUB_TOKEN` does not trigger other workflows; no personal access token is needed). `release.yml` stays the only publisher (release-please has `skip-github-release`). It needs the repository setting *Allow GitHub Actions to create and approve pull requests* (Settings > Actions > General). The release pull request does not start `ci.yml` (it is opened with `GITHUB_TOKEN`), but `release.yml` runs the same tests before it builds anything. Not run on GitHub yet.
+
+**Manual path (still works).** Steps 1 and 2 below by hand.
+
 1. Raise `version` in `app/package.json` (and merge it); the tag must be exactly `v<version>`.
 2. Push the tag `vX.Y.Z`. `.github/workflows/release.yml` then runs on `windows-latest`: it fails if the tag and the version differ, runs the Node tests, the Pester tests and the site check, and builds with `npm run dist` (electron-builder: NSIS installer and portable exe).
 3. A second job, the only one with `contents: write`, creates the GitHub Release with `KafkaBoost-Setup-X.Y.Z.exe`, its `.blockmap`, `KafkaBoost-Portable-X.Y.Z.exe`, `SHA256SUMS.txt` and `latest.yml`. A tag with a dash (`v0.2.0-rc1`) becomes a pre-release, which the app ignores.
