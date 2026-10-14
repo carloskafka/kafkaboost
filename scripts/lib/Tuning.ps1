@@ -169,6 +169,25 @@ function Restore-Vbs {
     reg add 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard' /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f | Out-Null
 }
 
+# Reads one boot-config element for the current OS entry. value is $null when the element is not set (Windows uses its own default).
+function Get-BcdElement([string]$Element) {
+    $out = & bcdedit /enum '{current}' 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $out) { return [pscustomobject]@{ exists = $false; value = $null } }
+    $m = [regex]::Match(($out -join "`n"), "(?im)^\s*$([regex]::Escape($Element))\s+(\S+)\s*$")
+    if ($m.Success) { return [pscustomobject]@{ exists = $true; value = $m.Groups[1].Value } }
+    return [pscustomobject]@{ exists = $false; value = $null }
+}
+
+function Set-BcdElement([string]$Element, [string]$Value) {
+    & bcdedit /set $Element $Value | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "bcdedit /set $Element $Value failed (exit $LASTEXITCODE)." }
+}
+
+# Removes the override, so the element goes back to the Windows default (not to a recorded "off" value).
+function Remove-BcdElement([string]$Element) {
+    & bcdedit /deletevalue $Element 2>$null | Out-Null   # exit code is non-zero when the element was already unset; not an error here
+}
+
 # Merges key=value lines of $SettingsFile into ThrottleStop.ini. Stops ONLY the ThrottleStop whose path is $Exe
 # (SaveOnExit=2 would overwrite the edit on a clean exit). Returns the number of keys written.
 function Merge-ThrottleStopSettings([string]$InstallDir, [string]$SettingsFile) {
