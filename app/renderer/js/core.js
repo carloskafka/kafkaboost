@@ -52,9 +52,9 @@
 
   // ---- navigation -----------------------------------------------------------------------------------------------
   // The wizard and the finish screen belong to the Optimizations section of the sidebar.
-  const NAV_OF = { wizard: 'optimizations', finish: 'optimizations', cs2: 'optimizations' };
-  const WINDOWS_ONLY = ['optimizations', 'cleanup', 'restore', 'sensors', 'insights', 'wizard', 'finish', 'cs2'];
-  const ALL_VIEWS = ['health', 'analysis', 'optimizations', 'cleanup', 'wizard', 'finish', 'restore', 'sensors', 'insights', 'cs2', 'apps', 'settings', 'help'];
+  const NAV_OF = { wizard: 'optimizations', finish: 'optimizations', cs2: 'optimizations', rammap: 'optimizations' };
+  const WINDOWS_ONLY = ['optimizations', 'cleanup', 'restore', 'sensors', 'insights', 'wizard', 'finish', 'cs2', 'rammap'];
+  const ALL_VIEWS = ['health', 'analysis', 'optimizations', 'cleanup', 'wizard', 'finish', 'restore', 'sensors', 'insights', 'cs2', 'rammap', 'apps', 'settings', 'help'];
 
   KB.registerView = (name, def) => { KB.views[name] = def || {}; };
   KB.featureOn = (view) => { const f = KB.state.info && KB.state.info.features; if (!f) return true; return f[NAV_OF[view] || view] !== false; };

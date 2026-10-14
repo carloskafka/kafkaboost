@@ -1,0 +1,16 @@
+{
+  "name": "RAMMap",
+  "homepage": "https://learn.microsoft.com/en-us/sysinternals/downloads/rammap",
+  "zipUrl": "https://download.sysinternals.com/files/RAMMap.zip",
+  "urlPrefix": "https://download.sysinternals.com/files/",
+  "exe": "RAMMap64.exe",
+  "signer": "Microsoft Corporation",
+  "license": "Sysinternals Software License Terms (freeware, not redistributable)",
+  "actions": [
+    { "id": "working-sets",        "switch": "-Ew", "risk": "safe" },
+    { "id": "system-working-sets", "switch": "-Es", "risk": "safe" },
+    { "id": "modified-pages",      "switch": "-Em", "risk": "advanced" },
+    { "id": "standby-low",         "switch": "-Ep", "risk": "advanced" },
+    { "id": "standby",             "switch": "-E0", "risk": "advanced" }
+  ]
+}

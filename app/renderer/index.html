@@ -179,6 +179,13 @@
             <ul class="opt-facts"><li data-i18n="opt.cs2.fact1"></li><li data-i18n="opt.cs2.fact2"></li><li data-i18n="opt.cs2.fact3"></li><li data-i18n="opt.cs2.fact4"></li></ul>
             <div class="actions"><button id="openCs2" class="btn primary" type="button" data-i18n="opt.cs2.open">Open</button></div>
           </article>
+          <article class="opt" id="optRammap">
+            <div class="opt-top"><span class="chip level" data-i18n="opt.level.advanced">Advanced</span><span class="chip" data-i18n="opt.cs2.optional">Optional</span></div>
+            <h3 data-i18n="opt.rammap.title">Memory cleanup (RAMMap)</h3>
+            <p class="muted" data-i18n="opt.rammap.desc"></p>
+            <ul class="opt-facts"><li data-i18n="opt.rammap.fact1"></li><li data-i18n="opt.rammap.fact2"></li><li data-i18n="opt.rammap.fact3"></li></ul>
+            <div class="actions"><button id="openRammap" class="btn primary" type="button" data-i18n="opt.cs2.open">Open</button></div>
+          </article>
         </div>
               <div class="tweaks-head">
           <h2 class="h2" data-i18n="tweaks.title"></h2>
@@ -253,6 +260,47 @@
           <div id="cs2CopyResult" class="result" hidden></div>
           <p class="muted" data-i18n="cs2.launch.where"></p>
           <p class="muted" data-i18n="cs2.launch.noVdf"></p>
+        </div>
+      </section>
+
+      <!-- ===== Memory cleanup with RAMMap (opened from Optimizations) ===== -->
+      <section id="rammap" class="view" hidden>
+        <button id="backFromRammap" class="btn small ghost back" type="button" data-i18n="wizard.back">‹ Optimizations</button>
+        <div class="page-head">
+          <div>
+            <div class="kicker" data-i18n="rammap.kicker">Memory</div>
+            <h1 data-i18n="rammap.title">Memory cleanup (RAMMap)</h1>
+            <p class="muted" data-i18n="rammap.intro"></p>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="h2" data-i18n="rammap.honest.title"></h2>
+          <ul class="changes">
+            <li data-i18n="rammap.honest.1"></li><li data-i18n="rammap.honest.2"></li><li data-i18n="rammap.honest.3"></li>
+          </ul>
+        </div>
+        <div id="rammapGet" class="card" hidden>
+          <h2 class="h2" data-i18n="rammap.get.title"></h2>
+          <p class="muted" id="rammapGetText"></p>
+          <label class="check"><input type="checkbox" id="rammapAgree"><span data-i18n="rammap.get.agree"></span></label>
+          <div id="rammapGetResult" class="result" hidden></div>
+          <div class="actions left"><button id="rammapDownload" class="btn primary" type="button" data-i18n="rammap.get.button" disabled></button></div>
+        </div>
+        <div class="card">
+          <div class="cs2-head"><h2 class="h2" data-i18n="rammap.mem.title"></h2><span id="rammapStatus" class="chip status"></span></div>
+          <table class="kv" id="rammapMem"></table>
+          <p class="muted" data-i18n="rammap.mem.note"></p>
+          <div class="actions left"><button id="rammapRefresh" class="btn small ghost" type="button" data-i18n="rammap.mem.refresh"></button></div>
+        </div>
+        <div id="rammapActionsCard" class="card" hidden>
+          <h2 class="h2" data-i18n="rammap.actions.title"></h2>
+          <div id="rammapResult" class="result" hidden></div>
+          <div id="rammapActions" class="clean-list"></div>
+        </div>
+        <div id="rammapHistoryCard" class="card" hidden>
+          <h2 class="h2" data-i18n="rammap.history.title"></h2>
+          <p id="rammapTotals" class="muted"></p>
+          <table class="kv" id="rammapHistory"></table>
         </div>
       </section>
 
@@ -599,6 +647,8 @@
   <script src="js/optimizations.js"></script>
 <script src="js/cs2logic.js"></script>
 <script src="js/cs2.js"></script>
+<script src="js/rammaplogic.js"></script>
+<script src="js/rammap.js"></script>
 <script src="js/cleanup.js"></script>
   <script src="js/apps.js"></script>
 <script src="js/sensorlogic.js"></script>

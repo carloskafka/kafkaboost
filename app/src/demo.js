@@ -226,7 +226,43 @@ function hwinfoStep(step, opts) {
   return ok('msg.hwinfo.stopped', {}, 'demo', { stopped: 1 });
 }
 
+// RAMMap (demo): nothing is downloaded or run. Canned counters; a run moves standby memory to free so the card has something to show.
+const GIB = 1024 * 1024 * 1024;
+state.rammap = { installed: false, history: [], mem: { totalBytes: 32 * GIB, availableBytes: 14 * GIB, freeBytes: 0.4 * GIB, standbyBytes: 13.6 * GIB, modifiedBytes: 0.2 * GIB } };
+const RAMMAP_ACTIONS = [
+  { id: 'working-sets', switch: '-Ew', risk: 'safe' }, { id: 'system-working-sets', switch: '-Es', risk: 'safe' },
+  { id: 'modified-pages', switch: '-Em', risk: 'advanced' }, { id: 'standby-low', switch: '-Ep', risk: 'advanced' }, { id: 'standby', switch: '-E0', risk: 'advanced' }
+];
+function rammapStep(step, opts) {
+  const r = state.rammap;
+  const ok = (code, args, data) => ({ logs: [], res: { ok: true, code, args: args || {}, message: 'demo', data } });
+  if (step === 'rammap-state') {
+    return ok(r.installed ? 'msg.rammap.state.installed' : 'msg.rammap.state.missing', {}, {
+      state: { installed: r.installed, exe: 'C:\\ProgramData\\LegionTuning\\rammap\\RAMMap64.exe', version: r.installed ? '1.62' : null, signerOk: r.installed, signer: r.installed ? 'Microsoft Corporation' : '' },
+      memory: { ...r.mem }, actions: RAMMAP_ACTIONS, source: 'https://download.sysinternals.com/files/RAMMap.zip', signer: 'Microsoft Corporation',
+      license: 'Sysinternals Software License Terms (freeware, not redistributable)'
+    });
+  }
+  if (step === 'rammap-get') {
+    if (!opts.download && !opts.zipPath) return { logs: [], res: { ok: false, code: 'msg.rammap.consentNeeded', args: {}, message: 'consent needed', data: null } };
+    r.installed = true;
+    return { logs: ['downloading RAMMap (demo: nothing is downloaded)', 'signature OK (Microsoft Corporation)'], res: ok('msg.rammap.installed', { version: '1.62' }, { version: '1.62' }).res };
+  }
+  if (step === 'rammap-history') return ok('msg.rammap.history', { count: r.history.length }, { history: r.history.slice() });
+  const act = RAMMAP_ACTIONS.find((a) => a.id === opts.rammapAction);
+  if (!act) return { logs: [], res: { ok: false, code: 'msg.rammap.unknownAction', args: {}, message: 'unknown', data: null } };
+  const before = { ...r.mem };
+  const moved = act.id === 'standby' ? r.mem.standbyBytes : act.id === 'standby-low' ? r.mem.standbyBytes * 0.25 : act.id === 'modified-pages' ? r.mem.modifiedBytes : r.mem.standbyBytes * 0.05;
+  if (act.id === 'modified-pages') r.mem.modifiedBytes -= moved; else r.mem.standbyBytes -= moved;
+  r.mem.availableBytes += moved; r.mem.freeBytes += moved;
+  const rec = { time: new Date().toISOString(), action: act.id, switch: act.switch, before, after: { ...r.mem },
+    delta: { availableBytes: moved, freeBytes: moved, standbyBytes: act.id === 'modified-pages' ? 0 : -moved, modifiedBytes: act.id === 'modified-pages' ? -moved : 0 } };
+  r.history.unshift(rec);
+  return ok('msg.rammap.done', {}, rec);
+}
+
 function demoStep(step, opts = {}, configDir) {
+  if (step.startsWith('rammap-')) return rammapStep(step, opts);
   if (step === 'telemetry') {
     telemetryTick++;
     const takenAt = new Date().toISOString().slice(0, 19);
