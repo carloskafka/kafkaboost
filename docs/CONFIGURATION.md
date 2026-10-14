@@ -179,6 +179,18 @@ There is **no pinned hash**: HWiNFO ships a new build every few weeks, so a hash
 
 **Third-party note.** HWiNFO is proprietary freeware by REALiX ("FREEWARE for Non-Commercial use only" on its download page). KafkaBoost neither bundles nor redistributes it: the file comes from hwinfo.com on your click, and the only network request before that is the one page read when you press *Check*. We could not confirm on the official pages any limit on how long the free edition may share sensors in one session, so none is stated here; if HWiNFO stops sharing, the card shows it and *Start* restarts it.
 
+## Memory cleanup with RAMMap (`config/rammap.json`)
+| Field | Meaning |
+|---|---|
+| `zipUrl` / `urlPrefix` | where RAMMap comes from (`download.sysinternals.com`); a different address is refused |
+| `exe` | `RAMMap64.exe`, the only file taken from the zip |
+| `signer` | `Microsoft Corporation`; the exe must carry a Valid Authenticode signature from exactly this signer, otherwise it is deleted |
+| `actions` | the five things the page can run: `working-sets` (`-Ew`), `system-working-sets` (`-Es`), `modified-pages` (`-Em`), `standby-low` (`-Ep`), `standby` (`-E0`), each with a `safe` or `advanced` tag |
+
+**How it works.** On your click (after the consent box) the app downloads RAMMap from Microsoft into `%ProgramData%\LegionTuning\rammap`, a folder only administrators can change. A button then runs one action: RAMMap starts with `-accepteula` and that action's switch, and the app reads the Windows memory counters (available, free, standby, modified) just before and just after. Each run is added to `history.jsonl` in that folder and shown on the page.
+
+**What it does not claim.** There is no FPS promise and no claim that it fixes a Counter-Strike 2 memory leak. Emptying the standby list throws away cached data that Windows must read from disk again, so it can cause a short stutter. A counter Windows does not report is shown as a dash, never as 0. Nothing runs automatically. RAMMap is Microsoft Sysinternals freeware: KafkaBoost neither bundles nor redistributes it.
+
 ## Counter-Strike 2 preset (`config/cs2.json`): what is written where
 | Field | Meaning |
 |---|---|
