@@ -46,6 +46,8 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
     check('windows-only panel replaces Sensors', await visible('windowsOnly') && !(await visible('sensors')));
     await js(win, "KB.showView('cs2')"); await sleep(300);
     check('the Counter-Strike 2 page is Windows only too', await visible('windowsOnly') && !(await visible('cs2')));
+    await js(win, "KB.showView('rammap')"); await sleep(300);
+    check('the RAMMap page is Windows only too', await visible('windowsOnly') && !(await visible('rammap')));
     await click('[data-view=settings]'); await sleep(400);
     check('Settings still works on this OS', await visible('settings'));
     check('Windows-only settings are hidden', !(await visible('thermalCard')) && !(await visible('sStartHwinfoRow')) && !(await visible('sAutoRecordRow')));
@@ -319,6 +321,25 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   demo.resetCs2();
   await click('#backFromCs2'); await sleep(400);
   check('Back returns to Optimizations', await visible('optimizations') && !(await visible('cs2')));
+
+  // Memory cleanup with RAMMap (demo: nothing is downloaded or run; canned memory counters)
+  check('Optimizations has the Memory cleanup (RAMMap) card', (await q('#optRammap h3')).includes('RAMMap'), await q('#optRammap h3'));
+  await click('#openRammap'); await sleep(1200);
+  check('the card opens the RAMMap page, and Optimizations stays the active menu item', await visible('rammap') && !(await visible('optimizations')) && (await js(win, "document.querySelector('.nav-btn.active').dataset.view")) === 'optimizations');
+  check('the page says it promises no FPS gain and that dropping the standby list can stutter', (await q('#rammap .changes')).includes('do not promise more FPS') && (await q('#rammap .changes')).includes('stutter'), await q('#rammap .changes'));
+  check('RAMMap is missing: the download card shows and the actions card does not', await visible('rammapGet') && !(await visible('rammapActionsCard')) && (await q('#rammapStatus')) === 'Not installed', await q('#rammapStatus'));
+  check('the live counters are listed (installed 32.0 GB, standby 13.6 GB)', (await q('#rammapMem')).includes('32.0 GB') && (await q('#rammapMem')).includes('13.6 GB'), await q('#rammapMem'));
+  check('download stays disabled until the box is ticked', await dis('rammapDownload'));
+  await click('#rammapAgree'); await sleep(200);
+  check('ticking the box enables the download', !(await dis('rammapDownload')));
+  await click('#rammapDownload'); await sleep(1500);
+  check('after the demo install the actions card shows five actions, each with a Run button', !(await visible('rammapGet')) && await visible('rammapActionsCard') && (await ccount('#rammapActions .rammap-row')) === 5 && (await q('#rammapStatus')) === 'Ready', await q('#rammapStatus'));
+  await js(win, "document.querySelectorAll('#rammapActions .rammap-row .btn')[4].click()"); await sleep(500);
+  check('running an advanced action asks first, and says it promises no gain', (await js(win, "document.getElementById('confirmDlg').open")) && (await q('#cfBody')).includes('does not promise a performance gain'), await q('#cfBody'));
+  await click('#cfOk'); await sleep(1800);
+  check('the result shows what the counters did, and the history records the run', (await q('#rammapResult')).includes('standby -13.6 GB') && await visible('rammapHistoryCard') && (await q('#rammapTotals')).includes('1 run'), await q('#rammapResult'));
+  await click('#backFromRammap'); await sleep(400);
+  check('Back returns to Optimizations from RAMMap', await visible('optimizations') && !(await visible('rammap')));
 
   // HWiNFO on demand (Dashboard card; demo: nothing is downloaded or started)
   await click('[data-view=health]'); await sleep(1500);
