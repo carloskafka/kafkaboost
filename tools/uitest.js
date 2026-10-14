@@ -48,7 +48,7 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
     check('the Counter-Strike 2 page is Windows only too', await visible('windowsOnly') && !(await visible('cs2')));
     await click('[data-view=settings]'); await sleep(400);
     check('Settings still works on this OS', await visible('settings'));
-    check('Windows-only settings are hidden', !(await visible('thermalCard')) && !(await visible('sStartHwinfoRow')));
+    check('Windows-only settings are hidden', !(await visible('thermalCard')) && !(await visible('sStartHwinfoRow')) && !(await visible('sAutoRecordRow')));
     await click('[data-view=apps]'); await sleep(1500);
     const cnt = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
     check('Apps works on this OS (no Windows-only panel)', await visible('apps') && !(await visible('windowsOnly')));
@@ -57,7 +57,7 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
     check('the Windows bloatware remover is hidden on Linux', !(await visible('bloatCard')));
     await click('[data-view=health]'); await sleep(400);
     check('Dashboard shows basic system info', (await q('#heroTitle')).length > 0, await q('#heroTitle'));
-    check('Dashboard hardware cards: CPU, memory, system (no live tiles, no level)', (await js(win, "document.querySelectorAll('.hw-card').length")) === 3 && !(await visible('tiles')) && !(await visible('optLevel')) && !(await visible('tilesNotice')));
+    check('Dashboard hardware cards: CPU, memory, system (no live tiles, no level)', (await js(win, "document.querySelectorAll('.hw-card').length")) === 3 && !(await visible('tiles')) && !(await visible('optLevel')) && !(await visible('tilesNotice')) && !(await visible('sessCard')) && !(await visible('advCard')));
     return finish();
   }
 
@@ -113,7 +113,7 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
 
   await click('#mReset'); await sleep(500);
   const s = settings.get();
-  check('reset restores every default', s.startHwinfoWithApp === false && s.theme === 'system' && s.language === 'auto' && s.closeToTray === true && s.notifications === true && s.checkIntervalMin === 30 && s.installDir === '');
+  check('reset restores every default', s.startHwinfoWithApp === false && s.autoRecord === false && s.theme === 'system' && s.language === 'auto' && s.closeToTray === true && s.notifications === true && s.checkIntervalMin === 30 && s.installDir === '');
   check('reset refreshes the form', (await js(win, "document.getElementById('sInterval').value")) === '30');
 
   // after Reset the language is 'auto' = the OS language (Portuguese on a pt-BR PC); the checks below read English text
@@ -124,6 +124,15 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   await click('[data-view=health]'); await waitFor("document.getElementById('tTemp').textContent.includes('°C')");
   check('Dashboard live tiles show real demo readings and when they were read', (await tileTemp()).includes('°C') && (await q('#tClock')).includes('GHz') && (await q('#tPower')).endsWith(' W') && (await visible('tilesWhen')) && (await q('#tilesWhen')).includes('Last read'), await q('#tilesWhen'));
   check('no notice while the readings work', !(await visible('tilesNotice')));
+  await click('[data-view=insights]'); await waitFor("document.getElementById('insights') && !document.getElementById('insights').hidden");
+  check('Insights offers the play session recorder', (await visible('sessCard')) && (await visible('sessStart')) && !(await visible('sessStop')));
+  await click('#sessStart'); await waitFor("document.getElementById('sessSummary') && !document.getElementById('sessSummary').hidden");
+  check('a recorded session shows duration, temperature, power and WHEA from real (demo) readings', (await q('#sessSummary')).includes('Duration') && (await q('#sessSummary')).includes('84 °C') && (await q('#sessSummary')).includes('WHEA'), await q('#sessSummary'));
+  check('the summary says throttle flags are not measured instead of claiming none', (await q('#sessSummary')).includes('does not say whether the CPU throttled'));
+  check('Insights offers the boost clock advice, empty until asked', (await visible('advCard')) && !(await visible('advVerdict')));
+  await click('#advAnalyze'); await waitFor("!document.getElementById('advVerdict').hidden");
+  check('the advice names the cap, the measured temperature, and never promises stability', (await q('#advVerdict')).includes('Keep 47x') && (await q('#advVerdict')).includes('90 °C') && !(await q('#advVerdict')).toLowerCase().includes('stable') && (await q('#advEvidence')).includes('4689 MHz'), await q('#advVerdict'));
+  await click('[data-view=health]'); await sleep(400);
   const tt0 = await tileTemp(); let tt1 = tt0;
   await until(async () => (tt1 = await tileTemp()) !== tt0);
   check('the live tiles refresh by themselves', tt1 !== tt0, tt0 + ' -> ' + tt1 + ' | hidden=' + await js(win, 'document.hidden') + ' focus=' + await js(win, 'document.hasFocus()'));

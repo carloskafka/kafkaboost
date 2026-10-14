@@ -70,3 +70,13 @@ test('startHwinfoWithApp: off by default, boolean only, survives a reload, sanit
   assert.equal(createStore(f).get().startHwinfoWithApp, true);
   assert.equal(sanitize({ startHwinfoWithApp: 'true' }).startHwinfoWithApp, false);
 });
+
+test('autoRecord: off by default, boolean only, survives a reload, sanitize drops junk', () => {
+  assert.equal(DEFAULTS.autoRecord, false);
+  const f = tmpFile(); const s = createStore(f);
+  for (const bad of ['yes', 1, null, undefined, {}]) assert.deepEqual(s.set({ autoRecord: bad }).rejected, ['autoRecord']);
+  assert.equal(s.get().autoRecord, false);
+  assert.deepEqual(s.set({ autoRecord: true }).rejected, []);
+  assert.equal(createStore(f).get().autoRecord, true);
+  assert.equal(sanitize({ autoRecord: 'true' }).autoRecord, false);
+});

@@ -197,6 +197,7 @@
       if (!KB.featureOn('optimizations')) { renderBasic(); return; }
       if (KB.hwinfoRefresh) KB.hwinfoRefresh();
       renderTiles(); renderLevel(); startTelemetry(); loadHardware(); loadTweaks();
+     
     },
     onHide() { stopTelemetry(); }
   });

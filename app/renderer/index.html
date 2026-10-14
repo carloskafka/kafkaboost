@@ -26,6 +26,7 @@
         <button class="nav-btn" type="button" data-view="cleanup"><span class="nav-ic" aria-hidden="true">♻</span><span data-i18n="nav.cleanup">Cleanup</span></button>
         <button class="nav-btn" type="button" data-view="restore"><span class="nav-ic" aria-hidden="true">↺</span><span data-i18n="nav.restore">Restore</span></button>
         <button class="nav-btn" type="button" data-view="sensors"><span class="nav-ic" aria-hidden="true">≈</span><span data-i18n="nav.sensors">Sensors</span></button>
+        <button class="nav-btn" type="button" data-view="insights"><span class="nav-ic" aria-hidden="true">◔</span><span data-i18n="nav.insights">Insights</span></button>
         <button class="nav-btn" type="button" data-view="apps"><span class="nav-ic" aria-hidden="true">▦</span><span data-i18n="nav.apps">Apps</span></button>
         <button class="nav-btn" type="button" data-view="settings"><span class="nav-ic" aria-hidden="true">⚙</span><span data-i18n="nav.settings">Settings</span></button>
         <button class="nav-btn" type="button" data-view="help"><span class="nav-ic" aria-hidden="true">?</span><span data-i18n="nav.help">Help</span></button>
@@ -299,6 +300,38 @@
       </section>
 
       <!-- ===== Sensors ===== -->
+      <section id="insights" class="view" hidden>
+        <div class="page-head">
+          <div>
+            <div class="kicker" data-i18n="insights.kicker"></div>
+            <h1 data-i18n="insights.title"></h1>
+            <p class="muted" data-i18n="insights.intro"></p>
+          </div>
+        </div>
+
+        <div id="sessCard" class="card" hidden>
+          <h2 class="h2" data-i18n="dashboard.session.title"></h2>
+          <p class="muted" data-i18n="dashboard.session.intro"></p>
+          <p id="sessLive" hidden></p>
+          <div id="sessResult" class="result warn" hidden></div>
+          <div id="sessSummary" hidden></div>
+          <div class="clean-foot"><span class="muted" data-i18n="dashboard.session.note"></span>
+            <button id="sessStart" class="btn primary" type="button" data-i18n="dashboard.session.start"></button>
+            <button id="sessStop" class="btn" type="button" data-i18n="dashboard.session.stop" hidden></button>
+          </div>
+        </div>
+
+        <div id="advCard" class="card" hidden>
+          <h2 class="h2" data-i18n="dashboard.advice.title"></h2>
+          <p class="muted" data-i18n="dashboard.advice.intro"></p>
+          <div id="advVerdict" class="result" hidden></div>
+          <p id="advEvidence" class="muted" hidden></p>
+          <div class="clean-foot"><span class="muted" data-i18n="dashboard.advice.note"></span>
+            <button id="advAnalyze" class="btn" type="button" data-i18n="dashboard.advice.analyze"></button>
+          </div>
+        </div>
+      </section>
+
       <section id="sensors" class="view" hidden>
         <div class="page-head">
           <div>
@@ -456,6 +489,10 @@
             <div class="row-text"><label class="row-title" for="sStartHwinfo" data-i18n="settings.startHwinfo"></label><div class="row-hint" data-i18n="settings.startHwinfo.hint"></div></div>
             <label class="switch"><input type="checkbox" id="sStartHwinfo"><span class="slider"></span></label>
           </div>
+          <div class="row" id="sAutoRecordRow">
+            <div class="row-text"><label class="row-title" for="sAutoRecord" data-i18n="settings.autoRecord"></label><div class="row-hint" data-i18n="settings.autoRecord.hint"></div></div>
+            <label class="switch"><input type="checkbox" id="sAutoRecord"><span class="slider"></span></label>
+          </div>
           <div class="row">
             <div class="row-text"><label class="row-title" for="sCloseToTray" data-i18n="settings.closeToTray"></label></div>
             <label class="switch"><input type="checkbox" id="sCloseToTray"><span class="slider"></span></label>
@@ -552,6 +589,10 @@
 <script src="js/core.js"></script>
   <script src="js/dashlogic.js"></script>
 <script src="js/dashboard.js"></script>
+  <script src="js/sessionlogic.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/advicelogic.js"></script>
+  <script src="js/advice.js"></script>
   <script src="js/analysis.js"></script>
   <script src="js/wizard.js"></script>
   <script src="js/restore.js"></script>

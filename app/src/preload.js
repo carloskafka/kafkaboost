@@ -4,6 +4,13 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('kb', {
   info: () => ipcRenderer.invoke('app:info'),
   runStep: (step, opts) => ipcRenderer.invoke('step:run', step, opts),
+  session: {
+    state: () => ipcRenderer.invoke('session:state'),
+    start: () => ipcRenderer.invoke('session:start'),
+    stop: () => ipcRenderer.invoke('session:stop'),
+    onUpdate: (cb) => ipcRenderer.on('session:update', (_e, st) => cb(st))
+  },
+  advice: () => ipcRenderer.invoke('advice:get'),
   onLog: (cb) => ipcRenderer.on('step:log', (_e, step, line) => cb(step, line)),
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
