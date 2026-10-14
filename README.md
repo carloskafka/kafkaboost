@@ -219,7 +219,7 @@ KafkaBoost.cmd/.command/.lnk  launchers for the app
 app/                   Electron app: src/ (main, preload, settings, updates, i18n, tray, demo), renderer/, build/ (icons), test/ (node tests)
 config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog), sensors.json (pinned sensor library), hwinfo.json (official HWiNFO page, signer)
 scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore, Sensors, Hwinfo), monitoring/, maintenance/
-tests/                 Pester tests for the library (154)
+tests/                 Pester tests for the library (176)
 tools/                 make-icons.js, make-shots.ps1, run-uitest.ps1 (UI checks)
 docs/                  GitHub Pages site (index.html landing, about-app.html docs hub, compare/download/faq/privacy/terms, pt-br/ mirror, site.css, site.js, assets/) and the reference documents
 local/                 git-ignored: backups, evidence, experiments
