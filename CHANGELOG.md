@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/carloskafka/kafkaboost/compare/v1.3.0...v1.4.0) (2026-10-14)
+
+
+### Features
+
+* **app,scripts:** the play-session recorder also logs standby and free memory ([#21](https://github.com/carloskafka/kafkaboost/issues/21)) ([60e0b7d](https://github.com/carloskafka/kafkaboost/commit/60e0b7d92ca8d4a74c21cd9570938aec13329133))
+
 ## [1.3.0](https://github.com/carloskafka/kafkaboost/compare/v1.2.0...v1.3.0) (2026-10-14)
 
 
