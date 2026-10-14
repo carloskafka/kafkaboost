@@ -1,5 +1,6 @@
 # Pester tests for scripts\lib\Rammap.ps1. A fake fetcher, fake signature check, fake runner and fake memory counters stand in for the
 # network, Authenticode, RAMMap itself and Windows: nothing is downloaded and RAMMap is never started.
+# Plain Assert-Equal / throw assertions (Setup.ps1), so the file runs on Pester 3.4 and 5.
 
 Describe 'Rammap (config, install, signature, run, history)' {
     BeforeAll {
@@ -12,6 +13,10 @@ Describe 'Rammap (config, install, signature, run, history)' {
             $z = [IO.Compression.ZipFile]::Open($Path, 'Create')
             try { foreach ($n in $Names) { [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($z, (Join-Path $src $n), $n) } } finally { $z.Dispose() }
             Remove-Item $src -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        function Get-ErrorCode([scriptblock]$Block) {
+            try { & $Block } catch { return $_.Exception.Data['code'] }
+            return $null
         }
         $script:Good = Join-Path ([IO.Path]::GetTempPath()) ('kb_rmzip_' + [guid]::NewGuid().ToString('N') + '.zip')
         New-FakeZip $script:Good @('RAMMap.exe', 'RAMMap64.exe', 'Eula.txt')
@@ -27,63 +32,59 @@ Describe 'Rammap (config, install, signature, run, history)' {
     AfterEach { Remove-Item -LiteralPath $script:RammapRoot -Recurse -Force -ErrorAction SilentlyContinue }
 
     It 'has five actions, every switch an -E switch and only from the config' {
-        @($script:Cfg.actions).Count | Should Be 5
-        foreach ($a in $script:Cfg.actions) { $a.switch | Should Match '^-E[a-z0-9]$' }
-        $script:Cfg.urlPrefix | Should Match '^https://download\.sysinternals\.com/'
-        $script:Cfg.zipUrl.StartsWith($script:Cfg.urlPrefix) | Should Be $true
+        Assert-Equal @($script:Cfg.actions).Count 5 'action count'
+        foreach ($a in $script:Cfg.actions) { if ($a.switch -notmatch '^-E[a-z0-9]$') { throw "bad switch $($a.switch)" } }
+        if ($script:Cfg.urlPrefix -notmatch '^https://download\.sysinternals\.com/') { throw 'urlPrefix' }
+        Assert-Equal $script:Cfg.zipUrl.StartsWith($script:Cfg.urlPrefix) $true 'zipUrl under urlPrefix'
     }
 
     It 'accepts only a Valid signature from exactly Microsoft Corporation' {
         $f = Join-Path $script:RammapRoot 'x.exe'; Set-Content $f 'x'
         $script:RammapSignature = $script:Valid
-        (Test-RammapSignature $f $script:Cfg).ok | Should Be $true
+        Assert-Equal (Test-RammapSignature $f $script:Cfg).ok $true 'valid + exact signer'
         $script:RammapSignature = { param($p) @{ status = 'Valid'; subject = 'CN="Microsoft Corporation Fake"' } }
-        (Test-RammapSignature $f $script:Cfg).ok | Should Be $false
+        Assert-Equal (Test-RammapSignature $f $script:Cfg).ok $false 'look-alike signer'
         $script:RammapSignature = { param($p) @{ status = 'NotSigned'; subject = '' } }
-        (Test-RammapSignature $f $script:Cfg).ok | Should Be $false
+        Assert-Equal (Test-RammapSignature $f $script:Cfg).ok $false 'not signed'
         $script:RammapSignature = { param($p) @{ status = 'HashMismatch'; subject = 'CN="Microsoft Corporation"' } }
-        (Test-RammapSignature $f $script:Cfg).ok | Should Be $false
+        Assert-Equal (Test-RammapSignature $f $script:Cfg).ok $false 'tampered'
     }
 
     It 'installs a good zip with a valid signature' {
         $script:RammapSignature = $script:Valid
         $script:RammapFetcher = { param($u, $out) Copy-Item $script:Good $out }
         $r = Install-Rammap $script:Cfg $null
-        Test-Path (Join-Path $script:RammapRoot 'RAMMap64.exe') | Should Be $true
-        $r.source | Should Be $script:Cfg.zipUrl
-        (Get-RammapState $script:Cfg).installed | Should Be $true
+        if (-not (Test-Path (Join-Path $script:RammapRoot 'RAMMap64.exe'))) { throw 'exe not installed' }
+        Assert-Equal $r.source $script:Cfg.zipUrl 'source'
+        Assert-Equal (Get-RammapState $script:Cfg).installed $true 'state installed'
     }
 
     It 'refuses a bad signature and installs nothing' {
         $script:RammapSignature = { param($p) @{ status = 'NotSigned'; subject = '' } }
         $script:RammapFetcher = { param($u, $out) Copy-Item $script:Good $out }
-        $code = $null; try { Install-Rammap $script:Cfg $null } catch { $code = $_.Exception.Data['code'] }
-        $code | Should Be 'msg.rammap.badSignature'
-        Test-Path (Join-Path $script:RammapRoot 'RAMMap64.exe') | Should Be $false
+        Assert-Equal (Get-ErrorCode { Install-Rammap $script:Cfg $null }) 'msg.rammap.badSignature' 'error code'
+        if (Test-Path (Join-Path $script:RammapRoot 'RAMMap64.exe')) { throw 'exe was installed' }
     }
 
     It 'refuses a zip without RAMMap64.exe and a reply that is not a zip' {
         $script:RammapSignature = $script:Valid
         $script:RammapFetcher = { param($u, $out) Copy-Item $script:NoExe $out }
-        $code = $null; try { Install-Rammap $script:Cfg $null } catch { $code = $_.Exception.Data['code'] }
-        $code | Should Be 'msg.rammap.badZip'
+        Assert-Equal (Get-ErrorCode { Install-Rammap $script:Cfg $null }) 'msg.rammap.badZip' 'zip without exe'
         $script:RammapFetcher = { param($u, $out) Set-Content $out '<html>blocked</html>' }
-        $code = $null; try { Install-Rammap $script:Cfg $null } catch { $code = $_.Exception.Data['code'] }
-        $code | Should Be 'msg.rammap.badZip'
+        Assert-Equal (Get-ErrorCode { Install-Rammap $script:Cfg $null }) 'msg.rammap.badZip' 'html reply'
     }
 
     It 'refuses a download address outside the expected site' {
-        $bad = $script:Cfg | ConvertTo-Json | ConvertFrom-Json; $bad.zipUrl = 'https://evil.example/RAMMap.zip'
-        $code = $null; try { Install-Rammap $bad $null } catch { $code = $_.Exception.Data['code'] }
-        $code | Should Be 'msg.rammap.badSource'
+        $bad = $script:Cfg | ConvertTo-Json -Depth 5 | ConvertFrom-Json; $bad.zipUrl = 'https://evil.example/RAMMap.zip'
+        Assert-Equal (Get-ErrorCode { Install-Rammap $bad $null }) 'msg.rammap.badSource' 'foreign address'
     }
 
     It 'computes the delta and keeps a missing counter missing, never 0' {
         $b = [pscustomobject]@{ availableBytes = 100; freeBytes = 10; standbyBytes = 80; modifiedBytes = $null }
         $a = [pscustomobject]@{ availableBytes = 150; freeBytes = 60; standbyBytes = 30; modifiedBytes = 5 }
         $d = Get-RammapDelta $b $a
-        $d.availableBytes | Should Be 50; $d.freeBytes | Should Be 50; $d.standbyBytes | Should Be (-50)
-        $d.modifiedBytes | Should BeNullOrEmpty
+        Assert-Equal $d.availableBytes 50 'available'; Assert-Equal $d.freeBytes 50 'free'; Assert-Equal $d.standbyBytes (-50) 'standby'
+        if ($null -ne $d.modifiedBytes) { throw 'a missing counter must stay missing' }
     }
 
     It 'runs only an allow-listed action with -accepteula and the switch from the config, and records before and after' {
@@ -94,37 +95,37 @@ Describe 'Rammap (config, install, signature, run, history)' {
         $script:Seen = $null
         $script:RammapRunner = { param($exe, $a) $script:Seen = $a; 0 }
         $r = Invoke-RammapAction 'standby' $script:Cfg
-        $r.ok | Should Be $true
-        ($script:Seen -join ' ') | Should Be '-accepteula -E0'
-        $r.data.delta.standbyBytes | Should Be (-100)
-        @(Get-RammapHistory).Count | Should Be 1
-        (Get-RammapHistory)[0].action | Should Be 'standby'
+        Assert-Equal $r.ok $true 'ok'
+        Assert-Equal ($script:Seen -join ' ') '-accepteula -E0' 'arguments'
+        Assert-Equal $r.data.delta.standbyBytes (-100) 'standby delta'
+        Assert-Equal @(Get-RammapHistory).Count 1 'history count'
+        Assert-Equal (Get-RammapHistory)[0].action 'standby' 'history action'
     }
 
     It 'rejects an unknown action id, including one that looks like a switch, without starting anything' {
         $script:RammapSignature = $script:Valid
         Set-Content (Join-Path $script:RammapRoot 'RAMMap64.exe') 'fake'
         $script:Ran = $false; $script:RammapRunner = { param($e, $a) $script:Ran = $true; 0 }
-        (Invoke-RammapAction '-Ew' $script:Cfg).code | Should Be 'msg.rammap.unknownAction'
-        (Invoke-RammapAction 'standby; calc' $script:Cfg).code | Should Be 'msg.rammap.unknownAction'
-        $script:Ran | Should Be $false
+        Assert-Equal (Invoke-RammapAction '-Ew' $script:Cfg).code 'msg.rammap.unknownAction' 'switch as id'
+        Assert-Equal (Invoke-RammapAction 'standby; calc' $script:Cfg).code 'msg.rammap.unknownAction' 'injected id'
+        Assert-Equal $script:Ran $false 'nothing started'
     }
 
     It 'does not start when not installed or when the signature is not valid, and does not log a failed run' {
-        (Invoke-RammapAction 'standby' $script:Cfg).code | Should Be 'msg.rammap.notInstalled'
+        Assert-Equal (Invoke-RammapAction 'standby' $script:Cfg).code 'msg.rammap.notInstalled' 'not installed'
         Set-Content (Join-Path $script:RammapRoot 'RAMMap64.exe') 'fake'
         $script:RammapSignature = { param($p) @{ status = 'NotSigned'; subject = '' } }
         $script:Ran = $false; $script:RammapRunner = { param($e, $a) $script:Ran = $true; 0 }
-        (Invoke-RammapAction 'standby' $script:Cfg).code | Should Be 'msg.rammap.badSignature'
-        $script:Ran | Should Be $false
+        Assert-Equal (Invoke-RammapAction 'standby' $script:Cfg).code 'msg.rammap.badSignature' 'bad signature'
+        Assert-Equal $script:Ran $false 'nothing started'
         $script:RammapSignature = $script:Valid; $script:RammapRunner = { param($e, $a) 5 }
         $script:RammapMemory = { [pscustomobject]@{ totalBytes = 1; availableBytes = 1; freeBytes = 1; standbyBytes = 1; modifiedBytes = 1 } }
-        (Invoke-RammapAction 'standby' $script:Cfg).code | Should Be 'msg.rammap.runFailed'
-        @(Get-RammapHistory).Count | Should Be 0
+        Assert-Equal (Invoke-RammapAction 'standby' $script:Cfg).code 'msg.rammap.runFailed' 'non-zero exit'
+        Assert-Equal @(Get-RammapHistory).Count 0 'failed run is not logged'
     }
 
     It 'reads the real memory counters as numbers and never as 0 when missing' {
         $m = Get-RammapMemory
-        if ($null -ne $m.totalBytes) { $m.totalBytes | Should BeGreaterThan 0 }
+        if ($null -ne $m.totalBytes -and $m.totalBytes -le 0) { throw 'totalBytes must be positive or missing' }
     }
 }
