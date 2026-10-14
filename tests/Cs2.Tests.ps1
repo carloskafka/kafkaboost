@@ -47,6 +47,18 @@ Describe 'CS2 preset (sandbox folders and registry)' {
             Set-ItemProperty -LiteralPath $k -Name $Exe -Value $Data -Type String
         }
         function Read-CsFile([string]$Path) { [IO.File]::ReadAllText($Path) }
+        function Set-CsActiveUser([int64]$Id32) {
+            New-Item -Path (Join-Path $script:CsKey 'Software\Valve\Steam\ActiveProcess') -Force | Out-Null
+            Set-ItemProperty -LiteralPath (Join-Path $script:CsKey 'Software\Valve\Steam\ActiveProcess') -Name ActiveUser -Value $Id32 -Type DWord
+        }
+        $script:CsVideoSample = "`"video.cfg`"`r`n{`r`n`t`"setting.defaultres`"`t`"1920`"`r`n`t`"setting.defaultresheight`"`t`"1080`"`r`n`t`"setting.fullscreen`"`t`"1`"`r`n`t`"setting.refreshrate_numerator`"`t`"144`"`r`n`t`"setting.refreshrate_denominator`"`t`"1`"`r`n}"
+        function New-CsVideoFile([string]$SteamRoot, [int64]$Id32, [string]$Content) {
+            $dir = Join-Path $SteamRoot "userdata\$Id32\730\local\cfg"
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            $path = Join-Path $dir 'cs2_video.txt'
+            [IO.File]::WriteAllText($path, $Content)
+            return $path
+        }
     }
     BeforeEach { New-CsSandbox }
     AfterEach { Remove-CsSandbox }
@@ -58,6 +70,12 @@ Describe 'CS2 preset (sandbox folders and registry)' {
         if (-not $c.autoexecMarker.StartsWith('//')) { throw 'the marker must be a cfg comment' }
         $ids = @($c.autoexec | ForEach-Object { $_.id }); Assert-Equal @($ids | Select-Object -Unique).Count $ids.Count 'autoexec ids unique'
         $lids = @($c.launch | ForEach-Object { $_.id }); Assert-Equal @($lids | Select-Object -Unique).Count $lids.Count 'launch ids unique'
+        if (-not $c.videoMarker.StartsWith('//')) { throw 'the video marker must be a KeyValues comment' }
+        $vids = @($c.video | ForEach-Object { $_.id }); Assert-Equal @($vids | Select-Object -Unique).Count $vids.Count 'video ids unique'
+        foreach ($v in $c.video) {
+            if (-not $v.settingKey.StartsWith('setting.')) { throw "video option $($v.id) has a settingKey that is not a 'setting.' key" }
+            if ($null -eq $v.param.min -or $null -eq $v.param.max -or $v.param.min -ge $v.param.max) { throw "video option $($v.id) has bad bounds" }
+        }
         foreach ($a in $c.autoexec) {
             if ($a.line -match "[\r\n;]") { throw "autoexec line for $($a.id) must be a single command" }
             if ($a.comment -match "[\r\n]") { throw "comment for $($a.id) must be one line" }
@@ -355,5 +373,117 @@ Describe 'CS2 preset (sandbox folders and registry)' {
         if (@($o.catalog.launch).Count -lt 3) { throw 'catalog is part of the overview' }
         $gone = Get-Cs2Overview 'C:\gone\game\bin\win64\cs2.exe'
         Assert-Equal $gone.found $false 'nothing to fall back to'; Assert-Equal $gone.userExeInvalid $true 'flagged'
+    }
+
+    # ------------------------------------------------------------ Steam account detection (for cs2_video.txt)
+    It 'finds the Steam32 id from ActiveUser, and falls back to the MostRecent entry in loginusers.vdf' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam
+        Set-CsActiveUser 123456789
+        Assert-Equal (Get-Cs2SteamId32 @($steam)) '123456789' 'ActiveUser wins'
+        Remove-Item -LiteralPath (Join-Path $script:CsKey 'Software\Valve\Steam\ActiveProcess') -Recurse -Force
+        New-Item -ItemType Directory -Force (Join-Path $steam 'config') | Out-Null
+        $vdf = "`"users`"`r`n{`r`n`t`"76561197960265729`"`r`n`t{`r`n`t`t`"AccountName`"`t`"old`"`r`n`t`t`"MostRecent`"`t`"0`"`r`n`t}`r`n`t`"76561198000000500`"`r`n`t{`r`n`t`t`"AccountName`"`t`"new`"`r`n`t`t`"MostRecent`"`t`"1`"`r`n`t}`r`n}"
+        [IO.File]::WriteAllText((Join-Path $steam 'config\loginusers.vdf'), $vdf)
+        Assert-Equal (Get-Cs2SteamId32 @($steam)) '39734772' 'falls back to loginusers.vdf MostRecent, converted to Steam32'
+    }
+    It 'cs2_video.txt is unavailable when no Steam account can be found, and nothing is written' {
+        $st = Get-Cs2VideoStatus
+        Assert-Equal $st.available $false 'unavailable'
+        $r = Write-Cs2Video @{ 'res-width' = '1920' }
+        Assert-Equal $r.ok $false 'refused'; Assert-Equal $r.code 'msg.cs2.noVideoAccount' 'code'
+    }
+
+    # ------------------------------------------------------------ cs2_video.txt
+    It 'refuses to write when cs2_video.txt does not exist yet, and never invents one' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam; Set-CsActiveUser 111
+        $r = Write-Cs2Video @{ 'res-width' = '1920' }
+        Assert-Equal $r.ok $false 'refused'; Assert-Equal $r.code 'msg.cs2.noVideoFile' 'code'
+        if (Test-Path -LiteralPath (Join-Path $steam 'userdata\111\730\local\cfg\cs2_video.txt')) { throw 'nothing should have been created' }
+    }
+    It 'updates only the chosen keys, keeps every other line byte for byte, and adds the marker' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam; Set-CsActiveUser 111
+        $path = New-CsVideoFile $steam 111 $script:CsVideoSample
+        $r = Write-Cs2Video @{ 'res-width' = '2560'; 'res-height' = '1440' }
+        Assert-Equal $r.ok $true 'ok'; Assert-Equal $r.code 'msg.cs2.videoWritten' 'code'
+        $text = Read-CsFile $path
+        if (-not $text.StartsWith('// Written by KafkaBoost')) { throw 'marker must be the first line' }
+        if ($text -notmatch '"setting\.defaultres"\s+"2560"') { throw 'width updated' }
+        if ($text -notmatch '"setting\.defaultresheight"\s+"1440"') { throw 'height updated' }
+        if ($text -notmatch '"setting\.fullscreen"\s+"1"') { throw 'unrelated key kept' }
+        if ($text -notmatch '"setting\.refreshrate_numerator"\s+"144"') { throw 'untouched option kept at its original value' }
+        $st = Get-Cs2VideoStatus
+        Assert-Equal $st.ours $true 'ours'; Assert-Equal $st.values.'res-width' '2560' 'status reads back the new value'
+    }
+    It 'the refresh-rate option also sets the paired denominator key ("also")' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam; Set-CsActiveUser 111
+        $sample = $script:CsVideoSample.Replace('"setting.refreshrate_denominator"`t"1"', '"setting.refreshrate_denominator"`t"2"')
+        $path = New-CsVideoFile $steam 111 $sample
+        Write-Cs2Video @{ 'refresh-rate' = '240' } | Out-Null
+        $text = Read-CsFile $path
+        if ($text -notmatch '"setting\.refreshrate_numerator"\s+"240"') { throw 'numerator updated' }
+        if ($text -notmatch '"setting\.refreshrate_denominator"\s+"1"') { throw 'denominator forced back to 1 by the paired "also" entry' }
+    }
+    It 'inserts a key that is missing from the file instead of failing' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam; Set-CsActiveUser 111
+        $noRefresh = "`"video.cfg`"`r`n{`r`n`t`"setting.defaultres`"`t`"1920`"`r`n}"
+        $path = New-CsVideoFile $steam 111 $noRefresh
+        $r = Write-Cs2Video @{ 'refresh-rate' = '165' }
+        Assert-Equal $r.ok $true 'ok'
+        $text = Read-CsFile $path
+        if ($text -notmatch '"setting\.refreshrate_numerator"\s+"165"') { throw 'missing key inserted' }
+        if ($text -notmatch '"setting\.defaultres"\s+"1920"') { throw 'existing key kept' }
+    }
+    It 'rejects an unknown id and an out-of-range value before touching the file' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam; Set-CsActiveUser 111
+        $path = New-CsVideoFile $steam 111 $script:CsVideoSample
+        foreach ($bad in @(@{ 'bogus' = '1' }, @{ 'res-width' = '10' }, @{ 'refresh-rate' = '99999' }, @{ 'res-width' = 'abc' })) {
+            $r = Write-Cs2Video $bad
+            Assert-Equal $r.ok $false "rejected: $($bad.Keys -join ',')"
+            Assert-Equal $r.code 'msg.cs2.badOptions' 'code'
+        }
+        Assert-Equal (Read-CsFile $path) $script:CsVideoSample 'file untouched'
+        Assert-Equal @(Get-ChildItem (Split-Path -Parent $path)).Count 1 'no backup was made for a rejected write'
+    }
+    It 'backs up before writing and restore puts the exact original back, even after two writes' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam; Set-CsActiveUser 111
+        $path = New-CsVideoFile $steam 111 $script:CsVideoSample
+        Write-Cs2Video @{ 'res-width' = '2560' } | Out-Null
+        Write-Cs2Video @{ 'res-width' = '3840' } | Out-Null
+        $st = Get-Cs2VideoStatus
+        Assert-Equal $st.backups 2 'two backups, the second one is our first write'
+        Assert-Equal $st.hasOriginal $true 'the true original is still among them'
+        $v = Restore-Cs2Video
+        Assert-Equal $v.code 'msg.cs2.videoRestored' 'restore code'
+        Assert-Equal (Read-CsFile $path) $script:CsVideoSample 'the ORIGINAL, not the first write'
+    }
+    It 'never restores over a file the user edited after us (marker gone)' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam; Set-CsActiveUser 111
+        $path = New-CsVideoFile $steam 111 $script:CsVideoSample
+        Write-Cs2Video @{ 'res-width' = '2560' } | Out-Null
+        [IO.File]::WriteAllText($path, "// edited by hand, marker removed`r`n")
+        $r = Restore-Cs2Video
+        Assert-Equal $r.ok $false 'refused'; Assert-Equal $r.code 'msg.cs2.videoNotOurs' 'code'
+        Assert-Equal (Read-CsFile $path) "// edited by hand, marker removed`r`n" 'kept as the user left it'
+    }
+    It 'will not write through a junction in place of the userdata cfg folder' {
+        $steam = Join-Path $script:CsTemp 'Steam'; New-Item -ItemType Directory -Force (Join-Path $steam 'steamapps') | Out-Null
+        Set-CsSteamPath $steam; Set-CsActiveUser 111
+        $path = New-CsVideoFile $steam 111 $script:CsVideoSample
+        $cfgDir = Split-Path -Parent $path
+        $outside = Join-Path $script:CsTemp 'outsideVideo'; New-Item -ItemType Directory $outside | Out-Null
+        Remove-Item -LiteralPath $cfgDir -Recurse -Force
+        cmd /c mklink /J "$cfgDir" "$outside" | Out-Null
+        $r = Write-Cs2Video @{ 'res-width' = '2560' }
+        Assert-Equal $r.ok $false 'refused'
+        Assert-Equal @(Get-ChildItem $outside).Count 0 'nothing landed outside'
+        cmd /c rmdir "$cfgDir" | Out-Null
     }
 }

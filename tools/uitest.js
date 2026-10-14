@@ -202,7 +202,7 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   const count = (sel) => js(win, `document.querySelectorAll(${JSON.stringify(sel)}).length`);
   const isOn = (id) => js(win, `document.querySelector('.tweak[data-id="${id}"] input').checked`);
   const input = (id, v) => js(win, `(()=>{const e=document.getElementById(${JSON.stringify(id)});e.value=${JSON.stringify(v)};e.dispatchEvent(new Event('input',{bubbles:true}))})()`);
-  check('tweak catalog shows all 30 cards', (await count('.tweak')) === 30, await count('.tweak'));
+  check('tweak catalog shows all 31 cards', (await count('.tweak')) === 31, await count('.tweak'));
   check('category chips exist (all + 7)', (await count('#tweakChips .chip-btn')) === 8, await count('#tweakChips .chip-btn'));
   await click('#tweakChips [data-cat=privacy]'); await sleep(200);
   check('a category chip filters the cards', (await count('.tweak')) === 6, await count('.tweak'));

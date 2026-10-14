@@ -105,7 +105,7 @@ MSI calls -80 mV a safe daily value; lowering boost clocks lets you go lower on 
 
 
 ## Tweak catalog (`config/tweaks.json`)
-30 tweaks in seven categories (performance, gpu, gaming, network, privacy, appearance, general). Each entry:
+31 tweaks in seven categories (performance, gpu, gaming, network, privacy, appearance, general). Each entry:
 
 | Field | Meaning |
 |---|---|
@@ -185,6 +185,8 @@ There is **no pinned hash**: HWiNFO ships a new build every few weeks, so a hash
 | `exeName`, `steamAppId`, `defaultFolder` | `cs2.exe`, 730 and `Counter-Strike Global Offensive`: used to find `steamapps\common\<folder>\game\bin\win64\cs2.exe` in every Steam library (the folder comes from `appmanifest_730.acf` when it is there) |
 | `autoexecMarker` | `// Written by KafkaBoost`: the first line of every file we write; restore acts only while it is present |
 | `autoexec` | the console lines the user can tick: `id`, `line`, a one-line `comment` that is written above it, and for `fps_max` a `param` with its bounds (30 to 1000). The page explains each in both languages (`cs2.cfg.opt.<id>`) |
+| `videoMarker` | same marker text, used for `cs2_video.txt` instead (its own file, same guard rule) |
+| `video` | the `cs2_video.txt` keys the user can tune: `id`, `settingKey` (the exact KeyValues key, e.g. `setting.defaultres`), a one-line `comment`, a `param` with bounds, and an optional `also` list of extra fixed key/value pairs written alongside it (used so `refresh-rate` also sets `setting.refreshrate_denominator` to `1`). No entry has a recommended value; the user picks their own resolution and refresh rate (`cs2.video.opt.<id>`) |
 | `launch` | the launch options the page can show: `id`, `text`, `tier` (`suggested`, `disputed`, `placebo`) and whether it is ticked by default (only `+exec autoexec`) |
 
 **Everything the preset writes.** Nothing else is created, changed or deleted.
@@ -194,9 +196,11 @@ There is **no pinned hash**: HWiNFO ships a new build every few weeks, so a hash
 | `%ProgramData%\LegionTuning\state.json`, section `cs2` | the previous registry data, so the revert is exact | removed on revert |
 | `<game>\csgo\cfg\autoexec.cfg` | the chosen lines, UTF-8 without BOM, first line the marker | *Restore previous*: the newest backup that is not ours is copied back, or our file is deleted when there was none |
 | `<game>\csgo\cfg\autoexec.cfg.bak_<yyyyMMdd_HHmmss>` | a copy of the file that was there, made before every write | kept (nothing deletes backups) |
+| `<steam>\userdata\<steamid32>\730\local\cfg\cs2_video.txt` | only the specific keys the user chose (resolution, refresh rate); every other line kept byte-for-byte; a marker line is added if not already present | *Restore previous*: the newest backup that is not ours is copied back, or our file is deleted when there was none. Only edited if the file already exists — KafkaBoost never creates it from scratch |
+| `<steam>\userdata\<steamid32>\730\local\cfg\cs2_video.txt.bak_<yyyyMMdd_HHmmss>` | a full copy of the file that was there, made before every write | kept (nothing deletes backups) |
 | `userData/settings.json` `cs2Exe` | a `cs2.exe` the user picked when Steam did not reveal the game | *Use the location from Steam* |
 
-Steam is only read (`HKCU\Software\Valve\Steam`, `libraryfolders.vdf`, `appmanifest_730.acf`). Launch options are never written anywhere: the page builds a string and copies it, and the user pastes it into Steam; Steam's `localconfig.vdf` is not touched. Which lines were included, and why: `cl_showfps 1` (a frame counter, useful to see stutter next to the Sensors page) and `fps_max <n>` (the same limit as the Video menu; a limit the PC can hold steadily lowers CPU and GPU load and heat). Console variables we were not sure exist in CS2 were left out on purpose. Launch options: `+exec autoexec` and `-console` are harmless and suggested; `-high` and `-vulkan` are disputed (no reliable gain shown; try and compare yourself); `-novid` and `-nojoy` are listed as placebo (reported to do nothing in CS2, or a negligible saving). None of this is a performance promise, and we did not test any anti-cheat with it.
+Steam is only read (`HKCU\Software\Valve\Steam`, `libraryfolders.vdf`, `appmanifest_730.acf`, `config\loginusers.vdf`, and while Steam is running `HKCU\Software\Valve\Steam\ActiveProcess` to find the signed-in account for `cs2_video.txt`). Launch options are never written anywhere: the page builds a string and copies it, and the user pastes it into Steam; Steam's `localconfig.vdf` is not touched. Which lines were included, and why: `cl_showfps 1` (a frame counter, useful to see stutter next to the Sensors page) and `fps_max <n>` (the same limit as the Video menu; a limit the PC can hold steadily lowers CPU and GPU load and heat). Console variables we were not sure exist in CS2 were left out on purpose. The `cs2_video.txt` keys (`setting.defaultres`, `setting.defaultresheight`, `setting.refreshrate_numerator`/`_denominator`) mirror the in-game Video menu exactly; KafkaBoost does not suggest a resolution or refresh rate, it only lets you set one without opening the menu, and a value your monitor cannot actually show is still accepted (CS2's own Video menu would reject or revert it, not this tool). Launch options: `+exec autoexec` and `-console` are harmless and suggested; `-high` and `-vulkan` are disputed (no reliable gain shown; try and compare yourself); `-novid` and `-nojoy` are listed as placebo (reported to do nothing in CS2, or a negligible saving). None of this is a performance promise, and we did not test any anti-cheat with it.
 
 ## App settings (`userData/settings.json`)
 `theme` (system|dark|light), `language` (auto|en|pt-BR), `closeToTray`, `startHidden`, `startHwinfoWithApp` (default off: start an installed HWiNFO once after the app starts, only if it is not running, the app is elevated and its INI already has `SensorsSM=1`; never edits the INI, no arguments), `notifications`, `checkIntervalMin` (5-1440),

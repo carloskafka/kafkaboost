@@ -1,5 +1,6 @@
-# Counter-Strike 2 preset: (1) the Windows "Graphics settings" GPU preference for cs2.exe, (2) an optional autoexec.cfg, (3) the data for the
-# launch-options helper (the app only shows and copies a string; Steam's localconfig.vdf is never touched).
+# Counter-Strike 2 preset: (1) the Windows "Graphics settings" GPU preference for cs2.exe, (2) an optional autoexec.cfg, (3) optional tuning of
+# cs2_video.txt (resolution, refresh rate), (4) the data for the launch-options helper (the app only shows and copies a string; Steam's
+# localconfig.vdf is never touched).
 # Dot-source AFTER lib\Tuning.ps1 and lib\Tweaks.ps1 (it reuses Read-RegValue / Write-RegValue / Remove-RegValueIfPresent and the state file).
 #
 # Rules
@@ -8,9 +9,12 @@
 #     Settings > Graphics page writes for "High performance"). The PREVIOUS data is recorded in the tweak state file (section "cs2"), so
 #     revert puts back exactly what was there, or removes the value when there was none. Other fields in the same data are kept.
 #     A value KafkaBoost did not write (no record) is never reverted by us.
-#   * autoexec.cfg is the only game file we write, always inside <game>\csgo\cfg, under a fixed name. An existing file is copied first to
-#     autoexec.cfg.bak_<timestamp>. Restore acts only when the current file carries our marker line (or is missing); a file the user wrote
-#     or edited without the marker is never overwritten or deleted. No other file in the game folder is read, written or removed.
+#   * The only two game files we write are autoexec.cfg (inside <game>\csgo\cfg) and cs2_video.txt (inside Steam's userdata for the active
+#     Steam account, <steam>\userdata\<steamid32>\730\local\cfg). Both: an existing file is copied first to <name>.bak_<timestamp>; restore
+#     acts only when the current file carries our marker line (or is missing); a file the user wrote or edited without the marker is never
+#     overwritten or deleted. cs2_video.txt is never fully rewritten: only the specific keys the user chose (resolution, refresh rate) are
+#     changed, everything else in the file (shadows, textures, AA, ...) is left exactly as it was. No other file in either location is
+#     read, written or removed, and Steam's localconfig.vdf is never touched by any of this.
 #   * Tests redirect $script:RegMap (registry), $script:TweakStatePath (state) and use temp folders for Steam and the game.
 
 $script:Cs2ConfigPath = $null          # default: <repo>\config\cs2.json
@@ -61,6 +65,27 @@ function Get-SteamLibraries([string[]]$Roots) {
     $seen = @{}; $res = @()
     foreach ($l in $libs) { $k = $l.ToLowerInvariant(); if (-not $seen.ContainsKey($k) -and (Test-Path -LiteralPath $l -PathType Container)) { $seen[$k] = 1; $res += $l } }
     return $res
+}
+
+function ConvertTo-Cs2SteamId32([string]$Steam64) {
+    try { $n = [uint64]$Steam64; if ($n -lt 76561197960265728) { return $null }; return [string]($n - [uint64]76561197960265728) } catch { return $null }
+}
+
+# The Steam32 id of the account currently signed in to Steam, read-only. Tries the running client's registry value first
+# (set only while Steam is open), then falls back to the most-recently-used entry in config\loginusers.vdf. $null if neither is found.
+function Get-Cs2SteamId32([string[]]$Roots) {
+    $active = Read-RegValue 'HKCU:\Software\Valve\Steam\ActiveProcess' 'ActiveUser'
+    if ($active.exists -and $active.value -and [int64]$active.value -gt 0) { return [string][int64]$active.value }
+    foreach ($r in $Roots) {
+        $vdf = Join-Path $r 'config\loginusers.vdf'
+        if ((Test-Path -LiteralPath $vdf -PathType Leaf) -and ((Get-Item -LiteralPath $vdf).Length -lt 1MB)) {
+            $text = [IO.File]::ReadAllText($vdf)
+            foreach ($m in [regex]::Matches($text, '(?is)"(7656\d{13})"\s*\{(.*?)\}')) {
+                if ($m.Groups[2].Value -match '"MostRecent"\s+"1"') { $id32 = ConvertTo-Cs2SteamId32 $m.Groups[1].Value; if ($id32) { return $id32 } }
+            }
+        }
+    }
+    return $null
 }
 
 function Get-Cs2InstallDirName([string]$Library, $Cfg) {
@@ -307,6 +332,145 @@ function Restore-Cs2Autoexec([string]$Exe) {
     return (New-Cs2Result $true 'msg.cs2.autoexecNothing' 'There is nothing to restore.' (Get-Cs2AutoexecStatus $c.exe))
 }
 
+# ---------------------------------------------------------------- cs2_video.txt (resolution, refresh rate)
+
+$script:Cs2VideoName = 'cs2_video.txt'
+$script:Cs2VideoBackupPattern = '^cs2_video\.txt\.bak_\d{8}_\d{6}(_\d+)?$'
+
+# <steamRoot>\userdata\<steamid32>\730\local\cfg\cs2_video.txt for the account currently signed in to Steam. $null if no
+# Steam install or no signed-in account could be found (read-only detection, same sources as Find-Cs2Install).
+function Get-Cs2VideoPath($Cfg) {
+    $roots = @(Get-SteamRoots)
+    if (-not $roots.Count) { return $null }
+    $id32 = Get-Cs2SteamId32 $roots
+    if (-not $id32) { return $null }
+    return (Join-Path $roots[0] "userdata\$id32\$($Cfg.steamAppId)\local\cfg\$script:Cs2VideoName")
+}
+
+function Test-VideoMarker([string]$Path, $Cfg) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    if ((Get-Item -LiteralPath $Path).Length -gt 1MB) { return $false }
+    foreach ($line in [IO.File]::ReadAllLines($Path)) { if ($line.StartsWith($Cfg.videoMarker)) { return $true } }
+    return $false
+}
+
+function Get-Cs2VideoContext {
+    $cfg = Get-Cs2Config
+    $target = Get-Cs2VideoPath $cfg
+    if (-not $target) { return @{ error = (New-Cs2Result $false 'msg.cs2.noVideoAccount' 'No signed-in Steam account could be found, so cs2_video.txt is not available. Open Steam and sign in, then try again.') } }
+    $dir = Split-Path -Parent $target
+    if (Test-ReparsePoint $dir) { return @{ error = (New-Cs2Result $false 'msg.cs2.noVideoFile' 'That Steam userdata folder is a link; KafkaBoost will not write through links.') } }
+    if (Test-ReparsePoint $target) { return @{ error = (New-Cs2Result $false 'msg.cs2.noVideoFile' 'cs2_video.txt is a link; KafkaBoost will not write through links.') } }
+    return @{ cfg = $cfg; target = $target }
+}
+
+# Current values of our known keys, read from the file text (regex only; this file is never fully parsed as KeyValues).
+function Get-Cs2VideoValues([string]$Text, $Cfg) {
+    $vals = @{}
+    if (-not $Text) { return $vals }
+    foreach ($o in $Cfg.video) {
+        $m = [regex]::Match($Text, '(?m)^\s*"' + [regex]::Escape($o.settingKey) + '"\s+"([^"]*)"')
+        if ($m.Success) { $vals[$o.id] = $m.Groups[1].Value }
+    }
+    return $vals
+}
+
+# New text for the file: $Values is a hashtable of option id -> string value. Only the matching keys (and any "also" pair) are
+# touched; everything else in $OriginalText is kept byte-for-byte. Unknown ids and out-of-range values are errors, nothing is written.
+function New-Cs2VideoText([hashtable]$Values, [string]$OriginalText, $Cfg) {
+    if (-not $OriginalText) { throw 'cs2_video.txt is empty.' }
+    if ($OriginalText.LastIndexOf('}') -lt 0) { throw 'cs2_video.txt does not look like a valid file (no closing brace), so nothing was changed.' }
+    $pairs = @()
+    foreach ($id in @($Values.Keys | Where-Object { $_ })) {
+        $o = $Cfg.video | Where-Object { $_.id -eq $id } | Select-Object -First 1
+        if (-not $o) { throw "Unknown video option: $id" }
+        $v = 0
+        $raw = "$($Values[$id])"
+        if ($raw -notmatch '^\d{1,5}$' -or -not [int]::TryParse($raw, [ref]$v)) { throw "Option $id needs a whole number." }
+        if ($v -lt [int]$o.param.min -or $v -gt [int]$o.param.max) { throw "Option $id needs a number between $($o.param.min) and $($o.param.max)." }
+        $pairs += [pscustomobject]@{ key = $o.settingKey; value = "$v" }
+        if ($o.PSObject.Properties['also']) { foreach ($extra in @($o.also)) { $pairs += [pscustomobject]@{ key = $extra.settingKey; value = "$($extra.value)" } } }
+    }
+    if (-not $pairs.Count) { throw 'Choose at least one option.' }
+    $text = $OriginalText
+    if (-not (($text -split "`r?`n") | Where-Object { $_.StartsWith($Cfg.videoMarker) })) {
+        $text = "$($Cfg.videoMarker) on $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))`r`n" + $text
+    }
+    foreach ($p in $pairs) {
+        $pattern = '(?m)^(\s*)"' + [regex]::Escape($p.key) + '"(\s+)"[^"]*"'
+        if ($text -match $pattern) {
+            $text = [regex]::Replace($text, $pattern, { param($m) $m.Groups[1].Value + '"' + $p.key + '"' + $m.Groups[2].Value + '"' + $p.value + '"' }, 1)
+        } else {
+            $i = $text.LastIndexOf('}')
+            $text = $text.Substring(0, $i) + "`t`"$($p.key)`"`t`"$($p.value)`"`r`n" + $text.Substring($i)
+        }
+    }
+    return $text
+}
+
+function Get-Cs2VideoStatus {
+    $c = Get-Cs2VideoContext
+    if ($c.error) { return [pscustomobject]@{ available = $false; exists = $false; ours = $false; foreign = $false; backups = 0; hasOriginal = $false; file = $null; values = @{} } }
+    $exists = Test-Path -LiteralPath $c.target -PathType Leaf
+    $ours = $exists -and (Test-VideoMarker $c.target $c.cfg)
+    $dir = Split-Path -Parent $c.target
+    $backups = @(if (Test-Path -LiteralPath $dir -PathType Container) { Get-ChildItem -LiteralPath $dir -File -Filter 'cs2_video.txt.bak_*' | Where-Object { $_.Name -match $script:Cs2VideoBackupPattern } })
+    $orig = @($backups | Where-Object { -not (Test-VideoMarker $_.FullName $c.cfg) })
+    $vals = @{}
+    if ($exists -and (Get-Item -LiteralPath $c.target).Length -lt 1MB) { $vals = Get-Cs2VideoValues ([IO.File]::ReadAllText($c.target)) $c.cfg }
+    [pscustomobject]@{ available = $true; exists = $exists; ours = $ours; foreign = ($exists -and -not $ours); backups = $backups.Count; hasOriginal = ($orig.Count -gt 0); file = $c.target; values = $vals }
+}
+
+function Write-Cs2Video([hashtable]$Values) {
+    $c = Get-Cs2VideoContext
+    if ($c.error) { return $c.error }
+    if (-not (Test-Path -LiteralPath $c.target -PathType Leaf)) {
+        return (New-Cs2Result $false 'msg.cs2.noVideoFile' 'cs2_video.txt was not found. Start Counter-Strike 2 once and open the Video settings so it is created, then try again.')
+    }
+    $original = [IO.File]::ReadAllText($c.target)
+    try { $text = New-Cs2VideoText $Values $original $c.cfg } catch { return (New-Cs2Result $false 'msg.cs2.badOptions' $_.Exception.Message @{ detail = $_.Exception.Message }) }
+    $backup = $null
+    try {
+        $stamp = (Get-Date).ToString('yyyyMMdd_HHmmss'); $dir = Split-Path -Parent $c.target
+        $bak = Join-Path $dir "$($script:Cs2VideoName).bak_$stamp"; $i = 1
+        while (Test-Path -LiteralPath $bak) { $bak = Join-Path $dir "$($script:Cs2VideoName).bak_${stamp}_$i"; $i++ }
+        Copy-Item -LiteralPath $c.target -Destination $bak
+        if ((Get-Item -LiteralPath $bak).Length -ne (Get-Item -LiteralPath $c.target).Length) { throw 'The backup copy does not match the original, so nothing was written.' }
+        $backup = Split-Path -Leaf $bak
+        $tmp = Join-Path $dir 'cs2_video.txt.kafkaboost_tmp'
+        [IO.File]::WriteAllText($tmp, $text, (New-Object Text.UTF8Encoding($false)))
+        Move-Item -LiteralPath $tmp -Destination $c.target -Force
+    } catch {
+        return (New-Cs2Result $false 'msg.cs2.failed' $_.Exception.Message $null @{ detail = $_.Exception.Message })
+    }
+    return (New-Cs2Result $true 'msg.cs2.videoWritten' 'cs2_video.txt updated. Your previous file was saved as {backup}.' (Get-Cs2VideoStatus) @{ backup = $backup })
+}
+
+function Restore-Cs2Video {
+    $c = Get-Cs2VideoContext
+    if ($c.error) { return $c.error }
+    $exists = Test-Path -LiteralPath $c.target -PathType Leaf
+    if ($exists -and -not (Test-VideoMarker $c.target $c.cfg)) {
+        return (New-Cs2Result $false 'msg.cs2.videoNotOurs' 'The current cs2_video.txt was not written by KafkaBoost (or you removed our marker line), so it was left alone.' (Get-Cs2VideoStatus))
+    }
+    $dir = Split-Path -Parent $c.target
+    $backups = @(if (Test-Path -LiteralPath $dir -PathType Container) { Get-ChildItem -LiteralPath $dir -File -Filter 'cs2_video.txt.bak_*' | Where-Object { $_.Name -match $script:Cs2VideoBackupPattern } | Sort-Object Name -Descending })
+    $orig = @($backups | Where-Object { -not (Test-VideoMarker $_.FullName $c.cfg) }) | Select-Object -First 1
+    try {
+        if ($orig) {
+            Copy-Item -LiteralPath $orig.FullName -Destination $c.target -Force
+            return (New-Cs2Result $true 'msg.cs2.videoRestored' 'Your previous cs2_video.txt was put back.' (Get-Cs2VideoStatus) @{ backup = $orig.Name })
+        }
+        if ($exists) {
+            Remove-Item -LiteralPath $c.target -Force
+            return (New-Cs2Result $true 'msg.cs2.videoRemoved' 'There was no cs2_video.txt before, so the one KafkaBoost wrote was removed.' (Get-Cs2VideoStatus))
+        }
+    } catch {
+        return (New-Cs2Result $false 'msg.cs2.failed' $_.Exception.Message $null @{ detail = $_.Exception.Message })
+    }
+    return (New-Cs2Result $true 'msg.cs2.videoNothing' 'There is nothing to restore.' (Get-Cs2VideoStatus))
+}
+
 # ---------------------------------------------------------------- overview for the screen
 
 # Everything the CS2 screen needs in one read-only call. $UserExe (optional) is a cs2.exe the user picked; when it is no longer valid
@@ -325,9 +489,10 @@ function Get-Cs2Overview([string]$UserExe) {
         $auto = Get-Cs2AutoexecStatus $det.exe
         $cfgDir = Get-Cs2CfgDir $det.exe
     }
+    $video = Get-Cs2VideoStatus    # independent of cs2.exe: tied to the signed-in Steam account, not the game install
     [pscustomobject]@{
         found = $det.found; source = $det.source; exe = $det.exe; others = @($det.others); steamPath = $det.steamPath; libraryCount = @($det.libraries).Count
-        cfgDir = $cfgDir; userExeInvalid = $invalid; gpu = $gpu; autoexec = $auto
-        catalog = [pscustomobject]@{ autoexec = @($cfg.autoexec); launch = @($cfg.launch) }
+        cfgDir = $cfgDir; userExeInvalid = $invalid; gpu = $gpu; autoexec = $auto; video = $video
+        catalog = [pscustomobject]@{ autoexec = @($cfg.autoexec); launch = @($cfg.launch); video = @($cfg.video) }
     }
 }

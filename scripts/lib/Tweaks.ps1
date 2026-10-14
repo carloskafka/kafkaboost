@@ -2,7 +2,7 @@
 # Dot-source AFTER lib\Tuning.ps1 (it needs Test-Admin, Disable-Vbs and Restore-Vbs).
 #
 # Design rules
-#   * Data driven: a tweak is a list of small declarative actions (registry, regkey, service, powerplan, dns, defender, vbs). Nothing is
+#   * Data driven: a tweak is a list of small declarative actions (registry, regkey, service, powerplan, dns, defender, vbs, bcdedit). Nothing is
 #     built from free text; ids, paths and values come from the catalog only.
 #   * Before an action changes anything, the PREVIOUS value is recorded in the state file, so revert restores what was really there
 #     (and removes what was not), not a guess.
@@ -127,6 +127,7 @@ function Test-ActionActive($a, $Record) {
         }
         'defender' { try { return [bool](Get-MpPreference).DisableRealtimeMonitoring } catch { return $false } }
         'vbs'      { return (-not [bool](Get-CimInstance Win32_ComputerSystem).HypervisorPresent) }
+        'bcdedit'  { $cur = Get-BcdElement $a.element; return ($cur.exists -and $cur.value -ieq $a.on) }
         default    { throw "Unknown action type: $($a.type)" }
     }
 }
@@ -188,6 +189,11 @@ function Invoke-ActionApply($a) {
             Disable-Vbs
             return [pscustomobject]@{ type = 'vbs'; hypervisorWasOn = $prev }
         }
+        'bcdedit' {
+            $prev = Get-BcdElement $a.element
+            Set-BcdElement $a.element $a.on
+            return [pscustomobject]@{ type = 'bcdedit'; exists = $prev.exists; value = $prev.value }
+        }
         default { throw "Unknown action type: $($a.type)" }
     }
 }
@@ -223,6 +229,10 @@ function Invoke-ActionRevert($a, $prev) {
         }
         'defender' { Set-MpPreference -DisableRealtimeMonitoring $false }
         'vbs'      { Restore-Vbs }
+        'bcdedit' {
+            if ($prev -and $prev.exists) { Set-BcdElement $a.element $prev.value }
+            else { Remove-BcdElement $a.element }
+        }
         default    { throw "Unknown action type: $($a.type)" }
     }
 }
@@ -236,7 +246,7 @@ function Remove-RegValueIfPresent([string]$Path, [string]$Name) {
 
 function Test-TweakNeedsAdmin($Tweak) {
     foreach ($a in $Tweak.actions) {
-        if ($a.type -in 'service', 'dns', 'defender', 'vbs') { return $true }
+        if ($a.type -in 'service', 'dns', 'defender', 'vbs', 'bcdedit') { return $true }
         if ($a.type -in 'registry', 'regkey' -and $a.path -like 'HKLM:*') { return $true }
     }
     return $false
@@ -381,6 +391,11 @@ function Get-ActionPreview($a) {
         'vbs' {
             $on = $null; try { $on = [bool](Get-CimInstance Win32_ComputerSystem).HypervisorPresent } catch { }
             return [pscustomobject]@{ type = 'vbs'; currentOn = $on }
+        }
+        'bcdedit' {
+            $cur = $null; try { $cur = Get-BcdElement $a.element } catch { }
+            $on = $(if ($null -eq $cur) { $null } else { ($cur.exists -and $cur.value -ieq $a.on) })
+            return [pscustomobject]@{ type = 'bcdedit'; element = $a.element; current = $(if ($cur) { $cur.value }); currentOn = $on; needsReboot = $true }
         }
         default { return [pscustomobject]@{ type = [string]$a.type } }
     }

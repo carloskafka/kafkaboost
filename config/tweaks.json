@@ -27,6 +27,10 @@
       "actions": [ { "type": "service", "name": "SysMain", "on": "Disabled", "off": "Auto" } ]
     },
     {
+      "id": "dynamic-tick-off", "category": "performance", "risk": "advanced", "recommended": false, "needsReboot": true,
+      "actions": [ { "type": "bcdedit", "element": "disabledynamictick", "on": "yes", "off": "no" } ]
+    },
+    {
       "id": "hags-on", "category": "gpu", "risk": "advanced", "recommended": false, "needsReboot": true, "minBuild": 19041,
       "actions": [ { "type": "registry", "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers", "name": "HwSchMode", "kind": "DWord", "on": 2, "off": null } ]
     },
