@@ -7,7 +7,7 @@ The product is called **KafkaBoost**. The GitHub repository (`legion-14900hx-thr
 
 ## What this repository is
 A guided, reversible ThrottleStop tuning for a Lenovo Legion 83DE (i9-14900HX, RTX 4090 Laptop, Windows 11), the scripts that apply
-and verify it, and an Electron app on top (called **KafkaBoost** in the UI; side menu: **Dashboard** health check, **System analysis**, **Optimizations** = 30-tweak catalog + CPU thermal tuning wizard, **Cleanup**, **Restore**, **Insights** (play session recorder + boost clock advice, Windows only), **Apps** (install/remove curated apps with winget / Homebrew / Flatpak, apt, dnf, pacman), **Settings**, **Help**; English + pt-BR, light/dark theme, update check with changelog). **Done and verified (2026-10-10):** peak 90 C,
+and verify it, and an Electron app on top (called **KafkaBoost** in the UI; side menu: **Dashboard** health check, **System analysis**, **Optimizations** = 31-tweak catalog + CPU thermal tuning wizard, **Cleanup**, **Restore**, **Insights** (play session recorder + boost clock advice, Windows only), **Apps** (install/remove curated apps with winget / Homebrew / Flatpak, apt, dnf, pacman), **Settings**, **Help**; English + pt-BR, light/dark theme, update check with changelog). **Done and verified (2026-10-10):** peak 90 C,
 no thermal throttling in a 19-minute CS2 session, game smooth, 0 WHEA errors (`docs/RESULTS.md`).
 
 Live tuning (profile 0, saved in `ThrottleStop.ini`, applied at every logon by the scheduled task `ThrottleStop_Autostart`):
@@ -36,7 +36,7 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 10. UI text lives in `app/renderer/i18n/{en,pt-BR}.json` (keys must match; a test checks). PowerShell results carry `code` + `args`, not translated text. Render remote text (release notes) with `textContent` only.
 11. **Sensors:** library only from the release pinned in `config/sensors.json` (other SHA-256 = delete and refuse), user agrees before download, never install a driver, missing sensors are *missing* (never 0), never claim DPC/ISR latency, claim only what we measured.
 12. **HWiNFO on demand:** proprietary freeware: never commit or bundle; download only after consent with version/source/signer shown, zip must hold `HWiNFO64.exe` with a Valid REALiX signature; start/stop only our own path and never with arguments; never overwrite a user's INI (`-UpdateIni` only when ticked per start); state no session-time limit.
-13. **Counter-Strike 2 preset:** no FPS or anti-cheat claim; only ids from `config/cs2.json`; GPU preference restored exactly (never revert one we did not write); the only game file written is `autoexec.cfg` (backup first, restore only with our marker); never edit Steam's `localconfig.vdf`.
+13. **Counter-Strike 2 preset:** no FPS or anti-cheat claim; only ids from `config/cs2.json`; GPU preference restored exactly (never revert one we did not write); the two game files written are `autoexec.cfg` and `cs2_video.txt` (resolution, refresh rate — backup first, restore only with our marker, and for `cs2_video.txt` only the specific keys the user chose, never a full rewrite); never edit Steam's `localconfig.vdf`.
 14. **Updates and "Apply recommended":** read the full rule 14 in `docs/AGENT-DETAILS.md` before touching update or Apply-recommended code.
 Full text of rules 11-14, the Layout table and the Roadmap/open items: `docs/AGENT-DETAILS.md` (read only the section you need).
 

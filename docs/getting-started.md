@@ -45,7 +45,7 @@ Tick **Settings > Start with Windows** to have it start hidden at every logon. T
 (English, Português), notifications and the check interval are in **Settings** too.
 
 ## 3c. More optimizations, cleanup and updates
-- **Optimizations** lists 30 tweaks (performance, GPU, gaming, network, privacy, appearance). Each shows what it changes and its
+- **Optimizations** lists 31 tweaks (performance, GPU, gaming, network, privacy, appearance). Each shows what it changes and its
   risk. *Apply recommended* applies only the safe ones; *advanced* ones ask for confirmation; the two *risky* ones (Defender
   real-time protection, core isolation) need two confirmations and are never part of "recommended". Switching a tweak off restores
   the value it had before.

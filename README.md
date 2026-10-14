@@ -86,7 +86,7 @@ Run from a terminal: `cd app; npm install; npm start` (administrator needed to a
 
 | Optimizations — tweak catalog | Cleanup | Settings |
 |---|---|---|
-| <img src="docs/assets/tweaks.png" alt="Optimizations: 30 tweaks with search, category filters, risk badges and toggles"> | <img src="docs/assets/cleanup.png" alt="Cleanup: sizes measured first, delete only what is ticked"> | <img src="docs/assets/settings.png" alt="Settings: theme, language, tray and update options"> |
+| <img src="docs/assets/tweaks.png" alt="Optimizations: 31 tweaks with search, category filters, risk badges and toggles"> | <img src="docs/assets/cleanup.png" alt="Cleanup: sizes measured first, delete only what is ticked"> | <img src="docs/assets/settings.png" alt="Settings: theme, language, tray and update options"> |
 
 The side menu has ten sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Sensors**, **Insights**, **Apps**, **Settings** and **Help**. **Insights** (Windows only) records play sessions (temperature, P/E clocks and package power every 5 s, manually or automatically) and gives advisory boost clock advice that never changes a setting.
 The app is being renamed **KafkaBoost** (launchers and window already; the repo, package ids and task names keep their old names).
@@ -111,7 +111,7 @@ Light and dark theme, English and Brazilian Portuguese.
   If the site answers with a protection page instead of the zip, the card says so and lets you pick a zip you downloaded yourself
   (same checks). **Not run on the PC yet:** the elevated install, start and stop, the Dashboard notice's Start button and the start-with-the-app setting (only run against the demo and fakes; see `docs/TESTING.md`).
 - **System analysis** is a read-only look at the PC (model, CPU, GPU, RAM, Windows, power plan, VBS) and whether the tuning can be applied.
-- **Optimizations** is a catalog of 30 tweaks (performance, GPU, gaming, network, privacy, appearance) with search, category
+- **Optimizations** is a catalog of 31 tweaks (performance, GPU, gaming, network, privacy, appearance) with search, category
   filters and a risk badge on each (`safe`, `advanced`, `risky`). Toggle one on and the previous value is saved, so toggling it
   off restores exactly what was there. *Apply recommended* applies only the safe ones; advanced ones ask first; the two risky
   ones (Defender real-time protection, core isolation) need two confirmations. No FPS gain is promised: nothing here was
