@@ -1,7 +1,7 @@
 {
     "name": "legion-tuning-wizard",
     "productName": "KafkaBoost",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "KafkaBoost: PC optimizer with a step-by-step wizard that applies the ThrottleStop undervolt/boost/power tuning for the Lenovo Legion 83DE (i9-14900HX).",
     "main": "src/main.js",
     "author": "carloskafka",
