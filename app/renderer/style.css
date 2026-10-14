@@ -47,7 +47,7 @@ body {
 .nav-btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .nav-ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; background: var(--panel-2); border: 1px solid var(--line); flex: none; }
 .nav-btn.active .nav-ic { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: var(--on-accent); }
-.stepper { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.stepper { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; margin: 2px 0 6px 14px; }
 .stepper li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 11px; color: var(--muted); border: 1px solid transparent; }
 .stepper li .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); flex: none; }
 .stepper li.active { background: var(--panel-2); color: var(--text); border-color: var(--line); }

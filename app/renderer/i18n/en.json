@@ -808,6 +808,8 @@
   "tweaks.pv.offDefender": "turning it off: real-time protection is switched on again",
   "tweaks.pv.vbs": "Core isolation (hypervisor, VBS): {current} → off",
   "tweaks.pv.offVbs": "turning it off: it is enabled again (needs a restart)",
+  "tweaks.pv.bcd": "Boot setting {element}: {current} → {new}",
+  "tweaks.pv.offBcd": "turning it off: the setting is put back as it was (needs a restart)",
   "tweaks.pv.on": "on",
   "tweaks.pv.off": "off",
   "tweaks.pv.unknown": "unknown",
