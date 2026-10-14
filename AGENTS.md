@@ -7,7 +7,7 @@ The product is called **KafkaBoost**. The GitHub repository (`legion-14900hx-thr
 
 ## What this repository is
 A guided, reversible ThrottleStop tuning for a Lenovo Legion 83DE (i9-14900HX, RTX 4090 Laptop, Windows 11), the scripts that apply
-and verify it, and an Electron app on top (called **KafkaBoost** in the UI; side menu: **Dashboard** health check, **System analysis**, **Optimizations** = 30-tweak catalog + CPU thermal tuning wizard, **Cleanup**, **Restore**, **Apps** (install/remove curated apps with winget / Homebrew / Flatpak, apt, dnf, pacman), **Settings**, **Help**; English + pt-BR, light/dark theme, update check with changelog). **Done and verified (2026-10-10):** peak 90 C,
+and verify it, and an Electron app on top (called **KafkaBoost** in the UI; side menu: **Dashboard** health check, **System analysis**, **Optimizations** = 30-tweak catalog + CPU thermal tuning wizard, **Cleanup**, **Restore**, **Insights** (play session recorder + boost clock advice, Windows only), **Apps** (install/remove curated apps with winget / Homebrew / Flatpak, apt, dnf, pacman), **Settings**, **Help**; English + pt-BR, light/dark theme, update check with changelog). **Done and verified (2026-10-10):** peak 90 C,
 no thermal throttling in a 19-minute CS2 session, game smooth, 0 WHEA errors (`docs/RESULTS.md`).
 
 Live tuning (profile 0, saved in `ThrottleStop.ini`, applied at every logon by the scheduled task `ThrottleStop_Autostart`):
@@ -45,9 +45,9 @@ Root launchers and `install.cmd`; `app/` Electron UI (thin: logic in `scripts/li
 
 ## Commands
 ```powershell
-Invoke-Pester tests                                                   # unit tests (138)
-cd app; node --test "test/*.test.js"                                  # node tests (126)
-powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (172 + 12)
+Invoke-Pester tests                                                   # unit tests (154)
+cd app; node --test "test/*.test.js"                                  # node tests (147)
+powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (177 + 12)
 powershell -File scripts\Steps.ps1 -Step health -InstallDir "<dir>"   # read-only verdict + live telemetry (no admin needed)
 powershell -File scripts\Create-Shortcut.ps1                          # shortcut with the app icon
 cd app; npm install; npm start                                        # the app (needs admin for changes)
