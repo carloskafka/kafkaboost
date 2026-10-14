@@ -1,5 +1,5 @@
-> **Site (GitHub Pages, published from `docs/`):** landing page <https://carloskafka.github.io/legion-14900hx-throttlestop/> ·
-> about the app <https://carloskafka.github.io/legion-14900hx-throttlestop/about-app.html#/overview>
+> **Site (GitHub Pages, published from `docs/`):** landing page <https://carloskafka.github.io/kafkaboost/> ·
+> about the app <https://carloskafka.github.io/kafkaboost/about-app.html#/overview>
 > (walkthrough screenshot by screenshot, from the hardware check to the last step). The links work once the site is pushed and published.
 
 <p align="center"><img src="docs/apple-touch-icon.png" alt="KafkaBoost icon: a CPU chip with a gauge needle in the green zone" width="96"></p>
@@ -10,14 +10,14 @@ A guided, reversible [ThrottleStop](https://www.techpowerup.com/download/techpow
 (Intel Core i9-14900HX)**: undervolt, boost-clock caps and power limits, a one-click installer, an always-on watchdog, and an
 Electron app whose **Dashboard** screen tells you whether the optimization is still in place after a Windows update.
 
-> The product is called **KafkaBoost**. The GitHub repository (`legion-14900hx-throttlestop`), the app id, the scheduled task names, the `%ProgramData%\LegionTuning` folder and the package name keep their historical names on purpose: renaming them would break existing installs and auto-update.
+> The product is called **KafkaBoost**. The GitHub repository is also called `kafkaboost` since 2026-10-14 (it was `legion-14900hx-throttlestop`; GitHub redirects the old address). The app id, the scheduled task names, the `%ProgramData%\LegionTuning` folder and the package name keep their historical names on purpose: renaming them would break existing installs and auto-update.
 
 ## Live pages
 
 | Landing page (`docs/index.html`) | About the app (`docs/about-app.html`) |
 |---|---|
 | <a href="docs/index.html"><img src="docs/assets/health-ok.png" alt="Landing page hero: KafkaBoost Dashboard screenshot" width="420"></a> | <a href="docs/about-app.html"><img src="docs/assets/tweaks.png" alt="About the app: tweak catalog screenshot" width="420"></a> |
-| Product page: how it works, real numbers, results with their caveats, features, availability per OS. [EN](https://carloskafka.github.io/legion-14900hx-throttlestop/) · [PT-BR](https://carloskafka.github.io/legion-14900hx-throttlestop/pt-br/) | The documentation hub: overview, quick start, walkthrough, what gets applied, troubleshooting, roadmap. English only. [Open](https://carloskafka.github.io/legion-14900hx-throttlestop/about-app.html) |
+| Product page: how it works, real numbers, results with their caveats, features, availability per OS. [EN](https://carloskafka.github.io/kafkaboost/) · [PT-BR](https://carloskafka.github.io/kafkaboost/pt-br/) | The documentation hub: overview, quick start, walkthrough, what gets applied, troubleshooting, roadmap. English only. [Open](https://carloskafka.github.io/kafkaboost/about-app.html) |
 
 Other pages (English and `pt-br/`): `compare.html`, `download.html`, `faq.html`, `privacy.html`, `terms.html`. `node tools/check-site.js` verifies links, anchors, language parity and the numbers.
 
@@ -149,7 +149,7 @@ Light and dark theme, English and Brazilian Portuguese.
 
 <img src="docs/assets/cs2-options.png" alt="Counter-Strike 2 page: autoexec.cfg lines with explanations, backup and restore (demo data)" width="560">
 
-Every screen is in the [live docs](https://carloskafka.github.io/legion-14900hx-throttlestop/about-app.html#/walkthrough). Screenshots come from
+Every screen is in the [live docs](https://carloskafka.github.io/kafkaboost/about-app.html#/walkthrough). Screenshots come from
 demo mode (`tools\make-shots.ps1`). Linux, macOS and other CPUs get an explanation screen instead.
 ## Runs in the background (system tray)
 

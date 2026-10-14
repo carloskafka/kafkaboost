@@ -28,7 +28,7 @@ $script:HwinfoStopper = $null
 $script:HwinfoRoot = Join-Path $env:ProgramData 'LegionTuning\hwinfo'
 $script:HwinfoConfigPath = Join-Path $PSScriptRoot '..\..\config\hwinfo.json'
 $script:HwinfoTemplatePath = Join-Path $PSScriptRoot '..\..\config\HWiNFO64.INI'
-$script:HwinfoUserAgent = 'KafkaBoost (+https://github.com/carloskafka/legion-14900hx-throttlestop)'
+$script:HwinfoUserAgent = 'KafkaBoost (+https://github.com/carloskafka/kafkaboost)'
 
 function Get-HwinfoConfig { Get-Content -LiteralPath $script:HwinfoConfigPath -Raw | ConvertFrom-Json }
 

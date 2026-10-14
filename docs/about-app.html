@@ -95,7 +95,7 @@ footer { color: var(--on-surface-variant); font-size: .9rem; border-top: 1px sol
   <img src="favicon-32.png" alt="" width="34" height="34">
   <span class="title">KafkaBoost</span> <span class="muted sub">About the app</span>
   <span class="sp"></span>
-  <a class="gh" href="index.html">Home</a><a class="gh" href="https://github.com/carloskafka/legion-14900hx-throttlestop">GitHub</a>
+  <a class="gh" href="index.html">Home</a><a class="gh" href="https://github.com/carloskafka/kafkaboost">GitHub</a>
 </header>
 
 <div class="shell">
@@ -131,7 +131,7 @@ footer { color: var(--on-surface-variant); font-size: .9rem; border-top: 1px sol
     <div class="card"><div class="stat">139 → 73 W</div><div class="muted">peak package power</div></div>
     <div class="card"><div class="stat">0</div><div class="muted">thermal-throttle samples in a 19-minute session (was frequent)</div></div>
   </div>
-  <p class="muted">Measured with HWiNFO shared memory, one sample every 2 seconds; the “before” figures are maxima from screenshots, not a controlled A/B test. FPS was not measured — the game felt as smooth as before. Details in <a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/RESULTS.md">RESULTS.md</a>.</p>
+  <p class="muted">Measured with HWiNFO shared memory, one sample every 2 seconds; the “before” figures are maxima from screenshots, not a controlled A/B test. FPS was not measured — the game felt as smooth as before. Details in <a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/RESULTS.md">RESULTS.md</a>.</p>
   <div class="note">The undervolt is silicon-specific. This chip logged a corrected WHEA “Internal parity error” at −100&nbsp;mV, so the values here are <strong>not</strong> a recipe for another CPU.</div>
 </section>
 
@@ -216,7 +216,7 @@ powershell -File scripts\Create-Shortcut.ps1</code></pre>
     <tr><td>PL1 / PL2</td><td>65 W / 85 W</td><td>Lenovo's limits were 80/119 W (static 140/190 W).</td></tr>
     <tr><td>IccMax (core)</td><td>511.75 A (max)</td><td>Stability, as recommended by the ThrottleStop author.</td></tr>
   </table>
-  <p>Every key, the voltage encoding and the community comparison are in <a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/CONFIGURATION.md">CONFIGURATION.md</a>.</p>
+  <p>Every key, the voltage encoding and the community comparison are in <a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/CONFIGURATION.md">CONFIGURATION.md</a>.</p>
 </section>
 
 <!-- ============================ TROUBLESHOOTING ============================ -->
@@ -232,7 +232,7 @@ powershell -File scripts\Create-Shortcut.ps1</code></pre>
   <p>Never start the free <code>HWiNFO64.exe</code> with command-line arguments; set <code>SensorsOnly=1</code> and <code>SensorsSM=1</code> in <code>HWiNFO64.INI</code> instead.</p>
   <h3>WSL2 / Docker stopped working</h3>
   <p>That is the price of turning VBS off. Run <code>scripts\maintenance\restore_vbs.ps1</code> and reboot (the undervolt stops working while VBS is on; the boost and power caps may still apply).</p>
-  <p>More, including the test protocol and stop conditions: <a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a>.</p>
+  <p>More, including the test protocol and stop conditions: <a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a>.</p>
 </section>
 
 <!-- ============================ ROADMAP ============================ -->
@@ -252,14 +252,14 @@ powershell -File scripts\Create-Shortcut.ps1</code></pre>
   <h1>Documentation</h1>
   <table>
     <tr><th>Document</th><th>What is in it</th></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/README.md">README.md</a></td><td>Overview, quick start, limitations, repository layout.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/AGENTS.md">AGENTS.md</a></td><td>Current state, rules and the repo map for anyone (human or AI) changing it.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/getting-started.md">getting-started.md</a></td><td>Step-by-step onboarding.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/ARCHITECTURE.md">ARCHITECTURE.md</a></td><td>How the app, the step runner and the PowerShell library fit together.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/CONFIGURATION.md">CONFIGURATION.md</a></td><td>ThrottleStop.ini keys, the voltage encoding, community comparison.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/TESTING.md">TESTING.md</a></td><td>Unit tests, UI screenshots, the safe way to test a tuning change.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a></td><td>Lessons learned, stop conditions, rollback.</td></tr>
-    <tr><td><a href="https://github.com/carloskafka/legion-14900hx-throttlestop/blob/main/docs/RESULTS.md">RESULTS.md</a></td><td>Measurements and the reference machine.</td></tr>
+    <tr><td><a href="https://github.com/carloskafka/kafkaboost/blob/main/README.md">README.md</a></td><td>Overview, quick start, limitations, repository layout.</td></tr>
+    <tr><td><a href="https://github.com/carloskafka/kafkaboost/blob/main/AGENTS.md">AGENTS.md</a></td><td>Current state, rules and the repo map for anyone (human or AI) changing it.</td></tr>
+    <tr><td><a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/getting-started.md">getting-started.md</a></td><td>Step-by-step onboarding.</td></tr>
+    <tr><td><a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/ARCHITECTURE.md">ARCHITECTURE.md</a></td><td>How the app, the step runner and the PowerShell library fit together.</td></tr>
+    <tr><td><a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/CONFIGURATION.md">CONFIGURATION.md</a></td><td>ThrottleStop.ini keys, the voltage encoding, community comparison.</td></tr>
+    <tr><td><a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/TESTING.md">TESTING.md</a></td><td>Unit tests, UI screenshots, the safe way to test a tuning change.</td></tr>
+    <tr><td><a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a></td><td>Lessons learned, stop conditions, rollback.</td></tr>
+    <tr><td><a href="https://github.com/carloskafka/kafkaboost/blob/main/docs/RESULTS.md">RESULTS.md</a></td><td>Measurements and the reference machine.</td></tr>
   </table>
   <footer>Not affiliated with Lenovo, Intel, TechPowerUp (ThrottleStop) or HWiNFO. Use at your own risk: changing CPU voltages can cause instability.</footer>
 </section>

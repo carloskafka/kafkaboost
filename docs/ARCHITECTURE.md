@@ -51,7 +51,7 @@ app: version list page, then the download form, validated as a zip containing `T
 - `src/updatedl.js` (pure Node, seams for fetch / fs / spawn, unit tested without network): the update path for builds that cannot
   update themselves (a source clone, the portable exe). `check` finds the `KafkaBoost-Setup-X.Y.Z.exe` and `SHA256SUMS.txt` assets of
   the newest release (`pickAssets`); `main.js` keeps their URLs, the page never supplies one (`app:downloadUpdate` takes no argument).
-  Only `https://github.com/carloskafka/legion-14900hx-throttlestop/releases/download/...` is fetched; redirects are followed by hand and
+  Only `https://github.com/carloskafka/kafkaboost/releases/download/...` is fetched; redirects are followed by hand and
   each hop must be that path or GitHub's release CDN hosts (`objects` / `release-assets` / `github-releases.githubusercontent.com`);
   300 MB cap; the file is streamed to `<temp>/KafkaBoost-update/<name>.part`, hashed on the way and renamed when whole; a mismatch
   with the release's `SHA256SUMS.txt` deletes it, a missing checksum keeps it but the app never runs it. After a verified download the

@@ -13,7 +13,7 @@
 const path = require('path');
 const crypto = require('crypto');
 
-const REPO_PATH = '/carloskafka/legion-14900hx-throttlestop/releases/download/';
+const REPO_PATH = '/carloskafka/kafkaboost/releases/download/';
 const CDN_HOSTS = new Set(['objects.githubusercontent.com', 'release-assets.githubusercontent.com', 'github-releases.githubusercontent.com']);
 const MAX_INSTALLER_BYTES = 300 * 1024 * 1024;
 const MAX_SUMS_BYTES = 256 * 1024;

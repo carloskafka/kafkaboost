@@ -8,7 +8,7 @@ const path = require('path');
 const { check } = require('./check-site');
 
 const root = path.join(__dirname, '..');
-const BASE = 'https://carloskafka.github.io/legion-14900hx-throttlestop/';
+const BASE = 'https://carloskafka.github.io/kafkaboost/';
 
 function page(lang, name, extra) {
   const alt = [['en', name], ['pt-BR', 'pt-br/' + name], ['x-default', name]]

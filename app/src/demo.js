@@ -333,7 +333,7 @@ resetUpdate('clone');
 function updateCheck() {
   const k = state.update.kind;
   const r = {
-    ok: true, current: '1.0.0', latest: '1.1.0', newer: true, url: 'https://github.com/carloskafka/legion-14900hx-throttlestop/releases/tag/v1.1.0',
+    ok: true, current: '1.0.0', latest: '1.1.0', newer: true, url: 'https://github.com/carloskafka/kafkaboost/releases/tag/v1.1.0',
     releases: [{ version: '1.1.0', name: 'v1.1.0', date: '2026-10-20T00:00:00Z', notes: [{ type: 'h', text: "What's new" }, { type: 'li', text: 'A demo release note' }] }],
     canInstall: k === 'installed', mode: k === 'installed' ? 'auto' : k === 'noinstaller' ? 'manual' : 'download',
     explain: k === 'installed' ? [] : k === 'noinstaller' ? ['update.why.source', 'update.why.noInstaller', 'update.why.clone'] : ['update.why.source', 'update.why.clone'],
