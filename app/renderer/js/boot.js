@@ -39,5 +39,6 @@
   if (KB.featureOn('optimizations')) {
     const h = await KB.runHealth();
     if (h && h.installed === false) KB.showView('optimizations');
+    else if (KB.loadTweaks) KB.loadTweaks().catch(() => {});   // warm the Optimizations list while the user reads the Dashboard
   }
 })();

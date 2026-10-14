@@ -101,14 +101,56 @@ function Get-StaticDnsServers([string]$InterfaceGuid) {
 
 function Get-DnsAdapters { @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }) }
 
+# Per-listing read cache. Only Get-TweakStatuses turns it on (a read-only listing); apply, revert and preview always read live state.
+# It turns the repeated DNS / Defender queries into one each.
+$script:StatusCache = $null
+
+# Start type straight from the Services registry key (Start: 0 Boot, 1 System, 2 Auto, 3 Manual, 4 Disabled): same names as Win32_Service.StartMode,
+# without the slow first WMI call. $null when the service does not exist.
+function Get-CachedServiceMode([string]$Name) {
+    $k = Get-ItemProperty -LiteralPath "HKLM:\SYSTEM\CurrentControlSet\Services\$Name" -Name Start -ErrorAction SilentlyContinue
+    if ($null -eq $k) { return $null }
+    $names = @('Boot', 'System', 'Auto', 'Manual', 'Disabled')
+    $n = [int]$k.Start
+    if ($n -ge 0 -and $n -lt $names.Count) { return $names[$n] } else { return $null }
+}
+
+function Get-CachedDnsState {
+    if ($null -ne $script:StatusCache -and $script:StatusCache.ContainsKey('dns')) { return $script:StatusCache['dns'] }
+    try {
+        # The same adapters and addresses as Get-NetAdapter -Physical / Get-DnsClientServerAddress, read through CIM without loading those modules.
+        $ns = 'root/StandardCimv2'
+        $ads = @(Get-CimInstance -Namespace $ns -ClassName MSFT_NetAdapter -Filter 'HardwareInterface=True AND InterfaceOperationalStatus=1' -ErrorAction Stop)
+        $dns = @(Get-CimInstance -Namespace $ns -ClassName MSFT_DNSClientServerAddress -Filter 'AddressFamily=2' -ErrorAction Stop)
+        $list = @(foreach ($ad in $ads) { [pscustomobject]@{ servers = @($dns | Where-Object { $_.InterfaceIndex -eq $ad.InterfaceIndex } | ForEach-Object { $_.ServerAddresses }) } })
+    } catch {
+        $list = @(foreach ($ad in (Get-DnsAdapters)) {
+            [pscustomobject]@{ servers = @((Get-DnsClientServerAddress -InterfaceIndex $ad.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses) }
+        })
+    }
+    if ($null -ne $script:StatusCache) { $script:StatusCache['dns'] = $list }
+    return $list
+}
+
+function Get-CachedDefenderOff {
+    if ($null -ne $script:StatusCache -and $script:StatusCache.ContainsKey('defender')) { return $script:StatusCache['defender'] }
+    $off = $false
+    try {
+        $mp = Get-CimInstance -Namespace root/Microsoft/Windows/Defender -ClassName MSFT_MpPreference -ErrorAction Stop   # much faster than loading the Defender module
+        $off = [bool]$mp.DisableRealtimeMonitoring
+    } catch { try { $off = [bool](Get-MpPreference).DisableRealtimeMonitoring } catch { } }
+    if ($null -ne $script:StatusCache) { $script:StatusCache['defender'] = $off }
+    return $off
+}
+
 function Test-ActionActive($a, $Record) {
     switch ($a.type) {
         'registry' { return (Test-RegEqual (Read-RegValue $a.path $a.name) $a.on $a.kind) }
         'regkey'   { return (Test-Path -LiteralPath (Resolve-RegPath $a.path)) }
         'service' {
-            $s = Get-CimInstance Win32_Service -Filter "Name='$($a.name)'" -ErrorAction SilentlyContinue
-            if (-not $s) { return $false }
-            return ($s.StartMode -eq $a.on)
+            $mode = Get-CachedServiceMode $a.name
+            if ($null -eq $mode) { return $false }
+            return ($mode -eq $a.on)
         }
         'powerplan' {
             $cur = Get-ActivePowerGuid
@@ -117,15 +159,15 @@ function Test-ActionActive($a, $Record) {
         }
         'dns' {
             $want = @($a.servers)
-            $ads = Get-DnsAdapters
+            $ads = @(Get-CachedDnsState)
             if (-not $ads.Count) { return $false }
             foreach ($ad in $ads) {
-                $cur = @((Get-DnsClientServerAddress -InterfaceIndex $ad.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses)
+                $cur = @($ad.servers)
                 if (($want | Where-Object { $cur -notcontains $_ }).Count) { return $false }
             }
             return $true
         }
-        'defender' { try { return [bool](Get-MpPreference).DisableRealtimeMonitoring } catch { return $false } }
+        'defender' { return (Get-CachedDefenderOff) }
         'vbs'      { return (-not [bool](Get-CimInstance Win32_ComputerSystem).HypervisorPresent) }
         'bcdedit'  { $cur = Get-BcdElement $a.element; return ($cur.exists -and $cur.value -ieq $a.on) }
         default    { throw "Unknown action type: $($a.type)" }
@@ -270,13 +312,16 @@ function Get-TweakStatus($Tweak, $State, [int]$Build) {
 
 function Get-TweakStatuses([string]$CatalogPath) {
     $cat = Get-TweakCatalog $CatalogPath; $state = Get-TweakState; $build = Get-WindowsBuild
-    foreach ($t in $cat.tweaks) {
-        $status = try { Get-TweakStatus $t $state $build } catch { 'error' }
-        [pscustomobject]@{
-            id = $t.id; category = $t.category; risk = $t.risk; recommended = [bool]$t.recommended; needsReboot = [bool]$t.needsReboot
-            needsAdmin = (Test-TweakNeedsAdmin $t); status = $status
+    $script:StatusCache = @{}
+    try {
+        foreach ($t in $cat.tweaks) {
+            $status = try { Get-TweakStatus $t $state $build } catch { 'error' }
+            [pscustomobject]@{
+                id = $t.id; category = $t.category; risk = $t.risk; recommended = [bool]$t.recommended; needsReboot = [bool]$t.needsReboot
+                needsAdmin = (Test-TweakNeedsAdmin $t); status = $status
+            }
         }
-    }
+    } finally { $script:StatusCache = $null }
 }
 
 # Applies ($Enable = $true) or reverts one tweak. Risky tweaks need -AllowRisky. All-or-nothing: a failing action undoes the earlier ones.
