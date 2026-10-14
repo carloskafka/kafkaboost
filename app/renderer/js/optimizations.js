@@ -4,7 +4,9 @@
 (function () {
   const { $, t } = KB;
   const ALL = 'all';
-  let tweaks = [], admin = true, cat = ALL, query = '', busy = false;
+  let tweaks = [], admin = true, cat = ALL, query = '', busy = false, loading = false;
+  const CACHE_KEY = 'kb.tweaks.v1';   // last known list, shown at once while the real state is read (a per-viewer convenience, never trusted for changes)
+  const dropCache = () => { try { localStorage.removeItem(CACHE_KEY); } catch { /* storage unavailable */ } };
 
   // ---- confirmation dialog (promise based) ----------------------------------------------------------------------
   // `blocks` (optional) are the detailed blocks of KBTweakPreview.buildBlocks: h, p, meta and mono (a monospace block). Everything is
@@ -71,7 +73,7 @@
     top.append(risk, grow);
     if (x.status === 'partial') { const p = document.createElement('span'); p.className = 'chip'; p.textContent = t('tweaks.partial'); top.append(p); }
     const sw = document.createElement('label'); sw.className = 'switch';
-    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = x.status === 'active'; cb.disabled = busy || x.status === 'unavailable';
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = x.status === 'active'; cb.disabled = busy || loading || x.status === 'unavailable';
     cb.setAttribute('aria-label', title(x.id));
     const sl = document.createElement('span'); sl.className = 'slider'; sw.append(cb, sl);
     cb.addEventListener('change', () => toggle(x, cb));
@@ -95,16 +97,21 @@
     const avail = tweaks.filter((x) => x.status !== 'unavailable');
     const on = avail.filter((x) => x.status === 'active').length;
     $('tweakSummary').textContent = tweaks.length ? t('tweaks.summary', { on, total: avail.length, shown: shown.length }) : '';
-    $('tweakRecommended').disabled = busy || !tweaks.length;
+    $('tweakRecommended').disabled = busy || loading || !tweaks.length;
     if (tweaks.length && !shown.length) $('tweakSummary').textContent = t('tweaks.none');
   }
 
   async function load() {
     if (!KB.featureOn('optimizations')) return;
-    const res = await window.kb.runStep('tweaks-list', {});
+    if (!tweaks.length) {
+      try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && Array.isArray(c.tweaks) && c.tweaks.length) { tweaks = c.tweaks; admin = !!c.admin; loading = true; render(); } } catch { /* no cache */ }
+    }
+    let res;
+    try { res = await window.kb.runStep('tweaks-list', {}); } finally { loading = false; }
     if (!res.ok || !res.data) { KB.showResult($('tweakResult'), 'fail', KB.message(res) || t('common.failed')); return; }
     tweaks = res.data.tweaks; admin = !!res.data.admin;
     KB.state.tweaks = tweaks;
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ tweaks, admin })); } catch { /* storage unavailable */ }
     render();
   }
 
@@ -133,6 +140,7 @@
     busy = true; render(); KB.showResult($('tweakResult'), '', '');
     const res = await window.kb.runStep('tweak-set', { tweakId: x.id, tweakMode: enable ? 'on' : 'off', allowRisky: x.risk === 'risky' });
     busy = false;
+    dropCache();                                            // the state changed: never leave the old list behind if the re-read below fails
     const base = KB.message(res) || t('common.failed');
     const extra = res.ok && x.needsReboot ? ' ' + t('tweaks.rebootNow') : '';
     KB.showResult($('tweakResult'), res.ok ? 'ok' : 'fail', `${title(x.id)}: ${base}${extra}`);
@@ -151,7 +159,10 @@
       : { paragraphs: [t('tweaks.recommendedBody', { count: todo.length }), ...todo.map((x) => '• ' + title(x.id)), t('tweaks.pv.unavailable'), t('tweaks.pv.closing')] };
     const ok = await KB.confirm({ title: t('tweaks.recommended'), ok: t('tweaks.apply'), ...dlg });
     if (!ok) return { status: 'cancelled' };
-    return { status: 'done', res: await window.kb.runStep('tweaks-recommended', {}) };
+    const res = await window.kb.runStep('tweaks-recommended', {});
+    dropCache();
+    if (KB.state.view !== 'optimizations') load().catch(() => {});   // started from the Dashboard: refresh the list (and its cache) in the background
+    return { status: 'done', res };
   };
 
   async function applyRecommended() {
@@ -163,6 +174,7 @@
     await load();
   }
 
+  KB.loadTweaks = load;   // boot.js reads the list in the background so the page is ready when it is opened
   KB.registerView('optimizations', { onShow() { if (KB.renderOptStatus) KB.renderOptStatus(); load(); } });
   document.addEventListener('DOMContentLoaded', () => {
     $('tweakSearch').addEventListener('input', () => { query = $('tweakSearch').value.trim(); render(); });
