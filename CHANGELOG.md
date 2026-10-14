@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.3.0](https://github.com/carloskafka/kafkaboost/compare/v1.2.0...v1.3.0) (2026-10-14)
+
+
+### Features
+
+* **app,scripts:** live Memory page in the side menu ([#20](https://github.com/carloskafka/kafkaboost/issues/20)) ([f662a5b](https://github.com/carloskafka/kafkaboost/commit/f662a5b1ee1daf387cfca75929001cc7374b429b))
+* **app,scripts:** memory cleanup with RAMMap under Optimizations ([#13](https://github.com/carloskafka/kafkaboost/issues/13)) ([e5ba419](https://github.com/carloskafka/kafkaboost/commit/e5ba419598bf449a97584a00af6f7c5c8d9c7486))
+* **app:** show the last result at once with a shimmer while the page refreshes ([#19](https://github.com/carloskafka/kafkaboost/issues/19)) ([8d195cb](https://github.com/carloskafka/kafkaboost/commit/8d195cba4be1e8a9955d0e73f655c375ec7fcb75))
+
+
+### Bug Fixes
+
+* **app:** wizard steps under Optimizations and a readable Dynamic Tick preview ([#10](https://github.com/carloskafka/kafkaboost/issues/10)) ([51ce2d4](https://github.com/carloskafka/kafkaboost/commit/51ce2d4c275a850d9b80e5c325876d9f201a2a4a))
+* follow the repository rename to carloskafka/kafkaboost ([#17](https://github.com/carloskafka/kafkaboost/issues/17)) ([3d066fb](https://github.com/carloskafka/kafkaboost/commit/3d066fbb3ebcdbeba32a271cce2e82b2507ec41c))
+
+
+### Performance Improvements
+
+* **app:** load the Optimizations list faster and show the last result at once ([#11](https://github.com/carloskafka/kafkaboost/issues/11)) ([dbcf476](https://github.com/carloskafka/kafkaboost/commit/dbcf476810e2c433156a6ecf731daddb5fc813a4))
+
 ## [1.2.0](https://github.com/carloskafka/legion-14900hx-throttlestop/compare/v1.1.1...v1.2.0) (2026-10-14)
 
 
