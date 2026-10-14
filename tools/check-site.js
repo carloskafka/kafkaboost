@@ -11,7 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const BASE = 'https://carloskafka.github.io/legion-14900hx-throttlestop/';
+const BASE = 'https://carloskafka.github.io/kafkaboost/';
 // Pages that exist in English only on purpose (the documentation hub); they are still link-checked.
 const EN_ONLY = new Set(['about-app.html']);
 // External hosts allowed for <script src> and <link rel=stylesheet>: none, the site is self-contained.

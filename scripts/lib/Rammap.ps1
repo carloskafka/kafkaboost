@@ -18,7 +18,7 @@ $script:RammapRunner = $null
 $script:RammapMemory = $null
 $script:RammapRoot = Join-Path $env:ProgramData 'LegionTuning\rammap'
 $script:RammapConfigPath = Join-Path $PSScriptRoot '..\..\config\rammap.json'
-$script:RammapUserAgent = 'KafkaBoost (+https://github.com/carloskafka/legion-14900hx-throttlestop)'
+$script:RammapUserAgent = 'KafkaBoost (+https://github.com/carloskafka/kafkaboost)'
 
 function Get-RammapConfig { Get-Content -LiteralPath $script:RammapConfigPath -Raw | ConvertFrom-Json }
 

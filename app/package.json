@@ -55,7 +55,7 @@
             {
                 "provider": "github",
                 "owner": "carloskafka",
-                "repo": "legion-14900hx-throttlestop"
+                "repo": "kafkaboost"
             }
         ],
         "portable": {

@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const d = require('../src/updatedl');
 
-const BASE = 'https://github.com/carloskafka/legion-14900hx-throttlestop/releases/download/v1.1.0/';
+const BASE = 'https://github.com/carloskafka/kafkaboost/releases/download/v1.1.0/';
 const SETUP = 'KafkaBoost-Setup-1.1.0.exe';
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'kb-dl-test-'));
@@ -29,14 +29,15 @@ const redirect = (to, status = 302) => () => new Response(null, { status, header
 test('only release assets of this repository on github.com are accepted as the first address', () => {
   assert.ok(d.isReleaseAssetUrl(BASE + SETUP));
   for (const bad of [
-    'http://github.com/carloskafka/legion-14900hx-throttlestop/releases/download/v1/x.exe',
-    'https://github.com.evil.com/carloskafka/legion-14900hx-throttlestop/releases/download/v1/x.exe',
-    'https://evil.com/github.com/carloskafka/legion-14900hx-throttlestop/releases/download/v1/x.exe',
+    'http://github.com/carloskafka/kafkaboost/releases/download/v1/x.exe',
+    'https://github.com.evil.com/carloskafka/kafkaboost/releases/download/v1/x.exe',
+    'https://evil.com/github.com/carloskafka/kafkaboost/releases/download/v1/x.exe',
     'https://github.com/someone/else/releases/download/v1/x.exe',
-    'https://github.com/carloskafka/legion-14900hx-throttlestop/releases/download/',
-    'https://github.com/carloskafka/legion-14900hx-throttlestop/archive/main.zip',
-    'https://user:pw@github.com/carloskafka/legion-14900hx-throttlestop/releases/download/v1/x.exe',
-    'https://github.com:8443/carloskafka/legion-14900hx-throttlestop/releases/download/v1/x.exe',
+    'https://github.com/carloskafka/legion-14900hx-throttlestop/releases/download/v1/x.exe',   // the old repository name is no longer accepted
+    'https://github.com/carloskafka/kafkaboost/releases/download/',
+    'https://github.com/carloskafka/kafkaboost/archive/main.zip',
+    'https://user:pw@github.com/carloskafka/kafkaboost/releases/download/v1/x.exe',
+    'https://github.com:8443/carloskafka/kafkaboost/releases/download/v1/x.exe',
     'file:///C:/x.exe', 'javascript:alert(1)', '', null, undefined
   ]) assert.equal(d.isReleaseAssetUrl(bad), false, String(bad));
 });
