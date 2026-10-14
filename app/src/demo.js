@@ -276,10 +276,12 @@ function demoStep(step, opts = {}, configDir) {
     return { logs: [], res: { ok: true, code: 'msg.telemetry.ok', args: {}, message: 'read', data: { available: true, takenAt, live: { ...l, packageTempC: l.packageTempC + (telemetryTick % 4) } } } };
   }
   if (step === 'session') {
-    const sm = (t, temp, pw) => 'SAMPLE ' + JSON.stringify({ t, packageTempC: temp, packagePowerW: pw, pClockMaxMHz: 4689, eClockMaxMHz: 3591 });
+    const GB2 = 1024 * 1024 * 1024;
+    const sm = (t, temp, pw, standby, free) => 'SAMPLE ' + JSON.stringify({ t, packageTempC: temp, packagePowerW: pw, pClockMaxMHz: 4689, eClockMaxMHz: 3591, standbyBytes: standby * GB2, freeBytes: free * GB2 });
     const stat = (peak, avg) => ({ peak, avg, samples: 2 });
-    const summary = { samples: 2, durationSec: 5, tempC: stat(84, 80), powerW: stat(66, 65), pClockMHz: stat(4689, 4689), eClockMHz: stat(3591, 3591), pl1Pct: 100, pl2Pct: 0, pl1W: 65, pl2W: 85, throttleFlags: 'unknown' };
-    return { logs: [sm('2026-10-13T20:00:00', 76, 65), sm('2026-10-13T20:00:05', 84, 66)], res: { ok: true, code: 'msg.session.done', args: { samples: 2 }, message: 'Session recorded.', data: { summary, whea: { count: 0, ids: [], has19: false }, startedAt: '2026-10-13T20:00:00', endedAt: '2026-10-13T20:00:05' } } };
+    const summary = { samples: 2, durationSec: 5, tempC: stat(84, 80), powerW: stat(66, 65), pClockMHz: stat(4689, 4689), eClockMHz: stat(3591, 3591), pl1Pct: 100, pl2Pct: 0, pl1W: 65, pl2W: 85, throttleFlags: 'unknown',
+      memory: { standbyBytes: { min: 12 * GB2, max: 14 * GB2, samples: 2 }, freeBytes: { min: 0.8 * GB2, max: 2.4 * GB2, samples: 2 } } };
+    return { logs: [sm('2026-10-13T20:00:00', 76, 65, 12, 2.4), sm('2026-10-13T20:00:05', 84, 66, 14, 0.8)], res: { ok: true, code: 'msg.session.done', args: { samples: 2 }, message: 'Session recorded.', data: { summary, whea: { count: 0, ids: [], has19: false }, startedAt: '2026-10-13T20:00:00', endedAt: '2026-10-13T20:00:05' } } };
   }
   if (step === 'advice') {
     const data = { verdict: 'hold', reason: 'hot', capRatio: 47, suggestedRatio: null, loadedSessions: 4, needed: 3, evidence: { maxTempC: 90, maxPClockMHz: 4689, avgPowerW: 62.4, maxPl1Pct: 40, capMHz: 4700 } };

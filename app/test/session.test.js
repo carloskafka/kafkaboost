@@ -17,7 +17,7 @@ test('start streams samples into running numbers and keeps the summary when the 
   const runStep = (step, opts, onLog) => new Promise((resolve) => {
     assert.equal(step, 'session'); assert.equal(opts.sessionStopFile, 'stop.flag');
     onLog('SAMPLE {"t":"2026-10-13T20:00:00","packageTempC":70,"packagePowerW":60,"pClockMaxMHz":4600,"eClockMaxMHz":3500}');
-    onLog('SAMPLE {"t":"2026-10-13T20:00:05","packageTempC":85,"packagePowerW":null,"pClockMaxMHz":4700,"eClockMaxMHz":3600}');
+    onLog('SAMPLE {"t":"2026-10-13T20:00:05","packageTempC":85,"packagePowerW":null,"pClockMaxMHz":4700,"eClockMaxMHz":3600,"standbyBytes":8589934592,"freeBytes":null}');
     onLog('not a sample line');
     finish = () => resolve({ ok: true, code: 'msg.session.done', data: { summary: { samples: 2 }, whea: { count: 0 } } });
   });
@@ -28,6 +28,8 @@ test('start streams samples into running numbers and keeps the summary when the 
   assert.equal(run.status, 'running'); assert.equal(run.count, 2);
   assert.equal(run.peakTempC, 85); assert.equal(run.peakPowerW, 60, 'a missing reading never counts as 0');
   assert.equal(run.last.powerW, null);
+  assert.equal(run.last.standbyBytes, 8589934592, 'standby memory is kept');
+  assert.equal(run.last.freeBytes, null, 'a missing memory counter stays null, never 0');
   finish(); await s.whenDone();
   assert.equal(s.getState().status, 'done');
   assert.equal(JSON.parse(fs.files.get('last.json')).summary.samples, 2);

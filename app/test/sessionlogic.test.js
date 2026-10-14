@@ -48,3 +48,13 @@ test('every session i18n key exists in both languages', () => {
   for (const k of ['msg.session.noSensors', 'msg.session.done', 'dashboard.session.title', 'dashboard.session.intro', 'dashboard.session.note', 'dashboard.session.start', 'dashboard.session.stop']) used.add(k);
   for (const lang of Object.keys(dicts)) for (const k of used) assert.ok(dicts[lang][k], `${lang} lacks ${k}`);
 });
+
+test('formatRange shows the lowest and highest memory in GB or MB, and nothing for a counter that was never readable', () => {
+  const GB = 1024 ** 3;
+  assert.deepEqual(L.formatRange({ min: 0.8 * GB, max: 14 * GB }), { low: '819 MB', high: '14.0 GB' });
+  assert.equal(L.formatRange(null), null);
+  assert.equal(L.formatRange({ min: null, max: 5 }), null);
+  assert.equal(L.bytesText(null), null);
+  assert.equal(L.bytesText(-1), null);
+  assert.equal(L.bytesText(0), '0 MB', 'a measured zero is shown, a missing value is not');
+});

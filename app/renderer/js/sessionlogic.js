@@ -20,6 +20,18 @@
     return { peak: `${stat.peak} ${unit}`, avg: `${stat.avg} ${unit}` };
   }
 
+  // Bytes as "12.3 GB" / "850 MB"; a missing value is null (the caller shows a dash), never 0.
+  function bytesText(n) {
+    if (!isNum(n) || n < 0) return null;
+    return n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} GB` : `${Math.round(n / 1024 ** 2)} MB`;
+  }
+
+  // range = { min, max } in bytes from the PowerShell summary's `memory` part (or null when the counter was never readable)
+  function formatRange(range) {
+    if (!range || !isNum(range.min) || !isNum(range.max)) return null;
+    return { low: bytesText(range.min), high: bytesText(range.max) };
+  }
+
   function formatNow(last) {
     const f = (v, u) => (isNum(v) ? `${v} ${u}` : '–');
     return last ? { temp: f(last.tempC, '°C'), power: f(last.powerW, 'W'), clock: f(last.pClockMHz, 'MHz') } : { temp: '–', power: '–', clock: '–' };
@@ -41,5 +53,5 @@
     return ['running', 'done', 'failed'].includes(state.status) ? state.status : 'idle';
   }
 
-  return { formatDuration, formatStat, formatNow, wheaKey, pctText, view };
+  return { formatDuration, formatStat, formatRange, bytesText, formatNow, wheaKey, pctText, view };
 });
