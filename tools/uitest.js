@@ -48,6 +48,8 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
     check('the Counter-Strike 2 page is Windows only too', await visible('windowsOnly') && !(await visible('cs2')));
     await js(win, "KB.showView('rammap')"); await sleep(300);
     check('the RAMMap page is Windows only too', await visible('windowsOnly') && !(await visible('rammap')));
+    await js(win, "KB.showView('memory')"); await sleep(300);
+    check('the Memory page is Windows only too', await visible('windowsOnly') && !(await visible('memory')));
     await click('[data-view=settings]'); await sleep(400);
     check('Settings still works on this OS', await visible('settings'));
     check('Windows-only settings are hidden', !(await visible('thermalCard')) && !(await visible('sStartHwinfoRow')) && !(await visible('sAutoRecordRow')));
@@ -332,6 +334,16 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   demo.resetCs2();
   await click('#backFromCs2'); await sleep(400);
   check('Back returns to Optimizations', await visible('optimizations') && !(await visible('cs2')));
+
+  // Memory page (demo: three canned readings; the real step reads the Windows counters every 2 s while the page is open)
+  await click('[data-view=memory]'); await sleep(1500);
+  check('the Memory page opens from its own side-menu item', await visible('memory') && (await js(win, "document.querySelector('.nav-btn.active').dataset.view")) === 'memory');
+  check('it shows six counters with real units and the installed memory (32.0 GB)', (await ccount('#memCards .memcard')) === 6 && (await q('#memCards')).includes('32.0 GB') && (await q('#memCards')).includes('GB'), await q('#memCards'));
+  check('the stacked bar has the four segments and its legend', (await ccount('#memBar .memseg')) === 4 && (await ccount('#memLegend .memlegend-item')) === 4);
+  check('it says Standby is droppable cache and that a missing counter is a dash', (await q('#memory .muted')).length > 0 && (await q('#memory')).includes('dash'), '');
+  await click('#memOpenRammap'); await sleep(900);
+  check('the button opens the Memory cleanup (RAMMap) page', await visible('rammap') && !(await visible('memory')));
+  await click('[data-view=optimizations]'); await sleep(500);
 
   // Memory cleanup with RAMMap (demo: nothing is downloaded or run; canned memory counters)
   check('Optimizations has the Memory cleanup (RAMMap) card', (await q('#optRammap h3')).includes('RAMMap'), await q('#optRammap h3'));

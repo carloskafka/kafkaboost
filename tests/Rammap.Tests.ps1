@@ -124,6 +124,33 @@ Describe 'Rammap (config, install, signature, run, history)' {
         Assert-Equal @(Get-RammapHistory).Count 0 'failed run is not logged'
     }
 
+    It 'Watch-RammapMemory emits one reading per interval until the time is up, keeps a missing counter missing and survives a failing reader' {
+        $script:Clock = [datetime]'2026-10-14T10:00:00'        # the fake clock only moves when the fake Sleep runs
+        $now = { $script:Clock }
+        $sleep = { param($s) $script:Clock = $script:Clock.AddSeconds($s) }
+        $script:Got = New-Object System.Collections.ArrayList
+        $reader = { [pscustomobject]@{ totalBytes = 1000; availableBytes = 400; freeBytes = $null; standbyBytes = 300; modifiedBytes = 5 } }
+        $n = Watch-RammapMemory 2 '' 6 -OnSample { param($x) [void]$script:Got.Add($x) } -Reader $reader -Sleep $sleep -Now $now
+        Assert-Equal $n 3 'readings in 6 s at 2 s'
+        Assert-Equal $script:Got.Count 3 'samples delivered'
+        if ($null -ne $script:Got[0].freeBytes) { throw 'a missing counter must stay missing' }
+        Assert-Equal $script:Got[0].standbyBytes 300 'standby'
+        $script:Clock = [datetime]'2026-10-14T10:00:00'
+        $bad = { throw 'counter unavailable' }
+        Assert-Equal (Watch-RammapMemory 2 '' 4 -Reader $bad -Sleep $sleep -Now $now) 0 'a failing reader gives no readings, no crash'
+    }
+
+    It 'Watch-RammapMemory stops when the stop file appears' {
+        $stop = Join-Path $script:RammapRoot 'memory.stop'
+        $script:Clock = [datetime]'2026-10-14T10:00:00'
+        $now = { $script:Clock }
+        $script:Count = 0
+        $sleep = { param($s) $script:Clock = $script:Clock.AddSeconds($s); $script:Count++; if ($script:Count -ge 2) { Set-Content $stop 'stop' } }
+        $reader = { [pscustomobject]@{ totalBytes = 1; availableBytes = 1; freeBytes = 1; standbyBytes = 1; modifiedBytes = 1 } }
+        $n = Watch-RammapMemory 1 $stop 100 -Reader $reader -Sleep $sleep -Now $now
+        Assert-Equal $n 2 'stopped after the stop file appeared'
+    }
+
     It 'reads the real memory counters as numbers and never as 0 when missing' {
         $m = Get-RammapMemory
         if ($null -ne $m.totalBytes -and $m.totalBytes -le 0) { throw 'totalBytes must be positive or missing' }

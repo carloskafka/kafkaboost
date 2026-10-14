@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('kb', {
     stop: () => ipcRenderer.invoke('session:stop'),
     onUpdate: (cb) => ipcRenderer.on('session:update', (_e, st) => cb(st))
   },
+  memory: {
+    state: () => ipcRenderer.invoke('memory:state'),
+    start: () => ipcRenderer.invoke('memory:start'),
+    stop: () => ipcRenderer.invoke('memory:stop'),
+    onUpdate: (cb) => ipcRenderer.on('memory:update', (_e, st) => cb(st))
+  },
   advice: () => ipcRenderer.invoke('advice:get'),
   onLog: (cb) => ipcRenderer.on('step:log', (_e, step, line) => cb(step, line)),
   settings: {

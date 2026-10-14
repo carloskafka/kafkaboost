@@ -179,3 +179,26 @@ function Invoke-RammapAction([string]$ActionId, $Config) {
     Add-RammapHistory $rec
     return [pscustomobject]@{ ok = $true; code = 'msg.rammap.done'; message = "RAMMap ran $($act.id)."; data = $rec }
 }
+
+# ---- live view (Memory page) -------------------------------------------------------------------------------------
+
+# One reading every $IntervalSec until the stop file appears or $MaxSec passes; $OnSample gets each reading (what it writes goes to the
+# console, never into the returned count). Counters Windows does not report stay $null. Returns the number of readings. Read-only.
+function Watch-RammapMemory([int]$IntervalSec, [string]$StopFile, [int]$MaxSec, [scriptblock]$OnSample = {},
+        [scriptblock]$Reader = { Get-RammapMemory }, [scriptblock]$Sleep = { param($s) Start-Sleep -Seconds $s }, [scriptblock]$Now = { Get-Date }) {
+    $start = & $Now; $n = 0
+    while ($true) {
+        $t = & $Now
+        if (($t - $start).TotalSeconds -ge $MaxSec) { break }
+        if ($StopFile -and (Test-Path -LiteralPath $StopFile)) { break }
+        $m = $null
+        try { $m = & $Reader } catch { $m = $null }
+        if ($m) {
+            $n++
+            $smp = [pscustomobject]@{ t = $t.ToString('s'); totalBytes = $m.totalBytes; availableBytes = $m.availableBytes; freeBytes = $m.freeBytes; standbyBytes = $m.standbyBytes; modifiedBytes = $m.modifiedBytes }
+            & $OnSample $smp | Out-Host
+        }
+        & $Sleep $IntervalSec
+    }
+    return $n
+}
