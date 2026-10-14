@@ -7,7 +7,7 @@ The product is called **KafkaBoost**. The GitHub repository is also called `kafk
 
 ## What this repository is
 A guided, reversible ThrottleStop tuning for a Lenovo Legion 83DE (i9-14900HX, RTX 4090 Laptop, Windows 11), the scripts that apply
-and verify it, and an Electron app on top (called **KafkaBoost** in the UI; side menu: **Dashboard** health check, **System analysis**, **Optimizations** = 31-tweak catalog + CPU thermal tuning wizard, **Cleanup**, **Restore**, **Insights** (play session recorder + boost clock advice, Windows only), **Apps** (install/remove curated apps with winget / Homebrew / Flatpak, apt, dnf, pacman), **Settings**, **Help**; English + pt-BR, light/dark theme, update check with changelog). **Done and verified (2026-10-10):** peak 90 C,
+and verify it, and an Electron app on top (called **KafkaBoost** in the UI; side menu: **Dashboard** health check, **System analysis**, **Optimizations** = 31-tweak catalog + CPU thermal tuning wizard, **Cleanup**, **Restore**, **Memory** (live Windows memory counters, Windows only; the RAMMap cleanup page sits under Optimizations), **Insights** (play session recorder + boost clock advice, Windows only), **Apps** (install/remove curated apps with winget / Homebrew / Flatpak, apt, dnf, pacman), **Settings**, **Help**; English + pt-BR, light/dark theme, update check with changelog). **Done and verified (2026-10-10):** peak 90 C,
 no thermal throttling in a 19-minute CS2 session, game smooth, 0 WHEA errors (`docs/RESULTS.md`).
 
 Live tuning (profile 0, saved in `ThrottleStop.ini`, applied at every logon by the scheduled task `ThrottleStop_Autostart`):
