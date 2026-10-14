@@ -13,6 +13,9 @@ on:
   push:
     tags:
       - "v*"
+  # started by release-please.yml for a tag it created (a tag made with GITHUB_TOKEN does not trigger the push above).
+  # Run it with --ref vX.Y.Z; any other ref fails the "tag must match" step below.
+  workflow_dispatch:
 
 # The build job only reads. Only the release job may write (create the release).
 permissions:
