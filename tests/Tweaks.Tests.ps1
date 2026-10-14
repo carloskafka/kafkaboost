@@ -110,7 +110,7 @@ Describe 'Tweak catalog (config\tweaks.json)' {
     It 'gives every action a known type and the fields that type needs' {
         foreach ($t in $script:real.tweaks) {
             foreach ($a in $t.actions) {
-                if ($a.type -notin 'registry', 'regkey', 'service', 'powerplan', 'dns', 'defender', 'vbs') { throw "$($t.id): type $($a.type)" }
+                if ($a.type -notin 'registry', 'regkey', 'service', 'powerplan', 'dns', 'defender', 'vbs', 'bcdedit') { throw "$($t.id): type $($a.type)" }
                 if ($a.type -eq 'registry') {
                     foreach ($f in 'path', 'name', 'kind') { if (-not $a.$f) { throw "$($t.id): registry action without $f" } }
                     if ($a.kind -notin 'DWord', 'String') { throw "$($t.id): kind $($a.kind)" }
@@ -119,6 +119,7 @@ Describe 'Tweak catalog (config\tweaks.json)' {
                 }
                 if ($a.type -eq 'regkey' -and $a.path -notmatch '^(HKLM|HKCU):\\') { throw "$($t.id): regkey path" }
                 if ($a.type -eq 'service' -and (-not $a.name -or -not $a.on -or -not $a.off)) { throw "$($t.id): service fields" }
+                if ($a.type -eq 'bcdedit' -and (-not $a.element -or -not $a.on)) { throw "$($t.id): bcdedit fields" }
             }
         }
     }
@@ -197,18 +198,21 @@ Describe 'Tweak preview (read-only, sandbox registry)' {
     }
     It 'previews service, power plan, DNS, Defender and VBS actions as readable data (read-only on this PC)' {
         $j = '{"version":1,"categories":["general"],"tweaks":[{"id":"nr","category":"general","risk":"advanced","recommended":false,"needsReboot":true,"actions":[' +
-             '{"type":"service","name":"KbNoSuchService123","on":"Disabled","off":"Auto"},{"type":"powerplan"},{"type":"dns","servers":["1.1.1.1","1.0.0.1"]},{"type":"defender"},{"type":"vbs"}]}]}'
+             '{"type":"service","name":"KbNoSuchService123","on":"Disabled","off":"Auto"},{"type":"powerplan"},{"type":"dns","servers":["1.1.1.1","1.0.0.1"]},{"type":"defender"},{"type":"vbs"},' +
+             '{"type":"bcdedit","element":"disabledynamictick","on":"yes","off":"no"}]}]}'
         $f = Join-Path ([IO.Path]::GetTempPath()) ("kb_cat3_" + [guid]::NewGuid().ToString('N') + '.json')
         [IO.File]::WriteAllText($f, $j)
         try {
             $p = @(Get-TweakPreview @('nr') $f)[0]
             Assert-Equal $p.needsAdmin $true 'needs admin'; Assert-Equal $p.needsReboot $true 'reboot'
             $acts = @($p.actions)
-            Assert-Equal (@($acts | ForEach-Object { $_.type }) -join ',') 'service,powerplan,dns,defender,vbs' 'types in order'
+            Assert-Equal (@($acts | ForEach-Object { $_.type }) -join ',') 'service,powerplan,dns,defender,vbs,bcdedit' 'types in order'
             Assert-Equal $acts[0].found $false 'missing service'; Assert-Equal $acts[0].new 'Disabled' 'service new'; Assert-Equal $acts[0].restore 'Auto' 'service restore'
             Assert-Equal $acts[2].servers '1.1.1.1, 1.0.0.1' 'dns servers'
             Assert-Equal ($acts[4].PSObject.Properties.Name -contains 'currentOn') $true 'vbs state field'
             Assert-Equal ($acts[3].PSObject.Properties.Name -contains 'currentOn') $true 'defender state field'
+            Assert-Equal $acts[5].element 'disabledynamictick' 'bcdedit element'
+            Assert-Equal ($acts[5].PSObject.Properties.Name -contains 'currentOn') $true 'bcdedit state field'
         } finally { Remove-Item $f -Force }
     }
     It 'previews the real catalog without throwing and without writing' {

@@ -59,7 +59,7 @@ for (const lang of ['en', 'pt-BR']) {
   test(`every real tweak of the catalog renders fully translated in ${lang} (no raw keys, no "undefined")`, () => {
     const t = tr(lang);
     const all = demo.demoStep('tweak-preview', { tweakIds: JSON.parse(require('fs').readFileSync(path.join(configDir, 'tweaks.json'), 'utf8')).tweaks.map((x) => x.id).join(',') }, configDir).res.data.tweaks;
-    assert.equal(all.length, 30);
+    assert.equal(all.length, 31);
     const blocks = P.buildBlocks(all, { t, title: (id) => t(`tweak.${id}.title`), desc: (id) => t(`tweak.${id}.desc`), notice: () => '', appAdmin: true, closing: [] });
     for (const b of blocks) { assert.ok(!/tweaks?\.pv\.|undefined|null/.test(b.text), `${lang}: ${b.text}`); }
   });
