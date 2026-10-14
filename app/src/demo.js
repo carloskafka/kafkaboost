@@ -263,6 +263,11 @@ function rammapStep(step, opts) {
 
 function demoStep(step, opts = {}, configDir) {
   if (step.startsWith('rammap-')) return rammapStep(step, opts);
+  if (step === 'memory-watch') {                         // demo: three canned readings, then the step ends
+    const GB3 = 1024 * 1024 * 1024;
+    const line = (i) => 'MEM ' + JSON.stringify({ t: '2026-10-14T10:00:0' + i, totalBytes: 32 * GB3, availableBytes: (14 + i * 0.1) * GB3, freeBytes: 0.4 * GB3, standbyBytes: (13.6 + i * 0.1) * GB3, modifiedBytes: 0.2 * GB3 });
+    return { logs: [line(0), line(2), line(4)], res: { ok: true, code: 'msg.memory.watched', args: { samples: 3 }, message: '3 reading(s).', data: { samples: 3 } } };
+  }
   if (step === 'telemetry') {
     telemetryTick++;
     const takenAt = new Date().toISOString().slice(0, 19);
