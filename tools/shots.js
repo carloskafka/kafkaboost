@@ -62,6 +62,12 @@ async function run({ win, dir, shot, js, sleep, demo, settings, PLATFORM }) {
     await js(win, "document.getElementById('cs2Cfg').scrollIntoView({ block: 'start' }); 0"); await sleep(500); await shot(win, out('cs2-options'));
     await js(win, "document.getElementById('cs2Launch').scrollIntoView({ block: 'start' }); 0"); await sleep(500); await shot(win, out('cs2-launch'));
     demo.resetCs2();
+    // Memory cleanup (RAMMap): first the page before RAMMap is downloaded, then after a demo install and one action with its history
+    await click('[data-view=optimizations]'); await sleep(900); await click('#openRammap'); await until("!document.getElementById('rammap').hidden && !document.getElementById('rammapGet').hidden"); await sleep(500);
+    await js(win, "document.querySelector('.main').scrollTop = 0; 0"); await sleep(300); await shot(win, out('rammap'));
+    await click('#rammapAgree'); await sleep(200); await click('#rammapDownload'); await until("!document.getElementById('rammapActionsCard').hidden"); await sleep(500);
+    await js(win, "document.querySelectorAll('#rammapActions .rammap-row .btn')[4].click(); 0"); await sleep(500); await click('#cfOk'); await until("!document.getElementById('rammapHistoryCard').hidden"); await sleep(600);
+    await js(win, "document.getElementById('rammapActionsCard').scrollIntoView({ block: 'start' }); 0"); await sleep(500); await shot(win, out('rammap-run'));
     await click('[data-view=cleanup]'); await sleep(1500); await shot(win, out('cleanup'));
     await click('[data-view=apps]'); for (let i = 0; i < 50 && (await js(win, "document.getElementById('apps').hidden")); i++) await sleep(100); await sleep(2200); await shot(win, out('apps'));
     demo.state.sensorsInstalled = true;          // the consent card is covered by the UI test; the shot shows the live cards
