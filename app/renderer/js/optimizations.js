@@ -5,8 +5,7 @@
   const { $, t } = KB;
   const ALL = 'all';
   let tweaks = [], admin = true, cat = ALL, query = '', busy = false, loading = false;
-  const CACHE_KEY = 'kb.tweaks.v1';   // last known list, shown at once while the real state is read (a per-viewer convenience, never trusted for changes)
-  const dropCache = () => { try { localStorage.removeItem(CACHE_KEY); } catch { /* storage unavailable */ } };
+  const dropCache = () => KB.lastDrop('tweaks');   // the last known list (shared with the Dashboard) is shown at once; never trusted for changes
 
   // ---- confirmation dialog (promise based) ----------------------------------------------------------------------
   // `blocks` (optional) are the detailed blocks of KBTweakPreview.buildBlocks: h, p, meta and mono (a monospace block). Everything is
@@ -103,15 +102,18 @@
 
   async function load() {
     if (!KB.featureOn('optimizations')) return;
+    const grid = $('tweakGrid');
     if (!tweaks.length) {
-      try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && Array.isArray(c.tweaks) && c.tweaks.length) { tweaks = c.tweaks; admin = !!c.admin; loading = true; render(); } } catch { /* no cache */ }
+      const c = KB.lastGet('tweaks');
+      if (c && c.v && Array.isArray(c.v.tweaks) && c.v.tweaks.length) { tweaks = c.v.tweaks; admin = !!c.v.admin; loading = true; render(); } else KB.skeleton(grid, 6);
     }
+    KB.refreshing(grid, true);
     let res;
-    try { res = await window.kb.runStep('tweaks-list', {}); } finally { loading = false; }
-    if (!res.ok || !res.data) { KB.showResult($('tweakResult'), 'fail', KB.message(res) || t('common.failed')); return; }
+    try { res = await window.kb.runStep('tweaks-list', {}); } finally { loading = false; KB.refreshing(grid, false); }
+    if (!res.ok || !res.data) { if (!tweaks.length) grid.textContent = ''; KB.showResult($('tweakResult'), 'fail', KB.message(res) || t('common.failed')); return; }
     tweaks = res.data.tweaks; admin = !!res.data.admin;
     KB.state.tweaks = tweaks;
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ tweaks, admin })); } catch { /* storage unavailable */ }
+    KB.lastSet('tweaks', { tweaks, admin });
     render();
   }
 

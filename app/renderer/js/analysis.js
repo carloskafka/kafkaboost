@@ -35,15 +35,25 @@
   async function run() {
     const btn = $('analyze'); btn.disabled = true; KB.showResult($('analysisResult'), '', '');
     if (!KB.featureOn('optimizations')) { data = { windows: null }; render(); btn.disabled = false; return; }
-    const res = await window.kb.runStep('detect', {});
-    btn.disabled = false;
+    KB.refreshing($('specs'), true);
+    let res = null;
+    try { res = await KB.getHardware(); } catch { res = null; } finally { KB.refreshing($('specs'), false); btn.disabled = false; }
+    if (!res) { KB.showResult($('analysisResult'), 'fail', t('common.failed')); return; }
     if (res.data) { data = { windows: res.data }; render(); }
     KB.showResult($('analysisResult'), res.ok ? (res.data && !res.data.modelVerified ? 'warn' : 'ok') : 'fail', KB.message(res));
   }
 
-  KB.registerView('analysis', { onShow() { if (!data) run(); } });
+  KB.registerView('analysis', {
+    onShow() {
+      if (data) return;
+      const last = KB.featureOn('optimizations') ? KB.lastGet('detect') : null;     // the last answer at once, refreshed below
+      if (last) { data = { windows: last.v }; render(); } else KB.skeleton($('specs'), 8);
+      run();
+    }
+  });
   document.addEventListener('DOMContentLoaded', () => {
-    $('analyze').addEventListener('click', run);
+    // a re-run asks again instead of reusing the shared answer
+    $('analyze').addEventListener('click', () => { KB.getHardware.reset(); run(); });
     KB.onSettingsChanged(render);
   });
 })();

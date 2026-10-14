@@ -50,6 +50,38 @@
     el.hidden = false; el.className = 'result ' + kind; el.textContent = text;
   };
 
+  // ---- last result, shimmer, placeholders -----------------------------------------------------------------------
+  // A page shows its last result at once and refreshes it in the background. The copy lives in localStorage (a per-viewer convenience: every
+  // access is wrapped, and the page works without it). A stale value is only ever DISPLAYED: whatever acts on it stays disabled until the
+  // fresh result arrives.
+  const LAST = 'kb.last.v1.';
+  KB.lastGet = (key) => { try { const c = JSON.parse(localStorage.getItem(LAST + key) || 'null'); return c && c.v !== undefined ? c : null; } catch { return null; } };
+  KB.lastSet = (key, value) => { try { localStorage.setItem(LAST + key, JSON.stringify({ at: Date.now(), v: value })); } catch { /* storage unavailable */ } };
+  KB.lastDrop = (key) => { try { localStorage.removeItem(LAST + key); } catch { /* storage unavailable */ } };
+  // The shimmer sweep over a container that shows a last result while the fresh one loads.
+  KB.refreshing = (el, on) => {
+    if (!el) return;
+    el.classList.toggle('refreshing', !!on);
+    if (on) el.setAttribute('aria-busy', 'true'); else el.removeAttribute('aria-busy');
+  };
+  // Grey placeholder rows for a first load with nothing cached.
+  KB.skeleton = (host, rows) => {
+    host.textContent = '';
+    for (let i = 0; i < (rows || 3); i++) { const d = document.createElement('div'); d.className = 'skel'; host.appendChild(d); }
+  };
+  // One `detect` request shared by the Dashboard hardware cards and System analysis (it is the slowest step); the last answer is kept.
+  let hardwareReq = null;
+  KB.getHardware = () => {
+    if (!hardwareReq) {
+      hardwareReq = window.kb.runStep('detect', {}).then(
+        (res) => { if (res && res.data) KB.lastSet('detect', res.data); else hardwareReq = null; return res; },
+        (e) => { hardwareReq = null; throw e; }
+      );
+    }
+    return hardwareReq;
+  };
+  KB.getHardware.reset = () => { hardwareReq = null; };
+
   // ---- navigation -----------------------------------------------------------------------------------------------
   // The wizard and the finish screen belong to the Optimizations section of the sidebar.
   const NAV_OF = { wizard: 'optimizations', finish: 'optimizations', cs2: 'optimizations', rammap: 'optimizations' };
