@@ -34,7 +34,7 @@ The CI workflow (`.github/workflows/ci.yml`) runs the PowerShell parse and Peste
 
 ## UI checks
 ```powershell
-powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 188 checks on Windows, 13 on a faked Linux
+powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 193 checks on Windows, 13 on a faked Linux
 ```
 It covers navigation, settings, the changelog dialog, the tweak catalog (search, filters, toggles, the double confirmation for risky
 tweaks), Cleanup, the restore points, the Dashboard (live tiles that refresh by themselves and stop when the screen is left, the administrator notice versus the HWiNFO notice, the hardware cards without serials, the optimization level and the confirmed Apply recommended), the Dashboard HWiNFO card (check, consent box gating the download, install, start, stop) and the Sensors screen (consent before any download, the license and fingerprint text, the five groups, demo label, values refreshing by themselves, Pause/Resume, polling stopping when the screen is left, copy and save) the Counter-Strike 2 page (the card in Optimizations, the honesty text, location, GPU apply and revert, the autoexec flow with the confirmation, the backup note and the restore, the launch string, the copy button with the real clipboard, the not-found state and picking a file) and the Apps view (install, confirmed removal, search, import and export on a fake package manager, the Store-app removal list; on the faked Linux it checks the Flatpak catalog and that the bloatware card is hidden). `tools\run-traytest.ps1` covers the tray.

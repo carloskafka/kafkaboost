@@ -56,6 +56,14 @@ body {
 .stepper li.fail .dot { background: rgba(255,107,129,.15); color: var(--bad); border-color: rgba(255,107,129,.5); }
 .stepper li.running .dot { animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(108,140,255,.2); } }
+/* last result shown while the fresh one loads: a soft sweep over the container; .skel = placeholder row on a first load */
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+.refreshing { position: relative; }
+.refreshing::after, .skel::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(100deg, transparent 25%, rgba(128,128,128,.18) 50%, transparent 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+.skel { position: relative; overflow: hidden; height: 16px; margin: 12px 0; border-radius: 8px; background: var(--panel-2); }
+.skel:nth-child(3n) { width: 70%; }
+.tweak-grid .skel, .tweak-grid .skel:nth-child(3n) { width: auto; height: 104px; margin: 0; border-radius: 14px; }
+@media (prefers-reduced-motion: reduce) { .refreshing::after, .skel::after { animation: none; } }
 .side-bottom { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .side-note { color: var(--muted); font-size: 12px; }
 .icon-btn { appearance: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); cursor: pointer; font-size: 16px; display: grid; place-items: center; }

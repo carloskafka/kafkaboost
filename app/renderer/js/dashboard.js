@@ -43,12 +43,14 @@
     renderLevel();
   }
 
+  let healthFromCache = false;        // the verdict on screen is the last check, shown while the real one runs
   async function runHealth() {
     $('check').disabled = true; $('fix').disabled = true;
-    $('hero').className = 'hero checking'; setText($('heroIcon'), '…'); setText($('heroTitle'), t('dashboard.checking'));
-    const res = await window.kb.runStep('health', {});
-    $('check').disabled = false; $('fix').disabled = false;
-    if (res.data && res.data.checks) { renderHealth(res.data); return res.data; }
+    if (healthFromCache) KB.refreshing($('hero'), true);
+    else { $('hero').className = 'hero checking'; setText($('heroIcon'), '…'); setText($('heroTitle'), t('dashboard.checking')); }
+    let res;
+    try { res = await window.kb.runStep('health', {}); } finally { $('check').disabled = false; $('fix').disabled = false; KB.refreshing($('hero'), false); healthFromCache = false; }
+    if (res.data && res.data.checks) { renderHealth(res.data); KB.lastSet('health', res.data); return res.data; }
     $('hero').className = 'hero fail'; setText($('heroIcon'), '✕'); setText($('heroTitle'), t('dashboard.couldNotCheck')); setText($('heroSub'), KB.message(res));
     return null;
   }
@@ -138,9 +140,14 @@
     }
     host.hidden = !host.childElementCount;
   }
+  let hwLoading = false;
   async function loadHardware() {
-    if (hw) return;
-    const res = await window.kb.runStep('detect', {});
+    if (hw || hwLoading) return;                             // loaded already, or the request is in flight
+    hwLoading = true;
+    const last = KB.lastGet('detect');                       // the last answer at once (detect is the slowest step), refreshed below
+    if (last) { hw = last.v; KB.state.hardware = hw; renderHardware(); renderLevel(); KB.refreshing($('hwCards'), true); }
+    let res = null;
+    try { res = await KB.getHardware(); } catch { /* the cards already shown stay */ } finally { KB.refreshing($('hwCards'), false); hwLoading = false; }
     if (res && res.data) { hw = res.data; KB.state.hardware = hw; renderHardware(); renderLevel(); }
   }
 
@@ -163,11 +170,20 @@
     const cpu = !lvl.cpuApplicable ? t('dashboard.level.cpuNa') : t(lvl.cpuOk ? 'dashboard.level.cpuOk' : 'dashboard.level.cpuNo');
     setText($('levelLine'), t('dashboard.level.line', { active: lvl.active, total: lvl.total }) + ' · ' + cpu);
     setText($('levelFormula'), t('dashboard.level.formula', { active: lvl.active, cpu: lvl.cpuOk ? 1 : 0, total: lvl.total, cpuItem: lvl.cpuApplicable ? 1 : 0, percent: lvl.percent }));
-    $('applyReco').disabled = applying || !lvl.todo.length;
+    $('applyReco').disabled = applying || tweaksStale || !lvl.todo.length;
   }
+  let tweaksStale = false;             // the list is the last one (shared with Optimizations), shown while the real one loads: Apply stays off
   async function loadTweaks() {
-    const res = await window.kb.runStep('tweaks-list', {});
-    if (res && res.ok && res.data) { tweaks = res.data.tweaks; KB.state.tweaks = tweaks; }
+    if (!tweaks) {
+      const last = KB.lastGet('tweaks');
+      if (last && last.v && Array.isArray(last.v.tweaks)) { tweaks = last.v.tweaks; tweaksStale = true; renderLevel(); }
+    }
+    let res = null;
+    try { res = await window.kb.runStep('tweaks-list', {}); } finally { tweaksStale = false; }
+    if (res && res.ok && res.data) {
+      tweaks = res.data.tweaks; KB.state.tweaks = tweaks;
+      KB.lastSet('tweaks', { tweaks, admin: !!res.data.admin });
+    }
     renderLevel();
   }
   async function applyReco() {
@@ -196,6 +212,10 @@
     onShow() {
       if (!KB.featureOn('optimizations')) { renderBasic(); return; }
       if (KB.hwinfoRefresh) KB.hwinfoRefresh();
+      if (!KB.state.health) {                                  // the last check at once; runHealth refreshes it (shimmer on the verdict)
+        const last = KB.lastGet('health');
+        if (last && last.v && last.v.checks) { healthFromCache = true; renderHealth(last.v); }
+      }
       renderTiles(); renderLevel(); startTelemetry(); loadHardware(); loadTweaks();
      
     },

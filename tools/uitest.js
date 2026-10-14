@@ -244,6 +244,17 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   await click('#rpCreate'); await sleep(900);
   check('creating a restore point shows it first and says so', (await js(win, "document.querySelectorAll('.rp-row').length")) === 3 && (await js(win, "document.getElementById('rpResult').hidden")) === false);
 
+  // last result at once + shimmer, then the fresh result (the cache is a per-viewer convenience in localStorage)
+  const cachedNow = await js(win, "(()=>{ KB.lastSet('restore', { admin: true, points: [{ id: 999, description: 'cached point', created: '2026-01-01T10:00:00', type: 'settings' }] }); KB.showView('restore'); const l = document.getElementById('rpList'); return l.textContent.includes('cached point') && l.classList.contains('refreshing') && l.getAttribute('aria-busy') === 'true'; })()");
+  check('Restore shows the last list at once, with the shimmer on', cachedNow === true);
+  await sleep(1000);
+  check('then the fresh list replaces it and the shimmer stops', (await js(win, "(()=>{ const l = document.getElementById('rpList'); return !l.textContent.includes('cached point') && !l.classList.contains('refreshing') && document.querySelectorAll('.rp-row').length === 3; })()")) === true);
+  const skeletonNow = await js(win, "(()=>{ KB.lastDrop('restore'); KB.showView('restore'); const n = document.querySelectorAll('#rpList .skel').length; return n; })()");
+  check('with nothing cached, placeholder rows show while it loads', skeletonNow === 3, String(skeletonNow));
+  await sleep(1000);
+  check('the placeholders are replaced by the real list', (await js(win, "document.querySelectorAll('#rpList .skel').length")) === 0 && (await js(win, "document.querySelectorAll('.rp-row').length")) === 3);
+  check('the last answers are stored for the next start (Restore, hardware, tweaks)', (await js(win, "!!KB.lastGet('restore') && !!KB.lastGet('tweaks')")) === true);
+
   // cleanup
   await click('[data-view=cleanup]'); await sleep(900);
   check('cleanup lists 6 targets', (await js(win, "document.querySelectorAll('.clean-row').length")) === 6);

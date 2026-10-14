@@ -28,8 +28,13 @@
   function setBusy(v) { busy = v; $('rpCreate').disabled = v; $('rpOpen').disabled = v; }
 
   async function loadPoints() {
-    const res = await window.kb.runStep('restore-list', {});
-    const d = res.data || { admin: false, points: [] };
+    const host = $('rpList');
+    const last = KB.lastGet('restore');                      // the last list at once, refreshed below
+    if (last && last.v) { renderPoints(last.v.points || [], last.v.admin !== false); KB.refreshing(host, true); } else KB.skeleton(host, 3);
+    let res = null;
+    try { res = await window.kb.runStep('restore-list', {}); } catch { res = null; } finally { KB.refreshing(host, false); }
+    const d = (res && res.data) || { admin: false, points: [] };
+    if (res && res.data) KB.lastSet('restore', d);
     renderPoints(d.points || [], d.admin !== false);
   }
 
