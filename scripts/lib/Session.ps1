@@ -55,7 +55,8 @@ function Invoke-SessionRecording([int]$IntervalSec, [string]$StopFile, [int]$Max
         try { $live = & $Reader } catch { $live = $null }
         if ($live) {
             $smp = [pscustomobject]@{ t = $t.ToString('s'); packageTempC = $live.packageTempC; packagePowerW = $live.packagePowerW; pClockMaxMHz = $live.pClockMaxMHz; eClockMaxMHz = $live.eClockMaxMHz }
-            $samples.Add($smp); & $OnSample $smp
+            $samples.Add($smp)
+            & $OnSample $smp | Out-Host   # whatever the callback writes goes to the console, never into the returned samples
         }
         & $Sleep $IntervalSec
     }
