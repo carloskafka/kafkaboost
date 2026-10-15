@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/carloskafka/kafkaboost/compare/v1.4.0...v1.5.0) (2026-10-15)
+
+
+### Features
+
+* **app:** opt-in automatic memory clean during play sessions ([#26](https://github.com/carloskafka/kafkaboost/issues/26)) ([5e8c3ee](https://github.com/carloskafka/kafkaboost/commit/5e8c3eec645fb67ca96a9c2bc1f8f8274a09adb2))
+* **scripts:** rammap-auto step with threshold, cooldown and auto marker ([#24](https://github.com/carloskafka/kafkaboost/issues/24)) ([f1e0efd](https://github.com/carloskafka/kafkaboost/commit/f1e0efded54ed1bbdbe484d4f85ea769f8847176))
+
 ## [1.4.0](https://github.com/carloskafka/kafkaboost/compare/v1.3.0...v1.4.0) (2026-10-14)
 
 
