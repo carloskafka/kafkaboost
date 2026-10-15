@@ -9,6 +9,7 @@
 #   * RAMMap64.exe is started ONLY from our own folder, ONLY with '-accepteula' plus one switch from the allow-list in the config (no free
 #     text, no user-built arguments), and never when another RAMMap64 from that path is already running.
 #   * A counter Windows does not report is $null (missing), never 0. We never claim a performance gain: only what was measured.
+#   * Besides the page, the only caller is the opt-in auto clean (Invoke-RammapAutoClean): the 'working-sets' action only, past a standby threshold and outside a cooldown.
 #
 # Tests replace the seams: $script:RammapFetcher, $script:RammapSignature, $script:RammapRunner, $script:RammapMemory and $script:RammapRoot.
 
@@ -157,7 +158,7 @@ function Get-RammapHistory([int]$Max = 50) {
 }
 
 # { ok; code; message; data }. Only an id from the config's allow-list is accepted; the switch comes from the config, never from the caller.
-function Invoke-RammapAction([string]$ActionId, $Config) {
+function Invoke-RammapAction([string]$ActionId, $Config, [ValidateSet('manual', 'auto')][string]$Trigger = 'manual') {
     $act = $Config.actions | Where-Object { $_.id -eq $ActionId } | Select-Object -First 1
     if (-not $act) { return [pscustomobject]@{ ok = $false; code = 'msg.rammap.unknownAction'; message = "Unknown RAMMap action: $ActionId"; data = $null } }
     $st = Get-RammapState $Config
@@ -175,9 +176,48 @@ function Invoke-RammapAction([string]$ActionId, $Config) {
     Start-Sleep -Milliseconds 500        # the counters settle a moment after the call returns
     $after = Get-RammapMemory
     $delta = Get-RammapDelta $before $after
-    $rec = [pscustomobject]@{ time = (Get-Date).ToUniversalTime().ToString('o'); action = $act.id; switch = [string]$act.switch; before = $before; after = $after; delta = $delta }
+    $rec = [pscustomobject]@{ time = (Get-Date).ToUniversalTime().ToString('o'); action = $act.id; trigger = $Trigger; switch = [string]$act.switch; before = $before; after = $after; delta = $delta }
     Add-RammapHistory $rec
     return [pscustomobject]@{ ok = $true; code = 'msg.rammap.done'; message = "RAMMap ran $($act.id)."; data = $rec }
+}
+
+# ---- auto clean --------------------------------------------------------------------------------------------------
+
+function Get-RammapAutoStatePath { Join-Path $script:RammapRoot 'auto-state.json' }
+
+# The time of the last successful auto clean, or $null when there is none (or the file is unreadable).
+function Get-RammapLastAutoClean {
+    $p = Get-RammapAutoStatePath
+    if (-not (Test-Path -LiteralPath $p)) { return $null }
+    try { return ([datetime](Get-Content -LiteralPath $p -Raw | ConvertFrom-Json).lastClean).ToUniversalTime() } catch { return $null }
+}
+
+function New-RammapAutoResult([bool]$Ok, [string]$Code, [string]$Message, $Data = $null) {
+    [pscustomobject]@{ ok = $Ok; code = $Code; message = $Message; data = $Data }
+}
+
+# { ok; code; message; data }. Cleans the working sets (never another action) when standby memory is at least $ThresholdPct of the total and
+# the last auto clean is older than $CooldownMin. A counter Windows does not report skips the clean (reason 'missing'); it is never read as 0.
+function Invoke-RammapAutoClean([int]$ThresholdPct, [int]$CooldownMin, $Config, [scriptblock]$Now = { Get-Date }) {
+    $pct = [math]::Max(20, [math]::Min(90, $ThresholdPct))
+    $cooldown = [math]::Max(5, [math]::Min(60, $CooldownMin))
+    $mem = Get-RammapMemory
+    if ($null -eq $mem.standbyBytes -or $null -eq $mem.totalBytes -or $mem.totalBytes -le 0) {
+        return New-RammapAutoResult $true 'msg.rammap.auto.skipped' 'Memory counters are missing; nothing was cleaned.' @{ reason = 'missing' }
+    }
+    if (($mem.standbyBytes / $mem.totalBytes * 100) -lt $pct) {
+        return New-RammapAutoResult $true 'msg.rammap.auto.skipped' 'Standby memory is below the threshold.' @{ reason = 'below' }
+    }
+    $at = (& $Now).ToUniversalTime()
+    $last = Get-RammapLastAutoClean
+    if ($last -and ($at - $last).TotalMinutes -lt $cooldown) {
+        return New-RammapAutoResult $true 'msg.rammap.auto.skipped' 'The last auto clean is too recent.' @{ reason = 'cooldown' }
+    }
+    $r = Invoke-RammapAction 'working-sets' $Config -Trigger auto
+    if (-not $r.ok) { return $r }
+    New-Item -ItemType Directory -Force $script:RammapRoot | Out-Null
+    (@{ lastClean = $at.ToString('o') } | ConvertTo-Json -Compress) | Set-Content -LiteralPath (Get-RammapAutoStatePath) -Encoding UTF8
+    return New-RammapAutoResult $true 'msg.rammap.auto.cleaned' 'Auto clean ran working-sets.' $r.data
 }
 
 # ---- live view (Memory page) -------------------------------------------------------------------------------------
