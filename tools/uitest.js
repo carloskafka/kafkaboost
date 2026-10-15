@@ -117,7 +117,7 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
 
   await click('#mReset'); await sleep(500);
   const s = settings.get();
-  check('reset restores every default', s.startHwinfoWithApp === false && s.autoRecord === false && s.theme === 'system' && s.language === 'auto' && s.closeToTray === true && s.notifications === true && s.checkIntervalMin === 30 && s.installDir === '');
+  check('reset restores every default', s.startHwinfoWithApp === false && s.autoRecord === false && s.theme === 'system' && s.language === 'auto' && s.closeToTray === true && s.notifications === true && s.checkIntervalMin === 30 && s.installDir === '' && s.autoClean === false && s.autoCleanThresholdPct === 50 && s.autoCleanCooldownMin === 10);
   check('reset refreshes the form', (await js(win, "document.getElementById('sInterval').value")) === '30');
 
   // after Reset the language is 'auto' = the OS language (Portuguese on a pt-BR PC); the checks below read English text
@@ -362,6 +362,29 @@ async function runChecks({ win, js, sleep, settings, demo, startHwinfoWithApp, o
   check('running an advanced action asks first, and says it promises no gain', (await js(win, "document.getElementById('confirmDlg').open")) && (await q('#cfBody')).includes('does not promise a performance gain'), await q('#cfBody'));
   await click('#cfOk'); await sleep(1800);
   check('the result shows what the counters did, and the history records the run', (await q('#rammapResult')).includes('standby -13.6 GB') && await visible('rammapHistoryCard') && (await q('#rammapTotals')).includes('1 run'), await q('#rammapResult'));
+  // Auto clean card (opt-in; lives next to the consent box)
+  check('M2-14 the auto clean card shows once RAMMap is installed', await visible('rammapAutoCard'));
+  check('M2-15 the switch is disabled until the consent box is ticked', await dis('rammapAutoToggle') && !settings.get().autoClean);
+  check('the consent text names the stutter risk and promises no FPS', (await q('#rammapAutoCard')).includes('stutter') && (await q('#rammapAutoCard')).includes('no FPS'), await q('#rammapAutoCard'));
+  await click('#rammapAutoAgree'); await sleep(200);
+  check('ticking the consent box enables the switch, still off', !(await dis('rammapAutoToggle')) && !settings.get().autoClean);
+  await click('#rammapAutoToggle'); await sleep(400);
+  check('M2-16 switching on saves autoClean true', settings.get().autoClean === true);
+  await setVal('rammapAutoPct', '60'); await setVal('rammapAutoCooldown', '15'); await sleep(400);
+  check('threshold and cooldown are saved', settings.get().autoCleanThresholdPct === 60 && settings.get().autoCleanCooldownMin === 15, JSON.stringify(settings.get()));
+  await setVal('rammapAutoPct', '5'); await sleep(400);
+  check('an out-of-range threshold is refused and the field returns to the saved value', settings.get().autoCleanThresholdPct === 60 && (await js(win, "document.getElementById('rammapAutoPct').value")) === '60');
+  demo.state.rammap.history.unshift({ time: new Date().toISOString(), action: 'working-sets', trigger: 'auto', switch: '-Ew', before: {}, after: {}, delta: { availableBytes: 1, freeBytes: 1, standbyBytes: -1, modifiedBytes: 0 } });
+  await click('#rammapRefresh'); await sleep(1200);
+  const histRows = await js(win, "[...document.querySelectorAll('#rammapHistory tr')].slice(1).map(r=>r.textContent)");
+  check('M2-18 the auto run shows the Auto tag and the manual run does not', histRows.length === 2 && histRows[0].includes('Auto') && !histRows[1].includes('Auto'), JSON.stringify(histRows));
+  settings.set({ autoClean: false });
+  win.webContents.send('rammap:autonotice', { code: 'msg.rammap.needsAdmin' }); await sleep(800);
+  check('M2-19 a needs-admin notice shows once and the switch is off', (await q('#rammapAutoNotice')).includes('administrator') && (await js(win, "document.querySelectorAll('#rammapAutoNotice').length")) === 1 && !(await js(win, "document.getElementById('rammapAutoToggle').checked")), await q('#rammapAutoNotice'));
+  await click('#rammapAutoToggle'); await sleep(400);
+  check('switched on again', settings.get().autoClean === true);
+  await click('#rammapAutoAgree'); await sleep(400);
+  check('M2-17 unticking the consent box sets autoClean false and disables the switch', settings.get().autoClean === false && await dis('rammapAutoToggle'));
   await click('#backFromRammap'); await sleep(400);
   check('Back returns to Optimizations from RAMMap', await visible('optimizations') && !(await visible('rammap')));
 

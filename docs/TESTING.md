@@ -14,7 +14,7 @@ keys or real temp folders. Tests use plain `throw` assertions and a shared `test
 
 ## Node tests
 ```powershell
-cd app; node --test "test/*.test.js"      # 163 tests: settings store, i18n key parity, autostart, update logic, Apps manager, Sensors logic, HWiNFO card, Dashboard logic, Counter-Strike 2 page, Insights (session, sessionlogic, loadwatch, advicelogic)
+cd app; node --test "test/*.test.js"      # 175 tests: settings store, i18n key parity, autostart, update logic, Apps manager, Sensors logic, HWiNFO card, Dashboard logic, Counter-Strike 2 page, Insights (session, sessionlogic, loadwatch, advicelogic)
 ```
 `session.test.js`, `sessionlogic.test.js`, `loadwatch.test.js` and `advicelogic.test.js` cover the Insights play session recorder, its logic, the automatic recording trigger and the boost clock advice rules (`app/src/session.js`, `app/src/loadwatch.js`, `renderer/js/session.js`, `renderer/js/sessionlogic.js`, `renderer/js/advice.js`, `renderer/js/advicelogic.js`).
 `sensors.test.js` covers `renderer/js/sensorlogic.js`: the generic temperature thresholds, value formatting, snapshot sanitizing (unknown fields, groups and units dropped, sizes bounded), grouping order and that every group, sensor type and message is translated.
@@ -34,7 +34,7 @@ The CI workflow (`.github/workflows/ci.yml`) runs the PowerShell parse and Peste
 
 ## UI checks
 ```powershell
-powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 199 checks on Windows, 14 on a faked Linux
+powershell -File tools\run-uitest.ps1     # drives the real window in demo mode: 210 checks on Windows, 14 on a faked Linux
 ```
 It covers navigation, settings, the changelog dialog, the tweak catalog (search, filters, toggles, the double confirmation for risky
 tweaks), Cleanup, the restore points, the Dashboard (live tiles that refresh by themselves and stop when the screen is left, the administrator notice versus the HWiNFO notice, the hardware cards without serials, the optimization level and the confirmed Apply recommended), the Dashboard HWiNFO card (check, consent box gating the download, install, start, stop) and the Sensors screen (consent before any download, the license and fingerprint text, the five groups, demo label, values refreshing by themselves, Pause/Resume, polling stopping when the screen is left, copy and save) the Counter-Strike 2 page (the card in Optimizations, the honesty text, location, GPU apply and revert, the autoexec flow with the confirmation, the backup note and the restore, the launch string, the copy button with the real clipboard, the not-found state and picking a file) and the Apps view (install, confirmed removal, search, import and export on a fake package manager, the Store-app removal list; on the faked Linux it checks the Flatpak catalog and that the bloatware card is hidden). `tools\run-traytest.ps1` covers the tray.

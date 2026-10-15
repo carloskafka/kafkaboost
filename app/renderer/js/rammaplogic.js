@@ -38,6 +38,7 @@
       showDownload: !installed,
       showActions: installed,
       badSignature: installed && !signerOk,
+      autoEnabled: installed && signerOk,
       downloadEnabled: !installed && !busy,
       actions
     };
@@ -61,6 +62,7 @@
     return {
       time: rec && rec.time ? String(rec.time) : '',
       action: rec && rec.action ? String(rec.action) : '',
+      auto: !!rec && rec.trigger === 'auto',
       available: formatDelta(d.availableBytes),
       standby: formatDelta(d.standbyBytes),
       modified: formatDelta(d.modifiedBytes),

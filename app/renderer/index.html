@@ -317,6 +317,24 @@
           <div id="rammapResult" class="result" hidden></div>
           <div id="rammapActions" class="clean-list"></div>
         </div>
+        <div id="rammapAutoCard" class="card" hidden>
+          <h2 class="h2" data-i18n="rammap.auto.title"></h2>
+          <label class="check"><input type="checkbox" id="rammapAutoAgree"><span data-i18n="rammap.auto.consent"></span></label>
+          <div class="row">
+            <div class="row-text"><label class="row-title" for="rammapAutoToggle" data-i18n="rammap.auto.toggle"></label></div>
+            <label class="switch"><input type="checkbox" id="rammapAutoToggle" disabled><span class="slider"></span></label>
+          </div>
+          <div class="row">
+            <div class="row-text"><label class="row-title" for="rammapAutoPct" data-i18n="rammap.auto.pct"></label></div>
+            <input id="rammapAutoPct" class="field" type="number" min="20" max="90" step="1">
+          </div>
+          <div class="row">
+            <div class="row-text"><label class="row-title" for="rammapAutoCooldown" data-i18n="rammap.auto.cooldown"></label></div>
+            <input id="rammapAutoCooldown" class="field" type="number" min="5" max="60" step="1">
+          </div>
+          <p class="muted" data-i18n="rammap.auto.hint"></p>
+          <div id="rammapAutoNotice" class="result" hidden></div>
+        </div>
         <div id="rammapHistoryCard" class="card" hidden>
           <h2 class="h2" data-i18n="rammap.history.title"></h2>
           <p id="rammapTotals" class="muted"></p>

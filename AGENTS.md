@@ -38,7 +38,7 @@ specific to this chip: **do not present them as valid for another CPU** (presets
 12. **HWiNFO on demand:** proprietary freeware: never commit or bundle; download only after consent with version/source/signer shown, zip must hold `HWiNFO64.exe` with a Valid REALiX signature; start/stop only our own path and never with arguments; never overwrite a user's INI (`-UpdateIni` only when ticked per start); state no session-time limit.
 13. **Counter-Strike 2 preset:** no FPS or anti-cheat claim; only ids from `config/cs2.json`; GPU preference restored exactly (never revert one we did not write); the two game files written are `autoexec.cfg` and `cs2_video.txt` (resolution, refresh rate — backup first, restore only with our marker, and for `cs2_video.txt` only the specific keys the user chose, never a full rewrite); never edit Steam's `localconfig.vdf`.
 14. **Updates and "Apply recommended":** read the full rule 14 in `docs/AGENT-DETAILS.md` before touching update or Apply-recommended code.
-15. **RAMMap (Optimizations > Memory cleanup):** Microsoft Sysinternals freeware: never commit or bundle; download only after the consent box from the address in `config/rammap.json`, zip must hold `RAMMap64.exe` with a Valid signature from exactly `Microsoft Corporation`; started only from our own folder, with `-accepteula` plus one switch from the config allow-list (the page sends an action id, never a switch), never a second copy; a counter Windows does not report is *missing*, never 0; no FPS or "fixes the memory leak" claim, only the before/after counters we measured.
+15. **RAMMap (Optimizations > Memory cleanup):** Microsoft Sysinternals freeware: never commit or bundle; download only after the consent box from the address in `config/rammap.json`, zip must hold `RAMMap64.exe` with a Valid signature from exactly `Microsoft Corporation`; started only from our own folder, with `-accepteula` plus one switch from the config allow-list (the page sends an action id, never a switch), never a second copy; a counter Windows does not report is *missing*, never 0; no FPS or "fixes the memory leak" claim, only the before/after counters we measured. Optional auto clean (off by default, separate consent, never FPS-promising): only inside a recording play session, only `working-sets`, only above the standby threshold and outside the cooldown, marked `trigger: auto` in the history; it switches itself off with one notice if RAMMap is missing, unsigned or not elevated.
 Full text of rules 11-15, the Layout table and the Roadmap/open items: `docs/AGENT-DETAILS.md` (read only the section you need).
 
 ## Layout (short)
@@ -47,8 +47,8 @@ Root launchers and `install.cmd`; `app/` Electron UI (thin: logic in `scripts/li
 ## Commands
 ```powershell
 Invoke-Pester tests                                                   # unit tests (181)
-cd app; node --test "test/*.test.js"                                  # node tests (163)
-powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (199 + 14)
+cd app; node --test "test/*.test.js"                                  # node tests (175)
+powershell -File tools\run-uitest.ps1                                 # UI checks in demo mode (210 + 14)
 powershell -File scripts\Steps.ps1 -Step health -InstallDir "<dir>"   # read-only verdict + live telemetry (no admin needed)
 powershell -File scripts\Create-Shortcut.ps1                          # shortcut with the app icon
 cd app; npm install; npm start                                        # the app (needs admin for changes)
