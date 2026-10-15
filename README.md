@@ -88,7 +88,7 @@ Run from a terminal: `cd app; npm install; npm start` (administrator needed to a
 |---|---|---|
 | <img src="docs/assets/tweaks.png" alt="Optimizations: 31 tweaks with search, category filters, risk badges and toggles"> | <img src="docs/assets/cleanup.png" alt="Cleanup: sizes measured first, delete only what is ticked"> | <img src="docs/assets/settings.png" alt="Settings: theme, language, tray and update options"> |
 
-The side menu has eleven sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Sensors**, **Memory**, **Insights**, **Apps**, **Settings** and **Help**. **Memory** (Windows only) shows the Windows memory counters live (installed, in use, available, free, standby, modified), read-only, every 2 s while the page is open; **Optimizations** also holds the Memory cleanup (RAMMap) page. **Insights** (Windows only) records play sessions (temperature, P/E clocks, package power and standby / free memory every 5 s, manually or automatically) and gives advisory boost clock advice that never changes a setting.
+The side menu has eleven sections: **Dashboard**, **System analysis**, **Optimizations**, **Cleanup**, **Restore**, **Sensors**, **Memory**, **Insights**, **Apps**, **Settings** and **Help**. **Memory** (Windows only) shows the Windows memory counters live (installed, in use, available, free, standby, modified), read-only, every 2 s while the page is open; **Optimizations** also holds the Memory cleanup (RAMMap) page, with an optional, opt-in auto clean during play sessions. **Insights** (Windows only) records play sessions (temperature, P/E clocks, package power and standby / free memory every 5 s, manually or automatically) and gives advisory boost clock advice that never changes a setting.
 The app is being renamed **KafkaBoost** (launchers and window already; the repo, package ids and task names keep their old names).
 Light and dark theme, English and Brazilian Portuguese.
 
@@ -219,7 +219,7 @@ KafkaBoost.cmd/.command/.lnk  launchers for the app
 app/                   Electron app: src/ (main, preload, settings, updates, i18n, tray, demo), renderer/, build/ (icons), test/ (node tests)
 config/                ThrottleStop.settings.ini, HWiNFO64.INI, defaults.json, tweaks.json (tweak catalog), sensors.json (pinned sensor library), hwinfo.json (official HWiNFO page, signer)
 scripts/               Install-Tuning.ps1, Steps.ps1, Create-Shortcut.ps1, lib/ (Tuning, Health, Tweaks, Cleanup, Restore, Sensors, Hwinfo), monitoring/, maintenance/
-tests/                 Pester tests for the library (181)
+tests/                 Pester tests for the library (195)
 tools/                 make-icons.js, make-shots.ps1, run-uitest.ps1 (UI checks)
 docs/                  GitHub Pages site (index.html landing, about-app.html docs hub, compare/download/faq/privacy/terms, pt-br/ mirror, site.css, site.js, assets/) and the reference documents
 local/                 git-ignored: backups, evidence, experiments

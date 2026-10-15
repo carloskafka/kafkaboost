@@ -20,6 +20,21 @@
     });
   }
 
+  const AUTO_NOTICE_KEYS = {
+    needsAdmin: 'rammap.auto.notice.needsAdmin', notInstalled: 'rammap.auto.notice.notInstalled', badSignature: 'rammap.auto.notice.badSignature'
+  };
+
+  function renderAuto(m) {
+    const card = $('rammapAutoCard');
+    card.hidden = !m.autoEnabled;
+    const s = KB.settings || {};
+    const agreed = $('rammapAutoAgree').checked;
+    $('rammapAutoToggle').disabled = !agreed;
+    $('rammapAutoToggle').checked = agreed && !!s.autoClean;
+    $('rammapAutoPct').value = s.autoCleanThresholdPct;
+    $('rammapAutoCooldown').value = s.autoCleanCooldownMin;
+  }
+
   function render() {
     const m = L.screenModel(data, busy);
     $('rammapGet').hidden = !m.showDownload;
@@ -32,6 +47,7 @@
     if (data) {
       $('rammapGetText').textContent = t('rammap.get.text', { source: data.source || '', signer: data.signer || '', license: data.license || '' });
     }
+    renderAuto(m);
     kvTable($('rammapMem'), L.memoryRows(data && data.memory).map((r) => [t(`rammap.mem.${r.key}`), r.value]));
 
     const host = $('rammapActions'); host.textContent = '';
@@ -57,7 +73,7 @@
     history.slice(0, 20).forEach((rec) => {
       const r = L.historyRow(rec);
       let when = r.time; try { when = new Date(r.time).toLocaleString(); } catch { /* keep raw */ }
-      rows.push([when, `${t(`rammap.action.${r.action}.title`)} · ${r.standby} · ${r.available} · ${r.modified}`]);
+      rows.push([when, `${t(`rammap.action.${r.action}.title`)} · ${r.standby} · ${r.available} · ${r.modified}${r.auto ? ' · ' + t('rammap.history.auto') : ''}`]);
     });
     kvTable($('rammapHistory'), rows);
   }
@@ -71,6 +87,7 @@
       const h = await window.kb.runStep('rammap-history', {});
       if (h.ok && h.data && Array.isArray(h.data.history)) history = h.data.history;
     }
+    $('rammapAutoAgree').checked = !!(KB.settings && KB.settings.autoClean);
     render();
   }
 
@@ -103,6 +120,17 @@
     await load();
   }
 
+  function saveAuto(patch) {
+    return KB.saveSetting(patch).then(render);
+  }
+
+  function onAutoNotice(payload) {
+    const name = String((payload && payload.code) || '').split('.').pop();
+    if (!Object.hasOwn(AUTO_NOTICE_KEYS, name)) return;
+    $('rammapAutoToggle').checked = false;
+    KB.showResult($('rammapAutoNotice'), 'fail', t(AUTO_NOTICE_KEYS[name]));
+  }
+
   KB.registerView('rammap', { onShow() { load(); } });
   document.addEventListener('DOMContentLoaded', () => {
     $('openRammap').addEventListener('click', () => KB.showView('rammap'));
@@ -110,6 +138,11 @@
     $('rammapAgree').addEventListener('change', render);
     $('rammapDownload').addEventListener('click', download);
     $('rammapRefresh').addEventListener('click', load);
+    $('rammapAutoAgree').addEventListener('change', () => { if (!$('rammapAutoAgree').checked) saveAuto({ autoClean: false }); else render(); });
+    $('rammapAutoToggle').addEventListener('change', () => { KB.showResult($('rammapAutoNotice'), '', ''); saveAuto({ autoClean: $('rammapAutoToggle').checked }); });
+    $('rammapAutoPct').addEventListener('change', () => saveAuto({ autoCleanThresholdPct: Number($('rammapAutoPct').value) }));
+    $('rammapAutoCooldown').addEventListener('change', () => saveAuto({ autoCleanCooldownMin: Number($('rammapAutoCooldown').value) }));
+    window.kb.onAutoNotice(onAutoNotice);
   });
   KB.onSettingsChanged(() => { if (data && !$('rammap').hidden) render(); });
 })();
