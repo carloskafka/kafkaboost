@@ -17,7 +17,10 @@ const DEFAULTS = Object.freeze({
   checkForUpdates: true,      // look at GitHub Releases every few hours (a lookup only; nothing downloads without a click)
   lastSeenVersion: '',        // version whose "what's new" was already shown
   lastCleanup: null,          // ISO time of the last cleanup run
-  cs2Exe: ''                  // a cs2.exe the user picked when Steam did not reveal it ('' = detect through Steam)
+  cs2Exe: '',                 // a cs2.exe the user picked when Steam did not reveal it ('' = detect through Steam)
+  autoClean: false,           // during a recorded play session, run RAMMap "working-sets" when standby memory is high (opt-in, needs the RAMMap consent)
+  autoCleanThresholdPct: 50,  // standby share of total memory that triggers an auto clean
+  autoCleanCooldownMin: 10    // minimum minutes between two auto cleans
 });
 
 const isBool = (v) => typeof v === 'boolean';
@@ -33,6 +36,9 @@ const RULES = Object.freeze({
   installDir: (v) => typeof v === 'string' && v.length <= 260,
   checkForUpdates: isBool,
   lastSeenVersion: (v) => typeof v === 'string' && v.length <= 40,
+  autoClean: isBool,
+  autoCleanThresholdPct: (v) => Number.isInteger(v) && v >= 20 && v <= 90,
+  autoCleanCooldownMin: (v) => Number.isInteger(v) && v >= 5 && v <= 60,
   lastCleanup: (v) => v === null || (typeof v === 'string' && v.length <= 40),
   // a drive path ending in cs2.exe, no ".." / "." parts, no wildcard characters (PowerShell validates it again)
   cs2Exe: (v) => v === '' || (typeof v === 'string' && v.length <= 260 && /^[A-Za-z]:[\\/](?:[^\[\]*?<>|"]*[\\/])?cs2\.exe$/i.test(v) && !/(^|[\\/])\.\.?([\\/]|$)/.test(v))

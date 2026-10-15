@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('kb', {
   },
   advice: () => ipcRenderer.invoke('advice:get'),
   onLog: (cb) => ipcRenderer.on('step:log', (_e, step, line) => cb(step, line)),
+  onAutoNotice: (cb) => ipcRenderer.on('rammap:autonotice', (_e, payload) => cb(payload)),
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     set: (patch) => ipcRenderer.invoke('settings:set', patch),

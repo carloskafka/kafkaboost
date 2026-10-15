@@ -249,13 +249,24 @@ function rammapStep(step, opts) {
     return { logs: ['downloading RAMMap (demo: nothing is downloaded)', 'signature OK (Microsoft Corporation)'], res: ok('msg.rammap.installed', { version: '1.62' }, { version: '1.62' }).res };
   }
   if (step === 'rammap-history') return ok('msg.rammap.history', { count: r.history.length }, { history: r.history.slice() });
+  if (step === 'rammap-auto') {
+    const fail = (code) => ({ logs: [], res: { ok: false, code, args: {}, message: 'demo', data: null } });
+    if (!r.installed) return fail('msg.rammap.notInstalled');
+    if (r.mem.standbyBytes / r.mem.totalBytes * 100 < opts.rammapAutoPct) return { logs: [], res: ok('msg.rammap.skipped', {}, null).res };
+    return runRammapAction(RAMMAP_ACTIONS[0], 'auto');
+  }
   const act = RAMMAP_ACTIONS.find((a) => a.id === opts.rammapAction);
   if (!act) return { logs: [], res: { ok: false, code: 'msg.rammap.unknownAction', args: {}, message: 'unknown', data: null } };
+  return runRammapAction(act, 'manual');
+}
+function runRammapAction(act, trigger) {
+  const r = state.rammap;
+  const ok = (code, args, data) => ({ logs: [], res: { ok: true, code, args: args || {}, message: 'demo', data } });
   const before = { ...r.mem };
   const moved = act.id === 'standby' ? r.mem.standbyBytes : act.id === 'standby-low' ? r.mem.standbyBytes * 0.25 : act.id === 'modified-pages' ? r.mem.modifiedBytes : r.mem.standbyBytes * 0.05;
   if (act.id === 'modified-pages') r.mem.modifiedBytes -= moved; else r.mem.standbyBytes -= moved;
   r.mem.availableBytes += moved; r.mem.freeBytes += moved;
-  const rec = { time: new Date().toISOString(), action: act.id, switch: act.switch, before, after: { ...r.mem },
+  const rec = { time: new Date().toISOString(), action: act.id, trigger, switch: act.switch, before, after: { ...r.mem },
     delta: { availableBytes: moved, freeBytes: moved, standbyBytes: act.id === 'modified-pages' ? 0 : -moved, modifiedBytes: act.id === 'modified-pages' ? -moved : 0 } };
   r.history.unshift(rec);
   return ok('msg.rammap.done', {}, rec);
