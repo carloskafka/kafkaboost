@@ -23,6 +23,17 @@ Describe 'Rammap (config, install, signature, run, history)' {
         $script:NoExe = Join-Path ([IO.Path]::GetTempPath()) ('kb_rmzip2_' + [guid]::NewGuid().ToString('N') + '.zip')
         New-FakeZip $script:NoExe @('RAMMap.exe', 'Eula.txt')
         $script:Valid = { param($p) @{ status = 'Valid'; subject = 'CN="Microsoft Corporation", O=Microsoft Corporation, C=US' } }
+        # An installed, validly signed fake RAMMap; the runner records its calls; the counters are the given standby and total bytes.
+        function Initialize-AutoClean($Standby, $Total, [int]$ExitCode = 0) {
+            $script:RammapSignature = $script:Valid
+            Set-Content (Join-Path $script:RammapRoot 'RAMMap64.exe') 'fake'
+            $script:Runs = 0; $script:Seen = $null; $script:RunExit = $ExitCode
+            $script:RammapRunner = { param($exe, $a) $script:Runs++; $script:Seen = $a; $script:RunExit }
+            $script:AutoStandby = $Standby; $script:AutoTotal = $Total
+            $script:RammapMemory = { [pscustomobject]@{ totalBytes = $script:AutoTotal; availableBytes = 100; freeBytes = 10; standbyBytes = $script:AutoStandby; modifiedBytes = 1 } }
+        }
+        $script:T0 = [datetime]'2026-10-15T10:00:00'
+        function Get-AutoStatePath { Join-Path $script:RammapRoot 'auto-state.json' }
     }
     AfterAll { Remove-Item -LiteralPath $script:Good, $script:NoExe -Force -ErrorAction SilentlyContinue }
     BeforeEach {
@@ -122,6 +133,129 @@ Describe 'Rammap (config, install, signature, run, history)' {
         $script:RammapMemory = { [pscustomobject]@{ totalBytes = 1; availableBytes = 1; freeBytes = 1; standbyBytes = 1; modifiedBytes = 1 } }
         Assert-Equal (Invoke-RammapAction 'standby' $script:Cfg).code 'msg.rammap.runFailed' 'non-zero exit'
         Assert-Equal @(Get-RammapHistory).Count 0 'failed run is not logged'
+    }
+
+    It 'M1-01 auto clean: standby below the threshold runs nothing and logs nothing' {
+        Initialize-AutoClean 400 1000
+        $r = Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }
+        Assert-Equal $r.code 'msg.rammap.auto.skipped' 'code'
+        Assert-Equal $r.data.reason 'below' 'reason'
+        Assert-Equal $script:Runs 0 'runner not called'
+        Assert-Equal @(Get-RammapHistory).Count 0 'no history'
+    }
+
+    It 'M1-02 auto clean: a missing standby counter is skipped as missing, never read as 0, and writes no state' {
+        Initialize-AutoClean $null 1000
+        $r = Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }
+        Assert-Equal $r.code 'msg.rammap.auto.skipped' 'code'
+        Assert-Equal $r.data.reason 'missing' 'reason'
+        Assert-Equal $script:Runs 0 'runner not called'
+        Assert-Equal (Test-Path (Get-AutoStatePath)) $false 'no state file'
+    }
+
+    It 'M1-03 auto clean: a missing or zero total is skipped as missing' {
+        Initialize-AutoClean 800 $null
+        Assert-Equal (Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }).data.reason 'missing' 'total null'
+        Initialize-AutoClean 800 0
+        Assert-Equal (Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }).data.reason 'missing' 'total 0'
+        Assert-Equal $script:Runs 0 'runner not called'
+    }
+
+    It 'M1-04 auto clean: a second call inside the cooldown is skipped' {
+        Initialize-AutoClean 800 1000
+        Assert-Equal (Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }).code 'msg.rammap.auto.cleaned' 'first'
+        $r = Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0.AddMinutes(5) }
+        Assert-Equal $r.code 'msg.rammap.auto.skipped' 'code'
+        Assert-Equal $r.data.reason 'cooldown' 'reason'
+        Assert-Equal $script:Runs 1 'runner called once'
+    }
+
+    It 'M1-05 auto clean: runs again once the cooldown has passed' {
+        Initialize-AutoClean 800 1000
+        [void](Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 })
+        Assert-Equal (Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0.AddMinutes(10) }).code 'msg.rammap.auto.cleaned' 'second'
+        Assert-Equal $script:Runs 2 'runner called twice'
+    }
+
+    It 'M1-06 auto clean: a successful clean writes lastClean to auto-state.json' {
+        Initialize-AutoClean 800 1000
+        $r = Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }
+        Assert-Equal $r.ok $true 'ok'
+        Assert-Equal $r.code 'msg.rammap.auto.cleaned' 'code'
+        $s = Get-Content -LiteralPath (Get-AutoStatePath) -Raw | ConvertFrom-Json
+        Assert-Equal ([datetime]$s.lastClean).ToUniversalTime() $script:T0.ToUniversalTime() 'lastClean'
+    }
+
+    It 'M1-07 auto clean: the threshold is clamped to 20..90' {
+        Initialize-AutoClean 190 1000
+        Assert-Equal (Invoke-RammapAutoClean 5 10 $script:Cfg { $script:T0 }).data.reason 'below' '5 acts as 20 (19% is below)'
+        Initialize-AutoClean 200 1000
+        Assert-Equal (Invoke-RammapAutoClean 5 10 $script:Cfg { $script:T0 }).code 'msg.rammap.auto.cleaned' '5 acts as 20 (20% acts)'
+        Remove-Item (Get-AutoStatePath) -Force
+        Initialize-AutoClean 890 1000
+        Assert-Equal (Invoke-RammapAutoClean 99 10 $script:Cfg { $script:T0 }).data.reason 'below' '99 acts as 90 (89% is below)'
+        Initialize-AutoClean 900 1000
+        Assert-Equal (Invoke-RammapAutoClean 99 10 $script:Cfg { $script:T0 }).code 'msg.rammap.auto.cleaned' '99 acts as 90 (90% acts)'
+    }
+
+    It 'M1-08 auto clean: the cooldown is clamped to 5..60 minutes' {
+        Initialize-AutoClean 800 1000
+        [void](Invoke-RammapAutoClean 50 1 $script:Cfg { $script:T0 })
+        Assert-Equal (Invoke-RammapAutoClean 50 1 $script:Cfg { $script:T0.AddMinutes(4) }).data.reason 'cooldown' '1 acts as 5 (4 min waits)'
+        Assert-Equal (Invoke-RammapAutoClean 50 1 $script:Cfg { $script:T0.AddMinutes(5) }).code 'msg.rammap.auto.cleaned' '1 acts as 5 (5 min runs)'
+        Remove-Item (Get-AutoStatePath) -Force
+        [void](Invoke-RammapAutoClean 50 99 $script:Cfg { $script:T0 })
+        Assert-Equal (Invoke-RammapAutoClean 50 99 $script:Cfg { $script:T0.AddMinutes(59) }).data.reason 'cooldown' '99 acts as 60 (59 min waits)'
+        Assert-Equal (Invoke-RammapAutoClean 50 99 $script:Cfg { $script:T0.AddMinutes(60) }).code 'msg.rammap.auto.cleaned' '99 acts as 60 (60 min runs)'
+    }
+
+    It 'M1-09 auto clean: the history row is marked trigger auto and keeps before and after' {
+        Initialize-AutoClean 800 1000
+        [void](Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 })
+        $h = @(Get-RammapHistory)
+        Assert-Equal $h.Count 1 'one row'
+        Assert-Equal $h[0].trigger 'auto' 'trigger'
+        Assert-Equal $h[0].before.standbyBytes 800 'before'
+        Assert-Equal $h[0].after.standbyBytes 800 'after'
+    }
+
+    It 'M1-10 manual run: the history row is marked trigger manual' {
+        Initialize-AutoClean 800 1000
+        [void](Invoke-RammapAction 'working-sets' $script:Cfg)
+        Assert-Equal (Get-RammapHistory)[0].trigger 'manual' 'trigger'
+    }
+
+    It 'M1-11 auto clean: starts RAMMap with -accepteula -Ew and nothing else' {
+        Initialize-AutoClean 800 1000
+        [void](Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 })
+        Assert-Equal ($script:Seen -join ' ') '-accepteula -Ew' 'arguments'
+        Assert-Equal (Get-Command Invoke-RammapAutoClean).Parameters.ContainsKey('ActionId') $false 'the caller cannot pick an action'
+    }
+
+    It 'M1-12 auto clean: RAMMap not installed passes the code through, no state, no history' {
+        Initialize-AutoClean 800 1000
+        Remove-Item (Join-Path $script:RammapRoot 'RAMMap64.exe') -Force
+        $r = Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }
+        Assert-Equal $r.code 'msg.rammap.notInstalled' 'code'
+        Assert-Equal (Test-Path (Get-AutoStatePath)) $false 'no state file'
+        Assert-Equal @(Get-RammapHistory).Count 0 'no history'
+    }
+
+    It 'M1-13 auto clean: a bad signature passes the code through and writes no state' {
+        Initialize-AutoClean 800 1000
+        $script:RammapSignature = { param($p) @{ status = 'NotSigned'; subject = '' } }
+        $r = Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }
+        Assert-Equal $r.code 'msg.rammap.badSignature' 'code'
+        Assert-Equal $script:Runs 0 'runner not called'
+        Assert-Equal (Test-Path (Get-AutoStatePath)) $false 'no state file'
+    }
+
+    It 'M1-14 auto clean: a failing run passes the code through, starts no cooldown and logs nothing' {
+        Initialize-AutoClean 800 1000 5
+        $r = Invoke-RammapAutoClean 50 10 $script:Cfg { $script:T0 }
+        Assert-Equal $r.code 'msg.rammap.runFailed' 'code'
+        Assert-Equal (Test-Path (Get-AutoStatePath)) $false 'no lastClean'
+        Assert-Equal @(Get-RammapHistory).Count 0 'no history'
     }
 
     It 'Watch-RammapMemory emits one reading per interval until the time is up, keeps a missing counter missing and survives a failing reader' {
