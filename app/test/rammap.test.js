@@ -48,3 +48,9 @@ test('historyRow and totals only count what was measured', () => {
   assert.equal(t.runs, 3); assert.equal(t.measured, 2); assert.equal(t.releasedStandbyBytes, 3 * 1024 ** 3);
   assert.deepEqual(R.totals(null), { runs: 0, measured: 0, releasedStandbyBytes: 0 });
 });
+
+test('M2-12 historyRow marks only auto records', () => {
+  assert.equal(R.historyRow({ action: 'working-sets', trigger: 'auto', delta: {} }).auto, true);
+  assert.equal(R.historyRow({ action: 'working-sets', trigger: 'manual', delta: {} }).auto, false);
+  assert.equal(R.historyRow({ action: 'working-sets', delta: {} }).auto, false);
+});
