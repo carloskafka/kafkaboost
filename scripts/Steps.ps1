@@ -5,10 +5,10 @@
   Output protocol (stdout, one per line):
     LOG: <text>
     RESULT: <json {ok, message, code, args, data}>      (code/args = language-neutral i18n key + values; message = English fallback)
-  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-preview | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | rammap-state | rammap-get | rammap-run | rammap-history | memory-watch | cs2-state | cs2-gpu | cs2-autoexec | telemetry | session | advice
+  Steps: detect | backup | get | vbs | apply | task | verify | health | fix | autostart | rollback | paths | cleanbackups | tweaks-list | tweak-preview | tweak-set | tweaks-recommended | cleanup-scan | cleanup-run | restore-list | restore-create | restore-open | sensors-state | sensors-get | sensors-read | hwinfo-state | hwinfo-check | hwinfo-get | hwinfo-start | hwinfo-stop | rammap-state | rammap-get | rammap-run | rammap-auto | rammap-history | memory-watch | cs2-state | cs2-gpu | cs2-autoexec | telemetry | session | advice
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'rammap-state', 'rammap-get', 'rammap-run', 'rammap-history', 'memory-watch', 'cs2-state', 'cs2-gpu', 'cs2-autoexec', 'telemetry', 'session', 'advice')][string]$Step,
+    [Parameter(Mandatory)][ValidateSet('detect', 'backup', 'get', 'vbs', 'apply', 'task', 'verify', 'health', 'fix', 'autostart', 'rollback', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'cleanup-run', 'restore-list', 'restore-create', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop', 'rammap-state', 'rammap-get', 'rammap-run', 'rammap-auto', 'rammap-history', 'memory-watch', 'cs2-state', 'cs2-gpu', 'cs2-autoexec', 'telemetry', 'session', 'advice')][string]$Step,
     [string]$InstallDir,
     [string]$ZipPath,
     [string]$SettingsFile,
@@ -29,6 +29,8 @@ param(
     [string]$HwinfoVersion,    # hwinfo-get: the version the user was shown and agreed to (refused when the page offers another)
     [switch]$UpdateIni,        # hwinfo-start: turn SensorsSM=1 on in the user's own HWiNFO64.INI (a timestamped .bak is made first)
     [string]$RammapAction,     # rammap-run: an action id from config\rammap.json (the switch itself is never taken from the caller)
+    [int]$RammapAutoPct = 50,  # rammap-auto: clean when standby memory is at least this percent of the total (clamped 20-90)
+    [int]$RammapAutoCooldownMin = 10,   # rammap-auto: minutes between two auto cleans (clamped 5-60)
     [string]$Cs2Exe,         # cs2-*: a cs2.exe the user picked (otherwise Steam is searched, read-only)
     [ValidateSet('on', 'off')][string]$Cs2Mode = 'on',   # cs2-gpu: apply / revert; cs2-autoexec: write / restore
     [string]$Cs2Options,       # cs2-autoexec on: comma separated option ids from config\cs2.json
@@ -65,7 +67,7 @@ function Done($ok, $msg, $data = $null, $code = $null, $cargs = $null) {
 
 try {
     $readOnly = ($Step -in 'detect', 'verify', 'health', 'paths', 'cleanbackups', 'tweaks-list', 'tweak-preview', 'tweak-set', 'tweaks-recommended', 'cleanup-scan', 'restore-list', 'restore-open', 'sensors-state', 'sensors-get', 'sensors-read', 'hwinfo-state', 'hwinfo-check', 'rammap-state', 'rammap-history', 'memory-watch', 'telemetry', 'session', 'advice', 'cs2-state', 'cs2-gpu', 'cs2-autoexec') -or ($Step -eq 'autostart' -and $Mode -eq 'status')
-    if ($Step -in 'rammap-get', 'rammap-run' -and -not (Test-Admin)) { Done $false 'Administrator rights are required for this step. Restart the app as administrator.' $null 'msg.rammap.needsAdmin' @{}; return }
+    if ($Step -in 'rammap-get', 'rammap-run', 'rammap-auto' -and -not (Test-Admin)) { Done $false 'Administrator rights are required for this step. Restart the app as administrator.' $null 'msg.rammap.needsAdmin' @{}; return }
     if ($Step -in 'hwinfo-get', 'hwinfo-start', 'hwinfo-stop' -and -not (Test-Admin)) { Done $false 'Administrator rights are required for this step. Restart the app as administrator.' $null 'msg.hwinfo.needsAdmin' @{}; return }
     if (-not $readOnly -and -not (Test-Admin)) { throw 'Administrator rights are required for this step. Restart the app as administrator.' }
     if (Test-Path -LiteralPath $SettingsFile) { $SettingsFile = (Resolve-Path -LiteralPath $SettingsFile).Path }
@@ -308,6 +310,11 @@ try {
         }
         'rammap-run' {
             $r = Invoke-RammapAction $RammapAction (Get-RammapConfig)
+            Log "$($r.code): $($r.message)"
+            Done $r.ok $r.message $r.data $r.code @{ detail = $r.message }
+        }
+        'rammap-auto' {
+            $r = Invoke-RammapAutoClean $RammapAutoPct $RammapAutoCooldownMin (Get-RammapConfig)
             Log "$($r.code): $($r.message)"
             Done $r.ok $r.message $r.data $r.code @{ detail = $r.message }
         }
